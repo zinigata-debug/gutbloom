@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "GutBloom",
+    "slug": "gutly",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.gutly.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#e3f2e1",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-localization",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "GutBloom needs camera access to scan food barcodes and photos."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "06a91f2b-c11a-411b-92bc-666c9a4e2661"
+      }
+    },
+    "owner": "zinigata"
+  }
+}

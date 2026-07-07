@@ -1,0 +1,12 @@
+node_modules/
+.git/
+.expo/
+.expo-shared/
+ios/
+android/
+dist/
+web-build/
+assets/backup/
+*.log
+.DS_Store
+.claude/
