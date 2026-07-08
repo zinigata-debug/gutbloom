@@ -1,4 +1,6 @@
+import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from './supabaseClient';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Localization from 'expo-localization';
@@ -7,6 +9,7 @@ import {
   AccessibilityInfo,
   ActivityIndicator,
   Animated,
+  AppState,
   Dimensions,
   Easing,
   FlatList,
@@ -45,6 +48,28 @@ const SUPPORTED_LANGS = ['en', 'de', 'es', 'fr', 'it'];
 
 const STRINGS = {
   en: {
+    // Account / authentication
+    account: 'Account', account_sub: 'Sign in to back up and sync your journey across devices.',
+    account_signed_in: 'Signed in', account_manage: 'Manage account',
+    sign_in: 'Sign in', sign_up: 'Create account', sign_out: 'Sign out',
+    auth_title_login: 'Welcome back', auth_title_signup: 'Create your account', auth_title_reset: 'Reset password',
+    auth_sub_login: 'Sign in to sync your gut journey across devices.',
+    auth_sub_signup: 'Your data stays yours — an account backs it up and keeps it in sync.',
+    auth_sub_reset: "Enter your email and we'll send you a reset link.",
+    auth_email: 'Email', auth_email_ph: 'you@example.com',
+    auth_password: 'Password', auth_password_ph: 'At least 6 characters',
+    auth_forgot: 'Forgot password?',
+    auth_to_signup: 'New here? Create an account', auth_to_login: 'Already have an account? Sign in',
+    auth_send_reset: 'Send reset link', auth_back_to_login: 'Back to sign in',
+    auth_err_empty: 'Please enter your email and password.',
+    auth_err_email: 'Please enter a valid email address.',
+    auth_err_password_short: 'Password must be at least 6 characters.',
+    auth_check_email: 'Almost there! Check your email to confirm your account, then sign in.',
+    auth_reset_sent: 'If that email is registered, a reset link is on its way.',
+    auth_signed_out: 'Signed out.', auth_welcome_toast: 'Signed in. Welcome back! 🌱',
+    auth_linked_note: 'Your existing data is now linked to your account.',
+    sync_now: 'Sync now', sync_syncing: 'Syncing…', sync_last: 'Last synced {time}', sync_never: 'Not synced yet', sync_failed: 'Sync failed — will retry.',
+    account_sync_sub: 'Your logs and custom foods back up and sync automatically.',
     continue: 'Continue', back: 'Back', save: 'Save', close: 'Close', gotIt: 'Got it', a11y_clear: 'Clear search', a11y_remove: 'Remove', a11y_add_log: 'Add log entry',
     cancel: 'Cancel', done: 'Done', skip: 'Skip',
     tab_home: 'Today', tab_foods: 'Foods', tab_plan: 'My Plan', tab_guide: 'GutGuide',
@@ -92,7 +117,7 @@ const STRINGS = {
     band_common: 'Commonly a trigger', band_sometimes: 'Sometimes a trigger', band_rarely: 'Rarely a trigger',
     band_common_s: 'Common trigger', band_sometimes_s: 'Sometimes', band_rarely_s: 'Rarely',
     recipes_title: 'Recipes',
-    recipes_cultura_sub: 'Gut-friendly meals Cultura loves to cook',
+    recipes_flora_sub: 'Gut-friendly meals Flora loves to cook',
     recipes_upsell_headline: 'Cook without limits',
     recipes_upsell_sub: 'You\'ve tried {free} of {total} recipes — here\'s everything else.',
     recipes_upsell_bullet1: 'All {n} gut-friendly recipes',
@@ -107,8 +132,8 @@ const STRINGS = {
     recipe_log_btn: 'Log as meal',
     meal_breakfast: 'Breakfast', meal_lunch: 'Lunch', meal_dinner: 'Dinner', meal_snack: 'Snack',
     guide_count: '{n} questions', guide_no_results: 'No questions match that search. Try a different word or topic.',
-    guide_cultura_title: 'Curious about FODMAP?',
-    guide_cultura_sub: 'Cultura has honest, clear answers to the most common questions.',
+    guide_flora_title: 'Curious about FODMAP?',
+    guide_flora_sub: 'Flora has honest, clear answers to the most common questions.',
     scan_limit_title: 'Monthly scans used up',
     scan_limit_body: 'You have used all {n} AI scans for this month. Your allowance resets at the start of next month. In the meantime, you can still log meals by search or barcode — both unlimited.',
     paywall_includes: 'What Premium includes',
@@ -147,7 +172,7 @@ const STRINGS = {
 
     // Onboarding steps
     onb_step: 'Step {n} of {total}',
-    onb_cultura_intro: "Hi, I'm Cultura — your gut buddy",
+    onb_flora_intro: "Hi, I'm Flora — your gut buddy",
     onb_ibs_q: 'What is IBS?',
     onb_ibs_card1_title: 'A very common condition',
     onb_ibs_card1_body: "Irritable Bowel Syndrome (IBS) affects around 1 in 10 people worldwide. It's not a disease — it's a functional gut disorder, meaning the gut is sensitive and reactive, but not damaged.",
@@ -183,7 +208,7 @@ const STRINGS = {
 
     // Home screen — empty state
     home_empty_title: "Let's take care of your gut",
-    home_empty_body: 'Track your meals and how you feel, spot patterns, and learn what your gut loves — one day at a time, with Cultura by your side.',
+    home_empty_body: 'Track your meals and how you feel, spot patterns, and learn what your gut loves — one day at a time, with Flora by your side.',
     home_before_start: 'BEFORE YOU START',
     home_gp_title: 'See your GP or a gastroenterologist',
     home_gp_sub: 'FODMAP is a tool used after an IBS diagnosis. Tap to see how they help.',
@@ -202,12 +227,12 @@ const STRINGS = {
     home_lets_start: "Let's get started",
 
     // Home screen — hasData
-    home_today: 'Today', home_see_progress: 'See My Progress',
+    home_today: 'Today', home_yesterday: 'Yesterday', home_journal: 'Journal', history_title: 'History', see_history: 'See all log entries', home_see_progress: 'See My Progress',
     home_hi_name: 'Hi {name}', home_hi: 'Hi there', home_journey_day: 'Day {n} of your gut journey', home_eat_well: 'Eat well today', picker_select_day: 'Select a day', meal_select_type: 'Select a Type', progress_level_points: 'Level {level} · {points} points', a11y_take_photo: 'Take photo', a11y_week_number: 'Week number', week_number_ph: 'e.g. 2',
-    recipes_all: 'All recipes', home_meals_sub: '4 elimination-safe meals picked for you. Tap any to see it.', patterns_empty_early: 'Keep logging meals and how you feel. Patterns usually start to show after about a week of data.', patterns_empty_none: 'No clear patterns yet. Keep logging — the more consistent your entries, the sharper the insights.', patterns_sub: 'Correlations from your log — not diagnoses. Use them to decide what to test.', patterns_window: 'Last {n} days', sev_watch: 'WORTH WATCHING', sev_info: 'NOTICED', sev_good: 'GOOD SIGN', show_less: 'Show less', show_more: 'Show {n} more',
+    recipes_all: 'All recipes', home_meals_sub: '4 elimination-safe meals picked for you. Tap any to see it.', patterns_empty_early: 'Keep logging meals and how you feel. Patterns usually start to show after about a week of data.', patterns_empty_none: 'No clear patterns yet. Keep logging — the more consistent your entries, the sharper the insights.', patterns_sub: 'Correlations from your log — not diagnoses. Use them to decide what to test.', patterns_window: 'Last {n} days', sev_watch: 'WORTH WATCHING', sev_maybe: 'EARLY SIGN', sev_info: 'NOTICED', sev_good: 'GOOD SIGN', show_less: 'Show less', show_more: 'Show {n} more',
     colony_lv: 'Lv {n} · {form}', colony_pts: '{n} points', colony_form_spore: 'Spore', colony_form_sprout: 'Sprout', colony_form_grown: 'Grown', colony_form_thriving: 'Thriving', colony_level_form: 'Level {n} · {form}',
     home_low_fodmap: 'Low-FODMAP', home_symptoms: 'Symptoms', home_sleep: 'Sleep',
-    home_colony_title: "Cultura's colony", home_see_colony: 'See Colony',
+    home_colony_title: "Flora's colony", home_see_colony: 'See Colony',
     home_colony_complete: 'Complete',
     home_colony_thriving: 'Colony complete — keep it up!',
     home_days_thriving: '{n} {unit} thriving',
@@ -241,17 +266,17 @@ const STRINGS = {
 
     // Mood from score
     mood_null_title: "Let's see how today goes",
-    mood_null_sub: 'Log a meal or symptom and Cultura will react.',
-    mood_good_title: 'Cultura feels calm today',
+    mood_null_sub: 'Log a meal or symptom and Flora will react.',
+    mood_good_title: 'Flora feels calm today',
     mood_good_sub_streak: 'No flare-ups in {n} {unit}. Keep it steady.',
     mood_good_sub: 'Your gut is having a good day.',
     mood_soso_title: 'A so-so day',
     mood_soso_sub: 'Mixed signals today — keep logging to spot the cause.',
-    mood_bad_title: 'Cultura is feeling rough',
+    mood_bad_title: 'Flora is feeling rough',
     mood_bad_sub: 'A harder gut day. Be gentle with yourself.',
 
     // Colony modal
-    colony_title: "Cultura's colony",
+    colony_title: "Flora's colony",
     colony_thriving: 'Thriving colony 🎉',
     colony_points_all: '{n} points · all 12 microbes',
     colony_points: '{n} points · {to} to level {next}',
@@ -260,7 +285,7 @@ const STRINGS = {
     colony_row_meals: 'Low-FODMAP meals', colony_row_meals_how: '+5 per safe meal (max 3/day)',
     colony_row_logging: 'Daily logging', colony_row_logging_how: '+10 for logging anything that day',
     colony_row_reintro: 'Reintro tests done', colony_row_reintro_how: '+50 per completed test',
-    colony_footer: 'Cultura grows as your gut habits do. Rough days never cost you points — consistency is what counts.',
+    colony_footer: 'Flora grows as your gut habits do. Rough days never cost you points — consistency is what counts.',
 
     // Level up celebration
     levelup_badge_complete: '🎉 COLONY COMPLETE',
@@ -268,13 +293,13 @@ const STRINGS = {
     levelup_body_complete: "You've grown all 12 microbes — a diverse, healthy gut community. Now keep it thriving.",
     levelup_badge: 'LEVEL UP',
     levelup_title: 'Level {n}',
-    levelup_body: 'Cultura is now {form}! Your gut habits are paying off.',
+    levelup_body: 'Flora is now {form}! Your gut habits are paying off.',
     levelup_member_badge: 'NEW COLONY MEMBER',
-    levelup_member_body: 'A new microbe just joined Cultura’s colony — your gut habits are paying off.',
+    levelup_member_body: 'A new microbe just joined Flora’s colony — your gut habits are paying off.',
     levelup_btn: 'Nice!',
 
     // Log feedback
-    lf_meal_low_title: 'Gentle choice!', lf_meal_low_msg: 'That meal looks easy on your gut. Cultura approves.',
+    lf_meal_low_title: 'Gentle choice!', lf_meal_low_msg: 'That meal looks easy on your gut. Flora approves.',
     lf_meal_mod_title: 'Moderate meal', lf_meal_mod_msg: 'Fine in smaller portions — watch out for stacking today.',
     lf_meal_high_title: 'High-FODMAP meal', lf_meal_high_msg: 'This one might stir things up. Notice how you feel later.',
     lf_symptom_high_title: 'Hang in there', lf_symptom_high_msg: "Sorry you're not feeling great. Logging it helps find the cause.",
@@ -306,7 +331,7 @@ const STRINGS = {
     progress_score_good: 'Your gut had a calm, steady week',
     progress_score_mid: 'A mixed week — a few things to spot',
     progress_score_bad: 'A tougher week — be gentle with yourself',
-    progress_cultura_body: 'Cultura grows as your weekly habits hold steady.',
+    progress_flora_body: 'Flora grows as your weekly habits hold steady.',
 
     // Log type chooser
     log_chooser_title: 'What to log?',
@@ -481,7 +506,7 @@ const STRINGS = {
     hist_high: 'HIGH', hist_mod: 'MOD', hist_liberator: 'LIBERATOR',
     pill_day: 'Day {n}', detail_ferm_tag: 'FERMENTATION', app_tagline: 'Your gut, in good hands',
 
-    // Form labels (Cultura evolution stages)
+    // Form labels (Flora evolution stages)
     form_seedling: 'Seedling', form_sprout: 'Sprout', form_growing: 'Growing',
     form_blooming: 'Blooming', form_thriving: 'Thriving',
 
@@ -503,7 +528,7 @@ const STRINGS = {
     meal_modal_recent: 'Recent foods',
     meal_modal_recent_meals: 'Recent meals',
     meal_type_label: 'Type', meal_type_breakfast: 'Breakfast', meal_type_lunch: 'Lunch', meal_type_dinner: 'Dinner', meal_type_snack: 'Snack',
-    meal_edit_foods: 'Foods', meal_edit_add: 'Add a food', meal_edit_none: 'No foods — add at least one.',
+    edit_dish: 'Dish', meal_edit_foods: 'Foods', meal_edit_add: 'Add a food', meal_edit_none: 'No foods — add at least one.',
     meal_custom_q: 'Can\'t find "{name}"?',
     meal_custom_tip: 'Tip: if it\'s a mix (like spaghetti bolognese), add the single ingredients instead — you\'ll get more accurate verdicts.',
     meal_custom_add: 'Choose its FODMAP level:',
@@ -518,6 +543,28 @@ const STRINGS = {
     meal_swap_tip: 'Swap {food} → {alt}',
   },
   de: {
+    // Account / authentication
+    account: 'Konto', account_sub: 'Melde dich an, um deine Reise geräteübergreifend zu sichern und zu synchronisieren.',
+    account_signed_in: 'Angemeldet', account_manage: 'Konto verwalten',
+    sign_in: 'Anmelden', sign_up: 'Konto erstellen', sign_out: 'Abmelden',
+    auth_title_login: 'Willkommen zurück', auth_title_signup: 'Konto erstellen', auth_title_reset: 'Passwort zurücksetzen',
+    auth_sub_login: 'Melde dich an, um deine Darm-Reise geräteübergreifend zu synchronisieren.',
+    auth_sub_signup: 'Deine Daten bleiben deine — ein Konto sichert und synchronisiert sie.',
+    auth_sub_reset: 'Gib deine E-Mail ein und wir senden dir einen Link zum Zurücksetzen.',
+    auth_email: 'E-Mail', auth_email_ph: 'du@beispiel.de',
+    auth_password: 'Passwort', auth_password_ph: 'Mindestens 6 Zeichen',
+    auth_forgot: 'Passwort vergessen?',
+    auth_to_signup: 'Neu hier? Konto erstellen', auth_to_login: 'Schon ein Konto? Anmelden',
+    auth_send_reset: 'Link senden', auth_back_to_login: 'Zurück zur Anmeldung',
+    auth_err_empty: 'Bitte gib E-Mail und Passwort ein.',
+    auth_err_email: 'Bitte gib eine gültige E-Mail-Adresse ein.',
+    auth_err_password_short: 'Das Passwort muss mindestens 6 Zeichen haben.',
+    auth_check_email: 'Fast geschafft! Prüfe deine E-Mails, um dein Konto zu bestätigen, und melde dich dann an.',
+    auth_reset_sent: 'Falls diese E-Mail registriert ist, ist ein Link unterwegs.',
+    auth_signed_out: 'Abgemeldet.', auth_welcome_toast: 'Angemeldet. Willkommen zurück! 🌱',
+    auth_linked_note: 'Deine bestehenden Daten sind jetzt mit deinem Konto verknüpft.',
+    sync_now: 'Jetzt synchronisieren', sync_syncing: 'Synchronisiere…', sync_last: 'Zuletzt synchronisiert {time}', sync_never: 'Noch nicht synchronisiert', sync_failed: 'Synchronisierung fehlgeschlagen — erneuter Versuch folgt.',
+    account_sync_sub: 'Deine Einträge und eigenen Lebensmittel werden automatisch gesichert und synchronisiert.',
     continue: 'Weiter', back: 'Zurück', save: 'Speichern', close: 'Schließen', gotIt: 'Verstanden', a11y_clear: 'Suche löschen', a11y_remove: 'Entfernen', a11y_add_log: 'Eintrag hinzufügen',
     cancel: 'Abbrechen', done: 'Fertig', skip: 'Überspringen',
     tab_home: 'Heute', tab_foods: 'Lebensmittel', tab_plan: 'Mein Plan', tab_guide: 'GutGuide',
@@ -565,7 +612,7 @@ const STRINGS = {
     band_common: 'Häufig ein Auslöser', band_sometimes: 'Manchmal ein Auslöser', band_rarely: 'Selten ein Auslöser',
     band_common_s: 'Häufig', band_sometimes_s: 'Manchmal', band_rarely_s: 'Selten',
     recipes_title: 'Rezepte',
-    recipes_cultura_sub: 'Darmfreundliche Mahlzeiten, die Cultura gerne kocht',
+    recipes_flora_sub: 'Darmfreundliche Mahlzeiten, die Flora gerne kocht',
     recipes_upsell_headline: 'Ohne Grenzen kochen',
     recipes_upsell_sub: 'Du hast {free} von {total} Rezepten probiert — hier ist alles weitere.',
     recipes_upsell_bullet1: 'Alle {n} darmfreundlichen Rezepte',
@@ -580,8 +627,8 @@ const STRINGS = {
     recipe_log_btn: 'Als Mahlzeit erfassen',
     meal_breakfast: 'Frühstück', meal_lunch: 'Mittagessen', meal_dinner: 'Abendessen', meal_snack: 'Snack',
     guide_count: '{n} Fragen', guide_no_results: 'Keine Fragen passen zur Suche. Versuch ein anderes Wort oder Thema.',
-    guide_cultura_title: 'Neugierig auf FODMAP?',
-    guide_cultura_sub: 'Cultura hat ehrliche, verständliche Antworten auf die häufigsten Fragen.',
+    guide_flora_title: 'Neugierig auf FODMAP?',
+    guide_flora_sub: 'Flora hat ehrliche, verständliche Antworten auf die häufigsten Fragen.',
     scan_limit_title: 'Monats-Scans aufgebraucht',
     scan_limit_body: 'Du hast alle {n} KI-Scans dieses Monats verbraucht. Dein Kontingent wird Anfang nächsten Monats zurückgesetzt. Du kannst Mahlzeiten weiterhin per Suche oder Barcode erfassen — beide unbegrenzt.',
     paywall_includes: 'Das ist in Premium enthalten',
@@ -617,7 +664,7 @@ const STRINGS = {
     safety_warn_body: 'Einige der Symptome, die du angekreuzt hast, nennen Ärzte „rote Flaggen". Das bedeutet nicht, dass etwas Schlimmes vorliegt — aber du solltest abgeklärt werden, bevor du eine restriktive Diät beginnst, da Ernährungsänderungen manchmal etwas verdecken können, das Aufmerksamkeit braucht.',
     safety_warn_ack: 'Ich verstehe das und möchte trotzdem fortfahren.',
     onb_step: 'Schritt {n} von {total}',
-    onb_cultura_intro: 'Hallo, ich bin Cultura — dein Darm-Begleiter',
+    onb_flora_intro: 'Hallo, ich bin Flora — deine Darm-Begleiterin',
     onb_ibs_q: 'Was ist IBS?',
     onb_ibs_card1_title: 'Eine sehr häufige Erkrankung',
     onb_ibs_card1_body: 'Das Reizdarmsyndrom (IBS) betrifft weltweit etwa 1 von 10 Menschen. Es ist keine Krankheit im eigentlichen Sinne — es ist eine funktionelle Darmstörung: Der Darm ist empfindlich und reaktiv, aber nicht beschädigt.',
@@ -651,7 +698,7 @@ const STRINGS = {
     onb_stress_q: 'Stressniveau?', onb_stress_sub: 'Stress und Darm hängen eng zusammen.',
     onb_stress_low: 'Meist entspannt', onb_stress_mid: 'Handhabbarer Stress', onb_stress_high: 'Viel Stress',
     home_empty_title: 'Lass uns deinen Darm pflegen',
-    home_empty_body: 'Erfasse Mahlzeiten und wie du dich fühlst, erkenne Muster und lerne, was deinem Darm gut tut — Schritt für Schritt, mit Cultura an deiner Seite.',
+    home_empty_body: 'Erfasse Mahlzeiten und wie du dich fühlst, erkenne Muster und lerne, was deinem Darm gut tut — Schritt für Schritt, mit Flora an deiner Seite.',
     home_before_start: 'BEVOR DU ANFÄNGST',
     home_gp_title: 'Geh zu deinem Hausarzt oder Gastroenterologen',
     home_gp_sub: 'FODMAP ist ein Werkzeug nach einer IBS-Diagnose. Tippe, um zu sehen, wie sie helfen.',
@@ -668,12 +715,12 @@ const STRINGS = {
     home_how_more: 'Mehr lesen', home_how_less: 'Weniger anzeigen',
     home_start_elim: 'Eliminationsphase starten',
     home_lets_start: "Los geht's",
-    home_today: 'Heute', home_see_progress: 'Mein Fortschritt',
+    home_today: 'Heute', home_yesterday: 'Gestern', home_journal: 'Journal', history_title: 'Verlauf', see_history: 'Alle Einträge ansehen', home_see_progress: 'Mein Fortschritt',
     home_hi_name: 'Hallo {name}', home_hi: 'Hallo', home_journey_day: 'Tag {n} deiner Darmreise', home_eat_well: 'Iss heute gut', picker_select_day: 'Wähle einen Tag', meal_select_type: 'Wähle eine Art', progress_level_points: 'Level {level} · {points} Punkte', a11y_take_photo: 'Foto aufnehmen', a11y_week_number: 'Wochennummer', week_number_ph: 'z. B. 2',
-    recipes_all: 'Alle Rezepte', home_meals_sub: '4 eliminationssichere Mahlzeiten für dich ausgewählt. Tippe auf eine, um sie zu sehen.', patterns_empty_early: 'Erfasse weiter Mahlzeiten und dein Befinden. Muster zeigen sich meist nach etwa einer Woche Daten.', patterns_empty_none: 'Noch keine klaren Muster. Erfasse weiter – je konsistenter deine Einträge, desto klarer die Erkenntnisse.', patterns_sub: 'Korrelationen aus deinem Protokoll – keine Diagnosen. Nutze sie, um zu entscheiden, was du testest.', patterns_window: 'Letzte {n} Tage', sev_watch: 'IM BLICK BEHALTEN', sev_info: 'BEMERKT', sev_good: 'GUTES ZEICHEN', show_less: 'Weniger anzeigen', show_more: '{n} weitere anzeigen',
+    recipes_all: 'Alle Rezepte', home_meals_sub: '4 eliminationssichere Mahlzeiten für dich ausgewählt. Tippe auf eine, um sie zu sehen.', patterns_empty_early: 'Erfasse weiter Mahlzeiten und dein Befinden. Muster zeigen sich meist nach etwa einer Woche Daten.', patterns_empty_none: 'Noch keine klaren Muster. Erfasse weiter – je konsistenter deine Einträge, desto klarer die Erkenntnisse.', patterns_sub: 'Korrelationen aus deinem Protokoll – keine Diagnosen. Nutze sie, um zu entscheiden, was du testest.', patterns_window: 'Letzte {n} Tage', sev_watch: 'IM BLICK BEHALTEN', sev_maybe: 'FRÜHES ZEICHEN', sev_info: 'BEMERKT', sev_good: 'GUTES ZEICHEN', show_less: 'Weniger anzeigen', show_more: '{n} weitere anzeigen',
     colony_lv: 'Lv {n} · {form}', colony_pts: '{n} Punkte', colony_form_spore: 'Spore', colony_form_sprout: 'Spross', colony_form_grown: 'Gewachsen', colony_form_thriving: 'Blühend', colony_level_form: 'Level {n} · {form}',
     home_low_fodmap: 'Low-FODMAP', home_symptoms: 'Symptome', home_sleep: 'Schlaf',
-    home_colony_title: 'Culturas Kolonie', home_see_colony: 'Kolonie ansehen',
+    home_colony_title: 'Floras Kolonie', home_see_colony: 'Kolonie ansehen',
     home_colony_complete: 'Vollständig',
     home_colony_thriving: 'Kolonie vollständig — weiter so!',
     home_days_thriving: '{n} {unit} im Aufblühen',
@@ -699,15 +746,15 @@ const STRINGS = {
     phase_reintro_headline: 'Woche {n} von ~{total}',
     phase_reintro_body: 'Eine FODMAP-Gruppe nach der anderen. Dein vollständiger Plan ist im Tab „Mein Plan".',
     mood_null_title: 'Mal sehen, wie der Tag läuft',
-    mood_null_sub: 'Erfasse eine Mahlzeit oder ein Symptom und Cultura reagiert.',
-    mood_good_title: 'Cultura fühlt sich heute ruhig',
+    mood_null_sub: 'Erfasse eine Mahlzeit oder ein Symptom und Flora reagiert.',
+    mood_good_title: 'Flora fühlt sich heute ruhig',
     mood_good_sub_streak: 'Kein Aufflackern seit {n} {unit}. Bleib dran.',
     mood_good_sub: 'Dein Darm hat einen guten Tag.',
     mood_soso_title: 'Ein so-lala-Tag',
     mood_soso_sub: 'Gemischte Signale heute — erfasse weiter, um die Ursache zu finden.',
-    mood_bad_title: 'Cultura fühlt sich nicht gut',
+    mood_bad_title: 'Flora fühlt sich nicht gut',
     mood_bad_sub: 'Ein schwerer Darmmitag. Sei gut zu dir.',
-    colony_title: 'Culturas Kolonie',
+    colony_title: 'Floras Kolonie',
     colony_thriving: 'Blühende Kolonie 🎉',
     colony_points_all: '{n} Punkte · alle 12 Mikroben',
     colony_points: '{n} Punkte · {to} bis Level {next}',
@@ -716,17 +763,17 @@ const STRINGS = {
     colony_row_meals: 'Low-FODMAP-Mahlzeiten', colony_row_meals_how: '+5 pro sicherer Mahlzeit (max. 3/Tag)',
     colony_row_logging: 'Tägliches Erfassen', colony_row_logging_how: '+10 für jeden Tag, an dem du etwas erfasst',
     colony_row_reintro: 'Abgeschlossene Tests', colony_row_reintro_how: '+50 pro abgeschlossenem Test',
-    colony_footer: 'Cultura wächst mit deinen Gewohnheiten. Schwierige Tage kosten keine Punkte — Beständigkeit zählt.',
+    colony_footer: 'Flora wächst mit deinen Gewohnheiten. Schwierige Tage kosten keine Punkte — Beständigkeit zählt.',
     levelup_badge_complete: '🎉 KOLONIE VOLLSTÄNDIG',
     levelup_title_complete: 'Eine vollständige, blühende Kolonie!',
     levelup_body_complete: 'Du hast alle 12 Mikroben gezüchtet — eine vielfältige, gesunde Darmgemeinschaft. Jetzt halt sie am Blühen.',
     levelup_badge: 'LEVEL AUFGESTIEGEN',
     levelup_title: 'Level {n}',
-    levelup_body: 'Cultura ist jetzt {form}! Deine Gewohnheiten zahlen sich aus.',
+    levelup_body: 'Flora ist jetzt {form}! Deine Gewohnheiten zahlen sich aus.',
     levelup_member_badge: 'NEUES KOLONIEMITGLIED',
-    levelup_member_body: 'Eine neue Mikrobe ist Culturas Kolonie beigetreten – deine Gewohnheiten zahlen sich aus.',
+    levelup_member_body: 'Eine neue Mikrobe ist Floras Kolonie beigetreten – deine Gewohnheiten zahlen sich aus.',
     levelup_btn: 'Super!',
-    lf_meal_low_title: 'Sanfte Wahl!', lf_meal_low_msg: 'Diese Mahlzeit ist gut für deinen Darm. Cultura ist begeistert.',
+    lf_meal_low_title: 'Sanfte Wahl!', lf_meal_low_msg: 'Diese Mahlzeit ist gut für deinen Darm. Flora ist begeistert.',
     lf_meal_mod_title: 'Moderate Mahlzeit', lf_meal_mod_msg: 'In kleineren Portionen okay — achte heute auf Stapeln.',
     lf_meal_high_title: 'High-FODMAP-Mahlzeit', lf_meal_high_msg: 'Diese könnte Unruhe stiften. Beobachte, wie du dich nachher fühlst.',
     lf_symptom_high_title: 'Bleib stark', lf_symptom_high_msg: 'Schade, dass du dich nicht gut fühlst. Das Erfassen hilft, die Ursache zu finden.',
@@ -756,7 +803,7 @@ const STRINGS = {
     progress_score_good: 'Dein Darm hatte eine ruhige, stetige Woche',
     progress_score_mid: 'Eine gemischte Woche — ein paar Dinge zu beobachten',
     progress_score_bad: 'Eine schwierige Woche — sei sanft zu dir',
-    progress_cultura_body: 'Cultura wächst mit deinen wöchentlichen Gewohnheiten.',
+    progress_flora_body: 'Flora wächst mit deinen wöchentlichen Gewohnheiten.',
     log_chooser_title: 'Was möchtest du erfassen?',
     log_meal_sub: 'Lebensmittel suchen, scannen oder KI-Erkennung',
     log_symptom_sub: 'Wie fühlst du dich?',
@@ -927,7 +974,7 @@ const STRINGS = {
     meal_modal_recent: 'Zuletzt verwendet',
     meal_modal_recent_meals: 'Letzte Mahlzeiten',
     meal_type_label: 'Art', meal_type_breakfast: 'Frühstück', meal_type_lunch: 'Mittagessen', meal_type_dinner: 'Abendessen', meal_type_snack: 'Snack',
-    meal_edit_foods: 'Lebensmittel', meal_edit_add: 'Lebensmittel hinzufügen', meal_edit_none: 'Keine Lebensmittel — füge mindestens eins hinzu.',
+    edit_dish: 'Gericht', meal_edit_foods: 'Lebensmittel', meal_edit_add: 'Lebensmittel hinzufügen', meal_edit_none: 'Keine Lebensmittel — füge mindestens eins hinzu.',
     meal_custom_q: '"{name}" nicht gefunden?',
     meal_custom_tip: 'Tipp: Wenn es eine Mischung ist (wie Käsespätzle), füge stattdessen die einzelnen Zutaten hinzu — du erhältst genauere Urteile.',
     meal_custom_add: 'FODMAP-Stufe wählen:',
@@ -942,6 +989,28 @@ const STRINGS = {
     meal_swap_tip: 'Ersetze {food} → {alt}',
   },
   es: {
+    // Account / authentication
+    account: 'Cuenta', account_sub: 'Inicia sesión para respaldar y sincronizar tu progreso entre dispositivos.',
+    account_signed_in: 'Sesión iniciada', account_manage: 'Gestionar cuenta',
+    sign_in: 'Iniciar sesión', sign_up: 'Crear cuenta', sign_out: 'Cerrar sesión',
+    auth_title_login: 'Bienvenido de nuevo', auth_title_signup: 'Crea tu cuenta', auth_title_reset: 'Restablecer contraseña',
+    auth_sub_login: 'Inicia sesión para sincronizar tu progreso entre dispositivos.',
+    auth_sub_signup: 'Tus datos son tuyos: una cuenta los respalda y los mantiene sincronizados.',
+    auth_sub_reset: 'Introduce tu correo y te enviaremos un enlace para restablecerla.',
+    auth_email: 'Correo', auth_email_ph: 'tu@ejemplo.com',
+    auth_password: 'Contraseña', auth_password_ph: 'Al menos 6 caracteres',
+    auth_forgot: '¿Olvidaste tu contraseña?',
+    auth_to_signup: '¿Nuevo aquí? Crea una cuenta', auth_to_login: '¿Ya tienes cuenta? Inicia sesión',
+    auth_send_reset: 'Enviar enlace', auth_back_to_login: 'Volver a iniciar sesión',
+    auth_err_empty: 'Introduce tu correo y contraseña.',
+    auth_err_email: 'Introduce una dirección de correo válida.',
+    auth_err_password_short: 'La contraseña debe tener al menos 6 caracteres.',
+    auth_check_email: '¡Casi listo! Revisa tu correo para confirmar tu cuenta y luego inicia sesión.',
+    auth_reset_sent: 'Si ese correo está registrado, el enlace ya va en camino.',
+    auth_signed_out: 'Sesión cerrada.', auth_welcome_toast: 'Sesión iniciada. ¡Bienvenido de nuevo! 🌱',
+    auth_linked_note: 'Tus datos existentes ahora están vinculados a tu cuenta.',
+    sync_now: 'Sincronizar ahora', sync_syncing: 'Sincronizando…', sync_last: 'Última sincronización {time}', sync_never: 'Sin sincronizar todavía', sync_failed: 'Error de sincronización — se reintentará.',
+    account_sync_sub: 'Tus registros y alimentos personalizados se respaldan y sincronizan automáticamente.',
     continue: 'Continuar', back: 'Atrás', save: 'Guardar', close: 'Cerrar', gotIt: 'Entendido', a11y_clear: 'Borrar búsqueda', a11y_remove: 'Quitar', a11y_add_log: 'Añadir registro',
     cancel: 'Cancelar', done: 'Hecho', skip: 'Omitir',
     tab_home: 'Hoy', tab_foods: 'Alimentos', tab_plan: 'Mi plan', tab_guide: 'GutGuide',
@@ -989,7 +1058,7 @@ const STRINGS = {
     band_common: 'Desencadenante frecuente', band_sometimes: 'A veces desencadenante', band_rarely: 'Rara vez desencadenante',
     band_common_s: 'Frecuente', band_sometimes_s: 'A veces', band_rarely_s: 'Rara vez',
     recipes_title: 'Recetas',
-    recipes_cultura_sub: 'Comidas amigables para el intestino que le encanta cocinar a Cultura',
+    recipes_flora_sub: 'Comidas amigables para el intestino que le encanta cocinar a Flora',
     recipes_upsell_headline: 'Cocina sin límites',
     recipes_upsell_sub: 'Has probado {free} de {total} recetas — aquí tienes todo lo demás.',
     recipes_upsell_bullet1: 'Todas las {n} recetas amigables para el intestino',
@@ -1004,8 +1073,8 @@ const STRINGS = {
     recipe_log_btn: 'Registrar como comida',
     meal_breakfast: 'Desayuno', meal_lunch: 'Almuerzo', meal_dinner: 'Cena', meal_snack: 'Snack',
     guide_count: '{n} preguntas', guide_no_results: 'Ninguna pregunta coincide con la búsqueda. Prueba otra palabra o tema.',
-    guide_cultura_title: '¿Curiosidad sobre FODMAP?',
-    guide_cultura_sub: 'Cultura tiene respuestas honestas y claras a las preguntas más frecuentes.',
+    guide_flora_title: '¿Curiosidad sobre FODMAP?',
+    guide_flora_sub: 'Flora tiene respuestas honestas y claras a las preguntas más frecuentes.',
     scan_limit_title: 'Scans mensuales agotados',
     scan_limit_body: 'Has usado todos los {n} scans de IA de este mes. Tu cuota se renueva al inicio del mes siguiente. Mientras tanto, puedes seguir registrando comidas por búsqueda o código de barras — ambas sin límite.',
     paywall_includes: 'Qué incluye Premium',
@@ -1041,7 +1110,7 @@ const STRINGS = {
     safety_warn_body: 'Algunos de los síntomas que has marcado son lo que los médicos llaman "señales de alerta". No significan que algo grave esté pasando, pero sí que debes ser evaluado/a antes de comenzar una dieta restrictiva, ya que los cambios alimentarios pueden enmascarar algo que necesita atención.',
     safety_warn_ack: 'Lo entiendo y he decidido continuar.',
     onb_step: 'Paso {n} de {total}',
-    onb_cultura_intro: 'Hola, soy Cultura — tu compañera intestinal',
+    onb_flora_intro: 'Hola, soy Flora — tu compañera intestinal',
     onb_ibs_q: '¿Qué es el SII?',
     onb_ibs_card1_title: 'Una afección muy común',
     onb_ibs_card1_body: 'El síndrome de intestino irritable (SII) afecta a alrededor de 1 de cada 10 personas en el mundo. No es una enfermedad — es un trastorno funcional del intestino: el intestino es sensible y reactivo, pero no está dañado.',
@@ -1075,7 +1144,7 @@ const STRINGS = {
     onb_stress_q: '¿Nivel de estrés?', onb_stress_sub: 'El estrés y el intestino van de la mano.',
     onb_stress_low: 'Mayormente tranquilo/a', onb_stress_mid: 'Manejable', onb_stress_high: 'Mucho estrés',
     home_empty_title: 'Cuidemos tu intestino',
-    home_empty_body: 'Registra tus comidas y cómo te sientes, detecta patrones y aprende qué le gusta a tu intestino — un día a la vez, con Cultura a tu lado.',
+    home_empty_body: 'Registra tus comidas y cómo te sientes, detecta patrones y aprende qué le gusta a tu intestino — un día a la vez, con Flora a tu lado.',
     home_before_start: 'ANTES DE EMPEZAR',
     home_gp_title: 'Visita a tu médico de cabecera o gastroenterólogo',
     home_gp_sub: 'FODMAP es una herramienta tras un diagnóstico de SII. Toca para ver cómo pueden ayudarte.',
@@ -1092,12 +1161,12 @@ const STRINGS = {
     home_how_more: 'Leer más', home_how_less: 'Ver menos',
     home_start_elim: 'Iniciar fase de eliminación',
     home_lets_start: 'Empecemos',
-    home_today: 'Hoy', home_see_progress: 'Ver mi progreso',
+    home_today: 'Hoy', home_yesterday: 'Ayer', home_journal: 'Diario', history_title: 'Historial', see_history: 'Ver todas las entradas', home_see_progress: 'Ver mi progreso',
     home_hi_name: 'Hola {name}', home_hi: 'Hola', home_journey_day: 'Día {n} de tu viaje intestinal', home_eat_well: 'Come bien hoy', picker_select_day: 'Elige un día', meal_select_type: 'Elige un tipo', progress_level_points: 'Nivel {level} · {points} puntos', a11y_take_photo: 'Hacer foto', a11y_week_number: 'Número de semana', week_number_ph: 'p. ej. 2',
-    recipes_all: 'Todas las recetas', home_meals_sub: '4 comidas seguras en eliminación elegidas para ti. Toca una para verla.', patterns_empty_early: 'Sigue registrando comidas y cómo te sientes. Los patrones suelen aparecer tras una semana de datos.', patterns_empty_none: 'Aún no hay patrones claros. Sigue registrando: cuanto más constantes sean tus entradas, más nítidas serán las conclusiones.', patterns_sub: 'Correlaciones de tu registro, no diagnósticos. Úsalas para decidir qué probar.', patterns_window: 'Últimos {n} días', sev_watch: 'A VIGILAR', sev_info: 'OBSERVADO', sev_good: 'BUENA SEÑAL', show_less: 'Ver menos', show_more: 'Ver {n} más',
+    recipes_all: 'Todas las recetas', home_meals_sub: '4 comidas seguras en eliminación elegidas para ti. Toca una para verla.', patterns_empty_early: 'Sigue registrando comidas y cómo te sientes. Los patrones suelen aparecer tras una semana de datos.', patterns_empty_none: 'Aún no hay patrones claros. Sigue registrando: cuanto más constantes sean tus entradas, más nítidas serán las conclusiones.', patterns_sub: 'Correlaciones de tu registro, no diagnósticos. Úsalas para decidir qué probar.', patterns_window: 'Últimos {n} días', sev_watch: 'A VIGILAR', sev_maybe: 'SEÑAL TEMPRANA', sev_info: 'OBSERVADO', sev_good: 'BUENA SEÑAL', show_less: 'Ver menos', show_more: 'Ver {n} más',
     colony_lv: 'Niv. {n} · {form}', colony_pts: '{n} puntos', colony_form_spore: 'Espora', colony_form_sprout: 'Brote', colony_form_grown: 'Crecida', colony_form_thriving: 'Próspera', colony_level_form: 'Nivel {n} · {form}',
     home_low_fodmap: 'Bajo en FODMAP', home_symptoms: 'Síntomas', home_sleep: 'Sueño',
-    home_colony_title: 'La colonia de Cultura', home_see_colony: 'Ver colonia',
+    home_colony_title: 'La colonia de Flora', home_see_colony: 'Ver colonia',
     home_colony_complete: 'Completa',
     home_colony_thriving: 'Colonia completa — ¡sigue así!',
     home_days_thriving: '{n} {unit} floreciendo',
@@ -1123,15 +1192,15 @@ const STRINGS = {
     phase_reintro_headline: 'Semana {n} de ~{total}',
     phase_reintro_body: 'Probando un grupo FODMAP a la vez. Consulta tu plan completo en la pestaña Mi plan.',
     mood_null_title: 'Veamos cómo va el día',
-    mood_null_sub: 'Registra una comida o síntoma y Cultura reaccionará.',
-    mood_good_title: 'Cultura se siente tranquila hoy',
+    mood_null_sub: 'Registra una comida o síntoma y Flora reaccionará.',
+    mood_good_title: 'Flora se siente tranquila hoy',
     mood_good_sub_streak: 'Sin brotes en {n} {unit}. Mantén el ritmo.',
     mood_good_sub: 'Tu intestino tiene un buen día.',
     mood_soso_title: 'Un día más o menos',
     mood_soso_sub: 'Señales mixtas hoy — sigue registrando para encontrar la causa.',
-    mood_bad_title: 'Cultura no se siente bien',
+    mood_bad_title: 'Flora no se siente bien',
     mood_bad_sub: 'Un día intestinal difícil. Sé amable contigo.',
-    colony_title: 'La colonia de Cultura',
+    colony_title: 'La colonia de Flora',
     colony_thriving: 'Colonia floreciente 🎉',
     colony_points_all: '{n} puntos · los 12 microbios',
     colony_points: '{n} puntos · {to} para el nivel {next}',
@@ -1140,17 +1209,17 @@ const STRINGS = {
     colony_row_meals: 'Comidas bajas en FODMAP', colony_row_meals_how: '+5 por comida segura (máx. 3/día)',
     colony_row_logging: 'Registro diario', colony_row_logging_how: '+10 por registrar algo ese día',
     colony_row_reintro: 'Tests de reintroducción', colony_row_reintro_how: '+50 por test completado',
-    colony_footer: 'Cultura crece con tus hábitos intestinales. Los días difíciles no te restan puntos — la constancia es lo que cuenta.',
+    colony_footer: 'Flora crece con tus hábitos intestinales. Los días difíciles no te restan puntos — la constancia es lo que cuenta.',
     levelup_badge_complete: '🎉 COLONIA COMPLETA',
     levelup_title_complete: '¡Una colonia completa y floreciente!',
     levelup_body_complete: 'Has cultivado los 12 microbios — una comunidad intestinal diversa y sana. Ahora mantenla floreciente.',
     levelup_badge: 'SUBIDA DE NIVEL',
     levelup_title: 'Nivel {n}',
-    levelup_body: '¡Cultura ahora es {form}! Tus hábitos están dando frutos.',
+    levelup_body: '¡Flora ahora es {form}! Tus hábitos están dando frutos.',
     levelup_member_badge: 'NUEVO MIEMBRO DE LA COLONIA',
-    levelup_member_body: 'Un nuevo microbio se unió a la colonia de Cultura: tus hábitos están dando frutos.',
+    levelup_member_body: 'Un nuevo microbio se unió a la colonia de Flora: tus hábitos están dando frutos.',
     levelup_btn: '¡Genial!',
-    lf_meal_low_title: '¡Buena elección!', lf_meal_low_msg: 'Esa comida es suave para tu intestino. Cultura lo aprueba.',
+    lf_meal_low_title: '¡Buena elección!', lf_meal_low_msg: 'Esa comida es suave para tu intestino. Flora lo aprueba.',
     lf_meal_mod_title: 'Comida moderada', lf_meal_mod_msg: 'Bien en porciones pequeñas — vigila el efecto acumulativo hoy.',
     lf_meal_high_title: 'Comida alta en FODMAP', lf_meal_high_msg: 'Esta puede revolver las cosas. Observa cómo te sientes después.',
     lf_symptom_high_title: 'Aguanta', lf_symptom_high_msg: 'Lo siento, no te sientes bien. Registrarlo ayuda a encontrar la causa.',
@@ -1180,7 +1249,7 @@ const STRINGS = {
     progress_score_good: 'Tu intestino tuvo una semana tranquila y estable',
     progress_score_mid: 'Una semana mixta — algunas cosas a observar',
     progress_score_bad: 'Una semana difícil — sé amable contigo',
-    progress_cultura_body: 'Cultura crece con tus hábitos semanales.',
+    progress_flora_body: 'Flora crece con tus hábitos semanales.',
     log_chooser_title: '¿Qué quieres registrar?',
     log_meal_sub: 'Busca alimentos, escanea o usa IA',
     log_symptom_sub: 'Cómo te sientes',
@@ -1351,7 +1420,7 @@ const STRINGS = {
     meal_modal_recent: 'Alimentos recientes',
     meal_modal_recent_meals: 'Comidas recientes',
     meal_type_label: 'Tipo', meal_type_breakfast: 'Desayuno', meal_type_lunch: 'Almuerzo', meal_type_dinner: 'Cena', meal_type_snack: 'Tentempié',
-    meal_edit_foods: 'Alimentos', meal_edit_add: 'Añadir alimento', meal_edit_none: 'Sin alimentos — añade al menos uno.',
+    edit_dish: 'Plato', meal_edit_foods: 'Alimentos', meal_edit_add: 'Añadir alimento', meal_edit_none: 'Sin alimentos — añade al menos uno.',
     meal_custom_q: '¿No encuentras "{name}"?',
     meal_custom_tip: 'Consejo: si es una mezcla (como una paella), añade los ingredientes individuales en su lugar — obtendrás veredictos más precisos.',
     meal_custom_add: 'Elige su nivel FODMAP:',
@@ -1366,6 +1435,28 @@ const STRINGS = {
     meal_swap_tip: 'Cambia {food} → {alt}',
   },
   fr: {
+    // Account / authentication
+    account: 'Compte', account_sub: 'Connecte-toi pour sauvegarder et synchroniser ton parcours sur tous tes appareils.',
+    account_signed_in: 'Connecté', account_manage: 'Gérer le compte',
+    sign_in: 'Se connecter', sign_up: 'Créer un compte', sign_out: 'Se déconnecter',
+    auth_title_login: 'Bon retour', auth_title_signup: 'Crée ton compte', auth_title_reset: 'Réinitialiser le mot de passe',
+    auth_sub_login: 'Connecte-toi pour synchroniser ton parcours sur tous tes appareils.',
+    auth_sub_signup: 'Tes données restent les tiennes — un compte les sauvegarde et les synchronise.',
+    auth_sub_reset: 'Saisis ton e-mail et nous t\'enverrons un lien de réinitialisation.',
+    auth_email: 'E-mail', auth_email_ph: 'toi@exemple.com',
+    auth_password: 'Mot de passe', auth_password_ph: 'Au moins 6 caractères',
+    auth_forgot: 'Mot de passe oublié ?',
+    auth_to_signup: 'Nouveau ici ? Crée un compte', auth_to_login: 'Déjà un compte ? Connecte-toi',
+    auth_send_reset: 'Envoyer le lien', auth_back_to_login: 'Retour à la connexion',
+    auth_err_empty: 'Saisis ton e-mail et ton mot de passe.',
+    auth_err_email: 'Saisis une adresse e-mail valide.',
+    auth_err_password_short: 'Le mot de passe doit comporter au moins 6 caractères.',
+    auth_check_email: 'Presque fini ! Vérifie tes e-mails pour confirmer ton compte, puis connecte-toi.',
+    auth_reset_sent: 'Si cet e-mail est enregistré, un lien est en route.',
+    auth_signed_out: 'Déconnecté.', auth_welcome_toast: 'Connecté. Bon retour ! 🌱',
+    auth_linked_note: 'Tes données existantes sont désormais liées à ton compte.',
+    sync_now: 'Synchroniser', sync_syncing: 'Synchronisation…', sync_last: 'Dernière synchro {time}', sync_never: 'Pas encore synchronisé', sync_failed: 'Échec de la synchro — nouvelle tentative à venir.',
+    account_sync_sub: 'Tes entrées et aliments personnalisés sont sauvegardés et synchronisés automatiquement.',
     continue: 'Continuer', back: 'Retour', save: 'Enregistrer', close: 'Fermer', gotIt: 'Compris', a11y_clear: 'Effacer la recherche', a11y_remove: 'Retirer', a11y_add_log: 'Ajouter une entrée',
     cancel: 'Annuler', done: 'Terminé', skip: 'Passer',
     tab_home: "Aujourd'hui", tab_foods: 'Aliments', tab_plan: 'Mon plan', tab_guide: 'GutGuide',
@@ -1413,7 +1504,7 @@ const STRINGS = {
     band_common: 'Déclencheur fréquent', band_sometimes: 'Parfois déclencheur', band_rarely: 'Rarement déclencheur',
     band_common_s: 'Fréquent', band_sometimes_s: 'Parfois', band_rarely_s: 'Rarement',
     recipes_title: 'Recettes',
-    recipes_cultura_sub: 'Des repas bons pour l\'intestin que Cultura adore cuisiner',
+    recipes_flora_sub: 'Des repas bons pour l\'intestin que Flora adore cuisiner',
     recipes_upsell_headline: 'Cuisiner sans limites',
     recipes_upsell_sub: 'Tu as essayé {free} recettes sur {total} — voici tout le reste.',
     recipes_upsell_bullet1: 'Toutes les {n} recettes bonnes pour l\'intestin',
@@ -1428,8 +1519,8 @@ const STRINGS = {
     recipe_log_btn: 'Consigner comme repas',
     meal_breakfast: 'Petit-déjeuner', meal_lunch: 'Déjeuner', meal_dinner: 'Dîner', meal_snack: 'Collation',
     guide_count: '{n} questions', guide_no_results: "Aucune question ne correspond. Essaie un autre mot ou thème.",
-    guide_cultura_title: 'Curieux·se sur les FODMAP ?',
-    guide_cultura_sub: 'Cultura a des réponses honnêtes et simples aux questions les plus fréquentes.',
+    guide_flora_title: 'Curieux·se sur les FODMAP ?',
+    guide_flora_sub: 'Flora a des réponses honnêtes et simples aux questions les plus fréquentes.',
     scan_limit_title: 'Scans mensuels épuisés',
     scan_limit_body: 'Tu as utilisé tous tes {n} scans IA de ce mois. Ton quota se réinitialise en début de mois prochain. En attendant, tu peux continuer à noter des repas par recherche ou code-barres — tous deux illimités.',
     paywall_includes: 'Ce que Premium inclut',
@@ -1465,7 +1556,7 @@ const STRINGS = {
     safety_warn_body: 'Certains de tes symptômes sont ce que les médecins appellent des « signaux d\'alerte ». Cela ne veut pas dire que quelque chose de grave se passe — mais tu devrais être évalué(e) avant de commencer un régime restrictif, car les changements alimentaires peuvent masquer quelque chose qui mérite attention.',
     safety_warn_ack: 'Je comprends et j\'ai décidé de continuer.',
     onb_step: 'Étape {n} sur {total}',
-    onb_cultura_intro: 'Salut, je suis Cultura — ta complice intestinale',
+    onb_flora_intro: 'Salut, je suis Flora — ta complice intestinale',
     onb_ibs_q: 'C\'est quoi le SII ?',
     onb_ibs_card1_title: 'Une affection très courante',
     onb_ibs_card1_body: 'Le syndrome de l\'intestin irritable (SII) touche environ 1 personne sur 10 dans le monde. Ce n\'est pas une maladie — c\'est un trouble fonctionnel de l\'intestin : l\'intestin est sensible et réactif, mais pas endommagé.',
@@ -1499,7 +1590,7 @@ const STRINGS = {
     onb_stress_q: 'Niveau de stress ?', onb_stress_sub: 'Le stress et l\'intestin sont étroitement liés.',
     onb_stress_low: 'Plutôt calme', onb_stress_mid: 'Gérable', onb_stress_high: 'Beaucoup de stress',
     home_empty_title: 'Prenons soin de ton intestin',
-    home_empty_body: 'Note tes repas et comment tu te sens, repère les tendances et découvre ce que ton intestin aime — un jour à la fois, avec Cultura à tes côtés.',
+    home_empty_body: 'Note tes repas et comment tu te sens, repère les tendances et découvre ce que ton intestin aime — un jour à la fois, avec Flora à tes côtés.',
     home_before_start: 'AVANT DE COMMENCER',
     home_gp_title: 'Consulte ton médecin généraliste ou un gastro-entérologue',
     home_gp_sub: 'FODMAP est un outil après un diagnostic de SII. Touche pour voir comment ils peuvent t\'aider.',
@@ -1516,12 +1607,12 @@ const STRINGS = {
     home_how_more: 'En savoir plus', home_how_less: 'Voir moins',
     home_start_elim: 'Démarrer la phase d\'élimination',
     home_lets_start: 'C\'est parti',
-    home_today: "Aujourd'hui", home_see_progress: 'Voir mes progrès',
+    home_today: "Aujourd'hui", home_yesterday: 'Hier', home_journal: 'Journal', history_title: 'Historique', see_history: 'Voir toutes les entrées', home_see_progress: 'Voir mes progrès',
     home_hi_name: 'Salut {name}', home_hi: 'Salut', home_journey_day: 'Jour {n} de ton parcours intestinal', home_eat_well: 'Bien manger aujourd\'hui', picker_select_day: 'Choisis un jour', meal_select_type: 'Choisis un type', progress_level_points: 'Niveau {level} · {points} points', a11y_take_photo: 'Prendre une photo', a11y_week_number: 'Numéro de semaine', week_number_ph: 'p. ex. 2',
-    recipes_all: 'Toutes les recettes', home_meals_sub: '4 repas compatibles élimination choisis pour toi. Touche-en un pour le voir.', patterns_empty_early: 'Continue à noter tes repas et ton ressenti. Les tendances apparaissent généralement après une semaine de données.', patterns_empty_none: 'Pas encore de tendance claire. Continue à noter — plus tes entrées sont régulières, plus les analyses sont précises.', patterns_sub: "Corrélations tirées de ton journal — pas des diagnostics. Sers-t'en pour décider quoi tester.", patterns_window: '{n} derniers jours', sev_watch: 'À SURVEILLER', sev_info: 'REMARQUÉ', sev_good: 'BON SIGNE', show_less: 'Voir moins', show_more: 'Voir {n} de plus',
+    recipes_all: 'Toutes les recettes', home_meals_sub: '4 repas compatibles élimination choisis pour toi. Touche-en un pour le voir.', patterns_empty_early: 'Continue à noter tes repas et ton ressenti. Les tendances apparaissent généralement après une semaine de données.', patterns_empty_none: 'Pas encore de tendance claire. Continue à noter — plus tes entrées sont régulières, plus les analyses sont précises.', patterns_sub: "Corrélations tirées de ton journal — pas des diagnostics. Sers-t'en pour décider quoi tester.", patterns_window: '{n} derniers jours', sev_watch: 'À SURVEILLER', sev_maybe: 'SIGNE PRÉCOCE', sev_info: 'REMARQUÉ', sev_good: 'BON SIGNE', show_less: 'Voir moins', show_more: 'Voir {n} de plus',
     colony_lv: 'Niv. {n} · {form}', colony_pts: '{n} points', colony_form_spore: 'Spore', colony_form_sprout: 'Pousse', colony_form_grown: 'Développée', colony_form_thriving: 'Florissante', colony_level_form: 'Niveau {n} · {form}',
     home_low_fodmap: 'Pauvre en FODMAP', home_symptoms: 'Symptômes', home_sleep: 'Sommeil',
-    home_colony_title: 'La colonie de Cultura', home_see_colony: 'Voir la colonie',
+    home_colony_title: 'La colonie de Flora', home_see_colony: 'Voir la colonie',
     home_colony_complete: 'Complète',
     home_colony_thriving: 'Colonie complète — continue ainsi !',
     home_days_thriving: '{n} {unit} en plein essor',
@@ -1547,15 +1638,15 @@ const STRINGS = {
     phase_reintro_headline: 'Semaine {n} sur ~{total}',
     phase_reintro_body: 'On teste un groupe FODMAP à la fois. Consulte ton plan complet dans l\'onglet Mon plan.',
     mood_null_title: 'Voyons comment se passe la journée',
-    mood_null_sub: 'Note un repas ou un symptôme et Cultura réagira.',
-    mood_good_title: 'Cultura se sent sereine aujourd\'hui',
+    mood_null_sub: 'Note un repas ou un symptôme et Flora réagira.',
+    mood_good_title: 'Flora se sent sereine aujourd\'hui',
     mood_good_sub_streak: 'Pas de poussée depuis {n} {unit}. Tiens le cap.',
     mood_good_sub: 'Ton intestin passe une bonne journée.',
     mood_soso_title: 'Une journée mi-figue, mi-raisin',
     mood_soso_sub: 'Signaux mitigés aujourd\'hui — continue à noter pour trouver la cause.',
-    mood_bad_title: 'Cultura ne se sent pas bien',
+    mood_bad_title: 'Flora ne se sent pas bien',
     mood_bad_sub: 'Une journée intestinale difficile. Sois indulgent(e) avec toi.',
-    colony_title: 'La colonie de Cultura',
+    colony_title: 'La colonie de Flora',
     colony_thriving: 'Colonie florissante 🎉',
     colony_points_all: '{n} points · les 12 microbes',
     colony_points: '{n} points · {to} pour le niveau {next}',
@@ -1564,17 +1655,17 @@ const STRINGS = {
     colony_row_meals: 'Repas pauvres en FODMAP', colony_row_meals_how: '+5 par repas sûr (max 3/jour)',
     colony_row_logging: 'Journal quotidien', colony_row_logging_how: '+10 pour noter quelque chose ce jour-là',
     colony_row_reintro: 'Tests de réintroduction', colony_row_reintro_how: '+50 par test complété',
-    colony_footer: 'Cultura grandit avec tes habitudes digestives. Les jours difficiles ne te coûtent pas de points — c\'est la régularité qui compte.',
+    colony_footer: 'Flora grandit avec tes habitudes digestives. Les jours difficiles ne te coûtent pas de points — c\'est la régularité qui compte.',
     levelup_badge_complete: '🎉 COLONIE COMPLÈTE',
     levelup_title_complete: 'Une colonie complète et florissante !',
     levelup_body_complete: 'Tu as cultivé les 12 microbes — une communauté intestinale diverse et saine. Maintenant, fais-la prospérer.',
     levelup_badge: 'NIVEAU SUPÉRIEUR',
     levelup_title: 'Niveau {n}',
-    levelup_body: 'Cultura est maintenant {form} ! Tes bonnes habitudes portent leurs fruits.',
+    levelup_body: 'Flora est maintenant {form} ! Tes bonnes habitudes portent leurs fruits.',
     levelup_member_badge: 'NOUVEAU MEMBRE DE LA COLONIE',
-    levelup_member_body: 'Un nouveau microbe a rejoint la colonie de Cultura — tes bonnes habitudes portent leurs fruits.',
+    levelup_member_body: 'Un nouveau microbe a rejoint la colonie de Flora — tes bonnes habitudes portent leurs fruits.',
     levelup_btn: 'Super !',
-    lf_meal_low_title: 'Bon choix !', lf_meal_low_msg: 'Ce repas est doux pour ton intestin. Cultura approuve.',
+    lf_meal_low_title: 'Bon choix !', lf_meal_low_msg: 'Ce repas est doux pour ton intestin. Flora approuve.',
     lf_meal_mod_title: 'Repas modéré', lf_meal_mod_msg: 'Ok en petites portions — surveille l\'accumulation aujourd\'hui.',
     lf_meal_high_title: 'Repas riche en FODMAP', lf_meal_high_msg: 'Celui-là pourrait agiter les choses. Observe comment tu te sens après.',
     lf_symptom_high_title: 'Courage', lf_symptom_high_msg: 'Désolé(e) que tu ne te sentes pas bien. Le noter aide à trouver la cause.',
@@ -1604,7 +1695,7 @@ const STRINGS = {
     progress_score_good: 'Ton intestin a eu une semaine calme et stable',
     progress_score_mid: 'Une semaine mitigée — quelques choses à observer',
     progress_score_bad: 'Une semaine difficile — sois indulgent(e) avec toi',
-    progress_cultura_body: 'Cultura grandit avec tes habitudes de la semaine.',
+    progress_flora_body: 'Flora grandit avec tes habitudes de la semaine.',
     log_chooser_title: 'Qu\'est-ce que tu veux noter ?',
     log_meal_sub: 'Cherche des aliments, scanne ou utilise l\'IA',
     log_symptom_sub: 'Comment tu te sens',
@@ -1775,7 +1866,7 @@ const STRINGS = {
     meal_modal_recent: 'Aliments récents',
     meal_modal_recent_meals: 'Repas récents',
     meal_type_label: 'Type', meal_type_breakfast: 'Petit-déj', meal_type_lunch: 'Déjeuner', meal_type_dinner: 'Dîner', meal_type_snack: 'Encas',
-    meal_edit_foods: 'Aliments', meal_edit_add: 'Ajouter un aliment', meal_edit_none: 'Aucun aliment — ajoutes-en au moins un.',
+    edit_dish: 'Plat', meal_edit_foods: 'Aliments', meal_edit_add: 'Ajouter un aliment', meal_edit_none: 'Aucun aliment — ajoutes-en au moins un.',
     meal_custom_q: '"{name}" introuvable ?',
     meal_custom_tip: 'Conseil : si c\'est un mélange (comme une ratatouille), ajoute plutôt les ingrédients individuels — tu obtiendras des verdicts plus précis.',
     meal_custom_add: 'Choisis son niveau FODMAP :',
@@ -1790,6 +1881,28 @@ const STRINGS = {
     meal_swap_tip: 'Remplace {food} → {alt}',
   },
   it: {
+    // Account / authentication
+    account: 'Account', account_sub: 'Accedi per salvare e sincronizzare il tuo percorso su tutti i dispositivi.',
+    account_signed_in: 'Accesso eseguito', account_manage: 'Gestisci account',
+    sign_in: 'Accedi', sign_up: 'Crea account', sign_out: 'Esci',
+    auth_title_login: 'Bentornato', auth_title_signup: 'Crea il tuo account', auth_title_reset: 'Reimposta password',
+    auth_sub_login: 'Accedi per sincronizzare il tuo percorso su tutti i dispositivi.',
+    auth_sub_signup: 'I tuoi dati restano tuoi — un account li salva e li mantiene sincronizzati.',
+    auth_sub_reset: 'Inserisci la tua email e ti invieremo un link per reimpostarla.',
+    auth_email: 'Email', auth_email_ph: 'tu@esempio.com',
+    auth_password: 'Password', auth_password_ph: 'Almeno 6 caratteri',
+    auth_forgot: 'Password dimenticata?',
+    auth_to_signup: 'Nuovo qui? Crea un account', auth_to_login: 'Hai già un account? Accedi',
+    auth_send_reset: 'Invia link', auth_back_to_login: 'Torna all\'accesso',
+    auth_err_empty: 'Inserisci email e password.',
+    auth_err_email: 'Inserisci un indirizzo email valido.',
+    auth_err_password_short: 'La password deve avere almeno 6 caratteri.',
+    auth_check_email: 'Ci siamo quasi! Controlla la tua email per confermare l\'account, poi accedi.',
+    auth_reset_sent: 'Se questa email è registrata, il link è in arrivo.',
+    auth_signed_out: 'Disconnesso.', auth_welcome_toast: 'Accesso eseguito. Bentornato! 🌱',
+    auth_linked_note: 'I tuoi dati esistenti sono ora collegati al tuo account.',
+    sync_now: 'Sincronizza ora', sync_syncing: 'Sincronizzazione…', sync_last: 'Ultima sincronizzazione {time}', sync_never: 'Non ancora sincronizzato', sync_failed: 'Sincronizzazione non riuscita — riproveremo.',
+    account_sync_sub: 'Le tue voci e gli alimenti personalizzati vengono salvati e sincronizzati automaticamente.',
     continue: 'Continua', back: 'Indietro', save: 'Salva', close: 'Chiudi', gotIt: 'Ho capito', a11y_clear: 'Cancella ricerca', a11y_remove: 'Rimuovi', a11y_add_log: 'Aggiungi voce',
     cancel: 'Annulla', done: 'Fatto', skip: 'Salta',
     tab_home: 'Oggi', tab_foods: 'Alimenti', tab_plan: 'Il mio piano', tab_guide: 'GutGuide',
@@ -1837,7 +1950,7 @@ const STRINGS = {
     band_common: 'Spesso un fattore scatenante', band_sometimes: 'A volte un fattore scatenante', band_rarely: 'Raramente un fattore scatenante',
     band_common_s: 'Spesso', band_sometimes_s: 'A volte', band_rarely_s: 'Raramente',
     recipes_title: 'Ricette',
-    recipes_cultura_sub: 'Pasti amici dell\'intestino che Cultura ama cucinare',
+    recipes_flora_sub: 'Pasti amici dell\'intestino che Flora ama cucinare',
     recipes_upsell_headline: 'Cucina senza limiti',
     recipes_upsell_sub: 'Hai provato {free} di {total} ricette — ecco tutto il resto.',
     recipes_upsell_bullet1: 'Tutte le {n} ricette amiche dell\'intestino',
@@ -1852,8 +1965,8 @@ const STRINGS = {
     recipe_log_btn: 'Registra come pasto',
     meal_breakfast: 'Colazione', meal_lunch: 'Pranzo', meal_dinner: 'Cena', meal_snack: 'Spuntino',
     guide_count: '{n} domande', guide_no_results: 'Nessuna domanda corrisponde alla ricerca. Prova un\'altra parola o argomento.',
-    guide_cultura_title: 'Curiosità sui FODMAP?',
-    guide_cultura_sub: 'Cultura ha risposte oneste e chiare alle domande più frequenti.',
+    guide_flora_title: 'Curiosità sui FODMAP?',
+    guide_flora_sub: 'Flora ha risposte oneste e chiare alle domande più frequenti.',
     scan_limit_title: 'Scansioni mensili esaurite',
     scan_limit_body: 'Hai utilizzato tutte le {n} scansioni IA di questo mese. Il tuo limite si azzera all\'inizio del mese prossimo. Nel frattempo puoi continuare a registrare pasti tramite ricerca o codice a barre — entrambi senza limite.',
     paywall_includes: 'Cosa include Premium',
@@ -1889,7 +2002,7 @@ const STRINGS = {
     safety_warn_body: 'Alcuni dei sintomi che hai indicato sono quelli che i medici chiamano "segnali d\'allarme". Non significa che ci sia qualcosa di grave — ma dovresti essere valutato/a prima di iniziare una dieta restrittiva, perché i cambiamenti alimentari possono mascherare qualcosa che richiede attenzione.',
     safety_warn_ack: 'Ho capito e ho deciso di continuare.',
     onb_step: 'Passo {n} di {total}',
-    onb_cultura_intro: 'Ciao, sono Cultura — la tua amica intestinale',
+    onb_flora_intro: 'Ciao, sono Flora — la tua amica intestinale',
     onb_ibs_q: 'Cos\'è l\'IBS?',
     onb_ibs_card1_title: 'Una condizione molto comune',
     onb_ibs_card1_body: 'La sindrome dell\'intestino irritabile (IBS) colpisce circa 1 persona su 10 nel mondo. Non è una malattia — è un disturbo funzionale dell\'intestino: l\'intestino è sensibile e reattivo, ma non danneggiato.',
@@ -1923,7 +2036,7 @@ const STRINGS = {
     onb_stress_q: 'Livello di stress?', onb_stress_sub: 'Stress e intestino vanno di pari passo.',
     onb_stress_low: 'Prevalentemente calmo/a', onb_stress_mid: 'Gestibile', onb_stress_high: 'Molto stress',
     home_empty_title: 'Prendiamoci cura del tuo intestino',
-    home_empty_body: 'Registra i pasti e come ti senti, individua i pattern e scopri cosa ama il tuo intestino — un giorno alla volta, con Cultura al tuo fianco.',
+    home_empty_body: 'Registra i pasti e come ti senti, individua i pattern e scopri cosa ama il tuo intestino — un giorno alla volta, con Flora al tuo fianco.',
     home_before_start: 'PRIMA DI INIZIARE',
     home_gp_title: 'Consulta il tuo medico di base o un gastroenterologo',
     home_gp_sub: 'FODMAP è uno strumento da usare dopo una diagnosi di IBS. Tocca per vedere come possono aiutarti.',
@@ -1940,12 +2053,12 @@ const STRINGS = {
     home_how_more: 'Leggi di più', home_how_less: 'Mostra meno',
     home_start_elim: 'Inizia la fase di eliminazione',
     home_lets_start: 'Iniziamo',
-    home_today: 'Oggi', home_see_progress: 'Vedi i miei progressi',
+    home_today: 'Oggi', home_yesterday: 'Ieri', home_journal: 'Diario', history_title: 'Cronologia', see_history: 'Vedi tutte le voci', home_see_progress: 'Vedi i miei progressi',
     home_hi_name: 'Ciao {name}', home_hi: 'Ciao', home_journey_day: 'Giorno {n} del tuo percorso intestinale', home_eat_well: 'Mangia bene oggi', picker_select_day: 'Scegli un giorno', meal_select_type: 'Scegli un tipo', progress_level_points: 'Livello {level} · {points} punti', a11y_take_photo: 'Scatta una foto', a11y_week_number: 'Numero della settimana', week_number_ph: 'es. 2',
-    recipes_all: 'Tutte le ricette', home_meals_sub: '4 pasti sicuri in eliminazione scelti per te. Toccane uno per vederlo.', patterns_empty_early: 'Continua a registrare i pasti e come ti senti. Gli schemi di solito emergono dopo circa una settimana di dati.', patterns_empty_none: 'Ancora nessuno schema chiaro. Continua a registrare: più le voci sono costanti, più le analisi sono precise.', patterns_sub: 'Correlazioni dal tuo diario, non diagnosi. Usale per decidere cosa testare.', patterns_window: 'Ultimi {n} giorni', sev_watch: "DA TENERE D'OCCHIO", sev_info: 'NOTATO', sev_good: 'BUON SEGNO', show_less: 'Mostra meno', show_more: 'Mostra altri {n}',
+    recipes_all: 'Tutte le ricette', home_meals_sub: '4 pasti sicuri in eliminazione scelti per te. Toccane uno per vederlo.', patterns_empty_early: 'Continua a registrare i pasti e come ti senti. Gli schemi di solito emergono dopo circa una settimana di dati.', patterns_empty_none: 'Ancora nessuno schema chiaro. Continua a registrare: più le voci sono costanti, più le analisi sono precise.', patterns_sub: 'Correlazioni dal tuo diario, non diagnosi. Usale per decidere cosa testare.', patterns_window: 'Ultimi {n} giorni', sev_watch: "DA TENERE D'OCCHIO", sev_maybe: 'SEGNALE INIZIALE', sev_info: 'NOTATO', sev_good: 'BUON SEGNO', show_less: 'Mostra meno', show_more: 'Mostra altri {n}',
     colony_lv: 'Liv. {n} · {form}', colony_pts: '{n} punti', colony_form_spore: 'Spora', colony_form_sprout: 'Germoglio', colony_form_grown: 'Cresciuta', colony_form_thriving: 'Fiorente', colony_level_form: 'Livello {n} · {form}',
     home_low_fodmap: 'Basso in FODMAP', home_symptoms: 'Sintomi', home_sleep: 'Sonno',
-    home_colony_title: 'La colonia di Cultura', home_see_colony: 'Vedi colonia',
+    home_colony_title: 'La colonia di Flora', home_see_colony: 'Vedi colonia',
     home_colony_complete: 'Completa',
     home_colony_thriving: 'Colonia completa — vai avanti così!',
     home_days_thriving: '{n} {unit} in fioritura',
@@ -1971,15 +2084,15 @@ const STRINGS = {
     phase_reintro_headline: 'Settimana {n} di ~{total}',
     phase_reintro_body: 'Un gruppo FODMAP alla volta. Consulta il tuo piano completo nella scheda Il mio piano.',
     mood_null_title: 'Vediamo come va la giornata',
-    mood_null_sub: 'Registra un pasto o un sintomo e Cultura reagirà.',
-    mood_good_title: 'Cultura si sente serena oggi',
-    mood_good_sub_streak: 'Nessuna fiammata da {n} {unit}. Mantieni il ritmo.',
+    mood_null_sub: 'Registra un pasto o un sintomo e Flora reagirà.',
+    mood_good_title: 'Flora si sente serena oggi',
+    mood_good_sub_streak: 'Nessun sintomo da {n} {unit}. Mantieni il ritmo.',
     mood_good_sub: 'Il tuo intestino sta avendo una buona giornata.',
     mood_soso_title: 'Una giornata così così',
     mood_soso_sub: 'Segnali contrastanti oggi — continua a registrare per trovare la causa.',
-    mood_bad_title: 'Cultura non si sente bene',
+    mood_bad_title: 'Flora non si sente bene',
     mood_bad_sub: 'Una giornata intestinale difficile. Sii gentile con te stesso/a.',
-    colony_title: 'La colonia di Cultura',
+    colony_title: 'La colonia di Flora',
     colony_thriving: 'Colonia fiorente 🎉',
     colony_points_all: '{n} punti · tutti e 12 i microbi',
     colony_points: '{n} punti · {to} al livello {next}',
@@ -1988,17 +2101,17 @@ const STRINGS = {
     colony_row_meals: 'Pasti low-FODMAP', colony_row_meals_how: '+5 per pasto sicuro (max 3/giorno)',
     colony_row_logging: 'Registrazione quotidiana', colony_row_logging_how: '+10 per aver registrato qualcosa quel giorno',
     colony_row_reintro: 'Test di reintroduzione', colony_row_reintro_how: '+50 per test completato',
-    colony_footer: 'Cultura cresce con le tue abitudini intestinali. I giorni difficili non ti tolgono punti — è la costanza che conta.',
+    colony_footer: 'Flora cresce con le tue abitudini intestinali. I giorni difficili non ti tolgono punti — è la costanza che conta.',
     levelup_badge_complete: '🎉 COLONIA COMPLETA',
     levelup_title_complete: 'Una colonia completa e fiorente!',
     levelup_body_complete: 'Hai coltivato tutti e 12 i microbi — una comunità intestinale diversificata e sana. Ora mantienila in fioritura.',
     levelup_badge: 'SALTO DI LIVELLO',
     levelup_title: 'Livello {n}',
-    levelup_body: 'Cultura è ora {form}! Le tue abitudini stanno dando i loro frutti.',
+    levelup_body: 'Flora è ora {form}! Le tue abitudini stanno dando i loro frutti.',
     levelup_member_badge: 'NUOVO MEMBRO DELLA COLONIA',
-    levelup_member_body: 'Un nuovo microbo si è unito alla colonia di Cultura — le tue abitudini stanno dando i loro frutti.',
+    levelup_member_body: 'Un nuovo microbo si è unito alla colonia di Flora — le tue abitudini stanno dando i loro frutti.',
     levelup_btn: 'Ottimo!',
-    lf_meal_low_title: 'Bella scelta!', lf_meal_low_msg: 'Questo pasto è delicato per il tuo intestino. Cultura approva.',
+    lf_meal_low_title: 'Bella scelta!', lf_meal_low_msg: 'Questo pasto è delicato per il tuo intestino. Flora approva.',
     lf_meal_mod_title: 'Pasto moderato', lf_meal_mod_msg: 'Va bene in porzioni più piccole — attento/a all\'accumulo oggi.',
     lf_meal_high_title: 'Pasto ad alto FODMAP', lf_meal_high_msg: 'Questo potrebbe creare disturbi. Osserva come ti senti dopo.',
     lf_symptom_high_title: 'Tieni duro', lf_symptom_high_msg: 'Mi dispiace che tu non ti senta bene. Registrarlo aiuta a trovare la causa.',
@@ -2028,7 +2141,7 @@ const STRINGS = {
     progress_score_good: 'Il tuo intestino ha avuto una settimana tranquilla e stabile',
     progress_score_mid: 'Una settimana mista — alcune cose da osservare',
     progress_score_bad: 'Una settimana difficile — sii gentile con te stesso/a',
-    progress_cultura_body: 'Cultura cresce con le tue abitudini settimanali.',
+    progress_flora_body: 'Flora cresce con le tue abitudini settimanali.',
     log_chooser_title: 'Cosa vuoi registrare?',
     log_meal_sub: 'Cerca alimenti, scansiona o usa l\'IA',
     log_symptom_sub: 'Come ti senti',
@@ -2199,7 +2312,7 @@ const STRINGS = {
     meal_modal_recent: 'Alimenti recenti',
     meal_modal_recent_meals: 'Pasti recenti',
     meal_type_label: 'Tipo', meal_type_breakfast: 'Colazione', meal_type_lunch: 'Pranzo', meal_type_dinner: 'Cena', meal_type_snack: 'Spuntino',
-    meal_edit_foods: 'Alimenti', meal_edit_add: 'Aggiungi alimento', meal_edit_none: 'Nessun alimento — aggiungine almeno uno.',
+    edit_dish: 'Piatto', meal_edit_foods: 'Alimenti', meal_edit_add: 'Aggiungi alimento', meal_edit_none: 'Nessun alimento — aggiungine almeno uno.',
     meal_custom_q: 'Non trovi "{name}"?',
     meal_custom_tip: 'Suggerimento: se è un mix (come la pasta all\'amatriciana), aggiungi invece i singoli ingredienti — otterrai verdetti più precisi.',
     meal_custom_add: 'Scegli il suo livello FODMAP:',
@@ -3510,11 +3623,11 @@ const THEME = {
   rPill: 12,
 };
 
-// ─── MASCOT: CULTURA ─────────────────────────────────────────────────────
+// ─── MASCOT: FLORA ─────────────────────────────────────────────────────
 // A friendly probiotic microbe — the face of GutBloom and its gamification.
 //   `mood`: 'good' | 'soso' | 'bad' — today's expression (legacy 'happy'/'queasy' ok)
 //   `form`: 'spore' | 'sprout' | 'grown' | 'thriving' — evolution stage (level)
-// Always recognisably Cultura: the face stays constant while the body grows and
+// Always recognisably Flora: the face stays constant while the body grows and
 // gains cilia, leaves, sparkles and a glow as she levels up.
 // A fine, wavy cilia fringe all around the body (paramecium-style) — reads as a
 // microbe rather than a sun. `count` cilia are spread evenly; each is a short
@@ -3550,7 +3663,7 @@ const FORMS = {
   grown:    { rBody: 50, body: '#6fa86f', inner: '#bfe0bf', cilia: 18, leaves: 0, glow: false, sparkle: false, specks: 3 },
   thriving: { rBody: 50, body: '#5fa85f', inner: '#b8e0b8', cilia: 18, leaves: 3, glow: true,  sparkle: true,  specks: 4 },
 };
-function Cultura({ size = 140, mood = 'good', form = 'grown', blink = false }) {
+function Flora({ size = 140, mood = 'good', form = 'grown', blink = false }) {
   const m = mood === 'happy' ? 'good' : mood === 'queasy' ? 'bad' : mood;
   const bad = m === 'bad';
   const soso = m === 'soso';
@@ -3633,10 +3746,10 @@ function Cultura({ size = 140, mood = 'good', form = 'grown', blink = false }) {
   );
 }
 
-// Cultura that gently breathes (a subtle scale pulse) and blinks at natural,
+// Flora that gently breathes (a subtle scale pulse) and blinks at natural,
 // slightly-random intervals. Used where she's the hero of the screen (the Today
 // mood card) to feel alive without being distracting.
-function BlinkingCultura(props) {
+function BlinkingFlora(props) {
   const [blink, setBlink] = useState(false);
   const breathe = useRef(new Animated.Value(0)).current; // bob + breathe
   const sway = useRef(new Animated.Value(0)).current;     // gentle side tilt
@@ -3663,12 +3776,12 @@ function BlinkingCultura(props) {
   const rotate = sway.interpolate({ inputRange: [0, 1], outputRange: ['-2.5deg', '2.5deg'] });
   return (
     <Animated.View style={{ transform: [{ translateY }, { scale }, { rotate }] }}>
-      <Cultura {...props} blink={blink} />
+      <Flora {...props} blink={blink} />
     </Animated.View>
   );
 }
 
-// Branded launch animation: Cultura springs in and breathes while a ring of
+// Branded launch animation: Flora springs in and breathes while a ring of
 // little probiotic dots orbits her (an on-brand spinner), and the wordmark
 // fades up. Shown while the app hydrates.
 function SplashScreen({ t }) {
@@ -3701,7 +3814,7 @@ function SplashScreen({ t }) {
           })}
         </Animated.View>
         <Animated.View style={{ transform: [{ scale: Animated.multiply(enterScale, breatheScale) }] }}>
-          <Cultura size={104} mood="good" />
+          <Flora size={104} mood="good" />
         </Animated.View>
       </View>
       <Animated.View style={{ opacity: enter, transform: [{ translateY: wordY }], alignItems: 'center', marginTop: 6 }}>
@@ -3751,8 +3864,8 @@ function computeGamification(log, reintroProgress) {
     breakdown: { logging, symptomFree, adherence, reintro },
   };
 }
-// Cultura's evolution form grows with level milestones.
-function culturaForm(level) {
+// Flora's evolution form grows with level milestones.
+function floraForm(level) {
   if (level >= 7) return 'thriving';
   if (level >= 4) return 'grown';
   if (level >= 2) return 'sprout';
@@ -3983,9 +4096,9 @@ function ColonyCluster({ size = 46, colonySize = 0, centered = false }) {
 // Two wide story illustrations for the My Plan phases, in the same sage/microbe
 // visual language. Width-driven; height keeps the 220×150 aspect.
 
-// Elimination: Cultura cheerfully, politely waving off a glass of milk — "we're
+// Elimination: Flora cheerfully, politely waving off a glass of milk — "we're
 // taking a break from this one for now", not "this food is bad".
-function CulturaPause({ width = 190 }) {
+function FloraPause({ width = 190 }) {
   return (
     <Svg width={width} height={width * 150 / 220} viewBox="0 0 220 150">
       {/* milk glass */}
@@ -4022,9 +4135,9 @@ function CulturaPause({ width = 190 }) {
   );
 }
 
-// Elimination variant B: Cultura presenting a clean plate of safe low-FODMAP
+// Elimination variant B: Flora presenting a clean plate of safe low-FODMAP
 // foods — positive framing ("here's what you can eat") vs the original "no thanks".
-function CulturaPauseB({ width = 190 }) {
+function FloraPauseB({ width = 190 }) {
   return (
     <Svg width={width} height={width * 150 / 220} viewBox="0 0 220 150">
       {/* plate base + shadow */}
@@ -4040,7 +4153,7 @@ function CulturaPauseB({ width = 190 }) {
       {/* safe badge */}
       <Circle cx="100" cy="74" r="11" fill="#e8f5e8" stroke="#a8d4a8" strokeWidth="1.5" />
       <Path d="M95 74 l3.5 3.5 6.5 -7" stroke="#2d6a2d" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      {/* Cultura body + cilia — wavy fringe on the exposed (right) side */}
+      {/* Flora body + cilia — wavy fringe on the exposed (right) side */}
       <G stroke={THEME.primary} strokeWidth="3" strokeLinecap="round" fill="none">
         {ciliaFringe(42, 13, 158, 80, 11, 3, [-100, 130]).map((d, i) => <Path key={i} d={d} />)}
       </G>
@@ -4061,9 +4174,9 @@ function CulturaPauseB({ width = 190 }) {
   );
 }
 
-// Elimination variant C: Cultura in a calm, centred pose with a small 6-week
+// Elimination variant C: Flora in a calm, centred pose with a small 6-week
 // progress row below — emphasises the structured, time-boxed nature of the phase.
-function CulturaPauseC({ width = 190 }) {
+function FloraPauseC({ width = 190 }) {
   const weeks = [0, 1, 2, 3, 4, 5];
   return (
     <Svg width={width} height={width * 150 / 220} viewBox="0 0 220 150">
@@ -4083,7 +4196,7 @@ function CulturaPauseC({ width = 190 }) {
         );
       })}
       <SvgText x="110" y="112" textAnchor="middle" fontSize="9.5" fill={THEME.textMuted} fontWeight="700" letterSpacing="1">6 WEEKS</SvgText>
-      {/* Cultura body + cilia — wavy fringe over the top and sides (tracker text below) */}
+      {/* Flora body + cilia — wavy fringe over the top and sides (tracker text below) */}
       <G stroke={THEME.primary} strokeWidth="3" strokeLinecap="round" fill="none">
         {ciliaFringe(42, 15, 110, 68, 11, 3.2, [130, 410]).map((d, i) => <Path key={i} d={d} />)}
       </G>
@@ -4101,9 +4214,9 @@ function CulturaPauseC({ width = 190 }) {
   );
 }
 
-// Reintroduction: Cultura peeking over three covered dishes (cloches), curious
+// Reintroduction: Flora peeking over three covered dishes (cloches), curious
 // and excited — "let's try one food at a time and see how your body responds".
-function CulturaExplore({ width = 190 }) {
+function FloraExplore({ width = 190 }) {
   const cloche = (cx, tint) => (
     <G key={cx}>
       <Ellipse cx={cx} cy={132} rx={26} ry={5} fill="#d8e0d8" />
@@ -4140,12 +4253,12 @@ function CulturaExplore({ width = 190 }) {
   );
 }
 
-// Empty-state hero: Cultura lovingly tending a little potted sprout — caring for
+// Empty-state hero: Flora lovingly tending a little potted sprout — caring for
 // her own gut health. A heart floats above. Same sage/microbe visual language.
-function CulturaCare({ width = 210, blink = false, showHeart = true }) {
+function FloraCare({ width = 210, blink = false, showHeart = true }) {
   return (
     <Svg width={width} height={width * 150 / 220} viewBox="0 0 220 150">
-      {/* heart (static; the animated version is overlaid in AnimatedCulturaCare) */}
+      {/* heart (static; the animated version is overlaid in AnimatedFloraCare) */}
       {showHeart && <Path d="M110 13 C108 7 99 7 99 15 C99 21 110 27 110 27 C110 27 121 21 121 15 C121 7 112 7 110 13 Z" fill="#f2a8a8" />}
       {/* cilia — wavy fringe on the upper sides (heart sits at top-centre, arms below) */}
       <G stroke={THEME.primary} strokeWidth="3" strokeLinecap="round" fill="none">
@@ -4189,9 +4302,9 @@ function CulturaCare({ width = 210, blink = false, showHeart = true }) {
   );
 }
 
-// CulturaCare stays grounded (it's a vase + sprout). The heart is overlaid as its
+// FloraCare stays grounded (it's a vase + sprout). The heart is overlaid as its
 // own RN view so it pulses about its centre (a lub-dub beat), and she blinks.
-function AnimatedCulturaCare({ width = 216 }) {
+function AnimatedFloraCare({ width = 216 }) {
   const height = width * 150 / 220;
   const heart = useRef(new Animated.Value(0)).current;
   const [blink, setBlink] = useState(false);
@@ -4216,7 +4329,7 @@ function AnimatedCulturaCare({ width = 216 }) {
   const vbX = 95, vbY = 4, vbW = 30, vbH = 26;
   return (
     <View style={{ width, height }}>
-      <CulturaCare width={width} blink={blink} showHeart={false} />
+      <FloraCare width={width} blink={blink} showHeart={false} />
       <Animated.View pointerEvents="none" style={{ position: 'absolute', left: vbX * k, top: vbY * k, width: vbW * k, height: vbH * k, transform: [{ scale }] }}>
         <Svg width={vbW * k} height={vbH * k} viewBox={`${vbX} ${vbY} ${vbW} ${vbH}`}>
           <Path d="M110 13 C108 7 99 7 99 15 C99 21 110 27 110 27 C110 27 121 21 121 15 C121 7 112 7 110 13 Z" fill="#f2a8a8" />
@@ -4226,9 +4339,9 @@ function AnimatedCulturaCare({ width = 216 }) {
   );
 }
 
-// Animated cooking Cultura for the recipes tile: a chef-hatted microbe stirring
+// Animated cooking Flora for the recipes tile: a chef-hatted microbe stirring
 // a pot, with two steam puffs rising on a gentle loop. Self-contained animation.
-function CulturaCooking({ size = 60 }) {
+function FloraCooking({ size = 60 }) {
   const s1 = useRef(new Animated.Value(0)).current;
   const s2 = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -4281,9 +4394,9 @@ function CulturaCooking({ size = 60 }) {
   );
 }
 
-// Cultura presenting an open cookbook, with a premium sparkle — for the
+// Flora presenting an open cookbook, with a premium sparkle — for the
 // "unlock all recipes" tile. Distinct from the cooking/cloche illustrations.
-function CulturaCookbook({ size = 70 }) {
+function FloraCookbook({ size = 70 }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 100 100">
       {/* cilia — wavy fringe across the top (arms/book below) */}
@@ -4324,9 +4437,9 @@ function CulturaCookbook({ size = 70 }) {
   );
 }
 
-// Cultura the guide: pointing at a bright idea (lightbulb) — for the GutGuide
+// Flora the guide: pointing at a bright idea (lightbulb) — for the GutGuide
 // intro. Signals friendly, plain-English knowledge.
-function CulturaGuide({ size = 64 }) {
+function FloraGuide({ size = 64 }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 100 100">
       {/* idea rays */}
@@ -4361,9 +4474,9 @@ function CulturaGuide({ size = 64 }) {
   );
 }
 
-// Cultura gently bobbing up and down on a loop — a lightweight hero animation
+// Flora gently bobbing up and down on a loop — a lightweight hero animation
 // for screens like the paywall. Defaults to her thriving form (sparkles + crown).
-function FloatingCultura({ size = 120, form = 'thriving', mood = 'good' }) {
+function FloatingFlora({ size = 120, form = 'thriving', mood = 'good' }) {
   const y = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(Animated.sequence([
@@ -4376,12 +4489,12 @@ function FloatingCultura({ size = 120, form = 'thriving', mood = 'good' }) {
   const translateY = y.interpolate({ inputRange: [0, 1], outputRange: [0, -8] });
   return (
     <Animated.View style={{ transform: [{ translateY }] }}>
-      <Cultura size={size} form={form} mood={mood} />
+      <Flora size={size} form={form} mood={mood} />
     </Animated.View>
   );
 }
 
-// A premium hero: a soft golden glow halo behind a floating Cultura, with a few
+// A premium hero: a soft golden glow halo behind a floating Flora, with a few
 // sparkles twinkling around her. Used on the paywall to feel aspirational.
 function PremiumHero() {
   const W = 220, H = 190;
@@ -4417,7 +4530,7 @@ function PremiumHero() {
         </Defs>
         <Circle cx={W / 2} cy={H * 0.46} r={W / 2} fill="url(#premiumGlow)" />
       </Svg>
-      <FloatingCultura size={128} form="thriving" mood="good" />
+      <FloatingFlora size={128} form="thriving" mood="good" />
       {stars.map((st, i) => (
         <Animated.Text key={i} style={[{ position: 'absolute', left: st.left, top: st.top, fontSize: st.size }, sparkle(tw[i])]}>✨</Animated.Text>
       ))}
@@ -4425,14 +4538,14 @@ function PremiumHero() {
   );
 }
 
-// Maps a 0–100 gut score to a Cultura mood + a friendly status message.
+// Maps a 0–100 gut score to a Flora mood + a friendly status message.
 function moodFromScore(score, symptomFreeDays, t) {
   if (!t) {
     // fallback for callers that haven't threaded t yet
-    if (score == null) return { mood: 'soso', title: "Let's see how today goes", sub: 'Log a meal or symptom and Cultura will react.' };
-    if (score >= 75) return { mood: 'good', title: 'Cultura feels calm today', sub: symptomFreeDays > 0 ? `No flare-ups in ${symptomFreeDays} day${symptomFreeDays === 1 ? '' : 's'}. Keep it steady.` : 'Your gut is having a good day.' };
+    if (score == null) return { mood: 'soso', title: "Let's see how today goes", sub: 'Log a meal or symptom and Flora will react.' };
+    if (score >= 75) return { mood: 'good', title: 'Flora feels calm today', sub: symptomFreeDays > 0 ? `No flare-ups in ${symptomFreeDays} day${symptomFreeDays === 1 ? '' : 's'}. Keep it steady.` : 'Your gut is having a good day.' };
     if (score >= 50) return { mood: 'soso', title: 'A so-so day', sub: 'Mixed signals today — keep logging to spot the cause.' };
-    return { mood: 'bad', title: 'Cultura is feeling rough', sub: 'A harder gut day. Be gentle with yourself.' };
+    return { mood: 'bad', title: 'Flora is feeling rough', sub: 'A harder gut day. Be gentle with yourself.' };
   }
   if (score == null) return { mood: 'soso', title: t('mood_null_title'), sub: t('mood_null_sub') };
   if (score >= 75) return { mood: 'good', title: t('mood_good_title'), sub: symptomFreeDays > 0 ? t('mood_good_sub_streak', { n: symptomFreeDays, unit: symptomFreeDays === 1 ? t('home_day') : t('home_days') }) : t('mood_good_sub') };
@@ -5261,7 +5374,7 @@ function detectPatterns(log, lang, windowDays) {
       // Intermediate tier: some correlation but not strong enough to flag firmly.
       patterns.push({
         id: 'food_maybe_' + id,
-        severity: 'info',
+        severity: 'maybe',
         icon: food.emoji || '🍽️',
         title: patternText('pat_food_maybe_t', { food: fn }, lang) || `${food.name} — a possible link`,
         detail: patternText('pat_food_maybe_d', { n: st.followedBySymptom, total: st.appeared, food: fn }, lang) || `You logged symptoms after ${st.followedBySymptom} of the ${st.appeared} meals with ${food.name.toLowerCase()} — a weak, early signal. Keep logging to see if it holds.`,
@@ -5347,7 +5460,7 @@ function detectPatterns(log, lang, windowDays) {
   }
 
   // Order: watch first (most actionable), then info, then good news
-  const rank = { watch: 0, info: 1, good: 2 };
+  const rank = { watch: 0, maybe: 1, info: 2, good: 3 };
   patterns.sort((a, b) => rank[a.severity] - rank[b.severity]);
   return patterns;
 }
@@ -5549,12 +5662,16 @@ export default function App() {
   const [periodActive, setPeriodActive] = useState(false);
   const [currentPhase, setCurrentPhase] = useState('not_started');
   const [phaseStartDate, setPhaseStartDate] = useState(null);
+  // Supabase auth session. Null = signed out (the app is fully usable signed out —
+  // an account just backs up and syncs data). `user` is the logged-in account.
+  const [session, setSession] = useState(null);
+  const user = session ? session.user : null;
 
   // Gamification level-up: `celebratedLevel` is the highest level already
   // acknowledged; `levelUp` holds a level number while its celebration shows.
   const [celebratedLevel, setCelebratedLevel] = useState(null);
   const [levelUp, setLevelUp] = useState(null);
-  const [feedback, setFeedback] = useState(null); // post-log Cultura reaction
+  const [feedback, setFeedback] = useState(null); // post-log Flora reaction
 
   // Hydration: app does not render UI until persisted state has loaded.
   // This prevents a flicker where onboarding briefly shows for a returning user.
@@ -5674,8 +5791,142 @@ export default function App() {
   const showToast = (msg) => { setToast(msg); AccessibilityInfo.announceForAccessibility(msg); setTimeout(() => setToast(null), 2500); };
   const dayCount = log.length === 0 ? 0 : Math.max(1, Math.floor((Date.now() - parseInt(log[0].id.slice(1).replace(/\D/g, ''))) / 86400000) + 1);
 
+  // ── ACCOUNT / AUTH + SYNC ─────────────────────────────────────────────
+  // Refs mirror the latest state so async sync callbacks (registered once on
+  // mount) never read stale values from an old render's closure.
+  const logRef = useRef(log); logRef.current = log;
+  const customFoodsRef = useRef(customFoods); customFoodsRef.current = customFoods;
+  const userRef = useRef(user); userRef.current = user;
+
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState(null); // ms timestamp of last successful sync
+  const tsMs = (x) => (x ? Date.parse(x) : 0);
+
+  // First login stamps the signed-in user's id onto every local record that
+  // still has `ownerId: null`, so sync knows those records are theirs.
+  const backfillOwnerId = (ownerId) => {
+    const now = new Date().toISOString();
+    setCustomFoods(prev => {
+      let changed = false;
+      const next = prev.map(f => {
+        if (f.ownerId == null) { changed = true; return Object.assign({}, f, { ownerId, updatedAt: now }); }
+        return f;
+      });
+      return changed ? next : prev;
+    });
+  };
+
+  // Every syncable local record → a row for the `records` table. Log entries take
+  // their updated_at from the entry timestamp (they don't store one locally yet);
+  // custom foods already carry updatedAt. The full record is stored as `data` jsonb.
+  const collectLocalRows = (ownerId) => {
+    const nowIso = new Date().toISOString();
+    const rows = [];
+    logRef.current.forEach(e => rows.push({ owner_id: ownerId, id: e.id, kind: 'log', data: e, updated_at: e.updatedAt || e.timestamp || nowIso, deleted: false }));
+    customFoodsRef.current.forEach(f => rows.push({ owner_id: ownerId, id: f.id, kind: 'customFood', data: f, updated_at: f.updatedAt || f.createdAt || nowIso, deleted: false }));
+    return rows;
+  };
+
+  // Merge remote rows into local state, last-write-wins by updated_at, honoring
+  // tombstones. Additive: nothing local is dropped unless the server says deleted.
+  const mergeRemote = (remoteRows) => {
+    const logRows = remoteRows.filter(r => r.kind === 'log');
+    const foodRows = remoteRows.filter(r => r.kind === 'customFood');
+    if (logRows.length) {
+      setLog(prev => {
+        const map = new Map(prev.map(e => [e.id, e]));
+        logRows.forEach(r => {
+          const local = map.get(r.id);
+          const localUpd = local ? tsMs(local.updatedAt || local.timestamp) : -1;
+          if (!local || tsMs(r.updated_at) > localUpd) { if (r.deleted) map.delete(r.id); else map.set(r.id, r.data); }
+        });
+        return Array.from(map.values()).sort((a, b) => tsMs(a.timestamp) - tsMs(b.timestamp));
+      });
+    }
+    if (foodRows.length) {
+      setCustomFoods(prev => {
+        const map = new Map(prev.map(f => [f.id, f]));
+        foodRows.forEach(r => {
+          const local = map.get(r.id);
+          const localUpd = local ? tsMs(local.updatedAt || local.createdAt) : -1;
+          if (!local || tsMs(r.updated_at) > localUpd) { if (r.deleted) map.delete(r.id); else map.set(r.id, r.data); }
+        });
+        const next = Array.from(map.values());
+        next.forEach(registerCustomFood);
+        return next;
+      });
+    }
+  };
+
+  // Full two-way sync: push all local rows, then pull the user's rows and merge.
+  // Failures are non-fatal — the app stays usable offline and the next trigger retries.
+  const syncingRef = useRef(false);
+  const syncNow = async (ownerId) => {
+    if (!ownerId || syncingRef.current) return;
+    syncingRef.current = true; setSyncing(true);
+    try {
+      const rows = collectLocalRows(ownerId);
+      if (rows.length) {
+        const { error: upErr } = await supabase.from('records').upsert(rows, { onConflict: 'owner_id,id' });
+        if (upErr) throw upErr;
+      }
+      const { data, error: selErr } = await supabase.from('records').select('id,kind,data,updated_at,deleted').eq('owner_id', ownerId);
+      if (selErr) throw selErr;
+      if (Array.isArray(data)) mergeRemote(data);
+      setLastSync(Date.now());
+    } catch (e) {
+      console.warn('[gutly] sync failed:', e && e.message);
+      showToast(t('sync_failed'));
+    } finally {
+      syncingRef.current = false; setSyncing(false);
+    }
+  };
+
+  // Track whether we've already backfilled this session so a token refresh that
+  // re-fires SIGNED_IN doesn't run it twice.
+  const backfilledRef = useRef(false);
+  useEffect(() => {
+    let mounted = true;
+    // Restore a persisted session on launch (fires as INITIAL_SESSION, no toast) and pull.
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      setSession(data.session);
+      if (data.session && data.session.user) syncNow(data.session.user.id);
+    });
+    const { data: authSub } = supabase.auth.onAuthStateChange((event, sess) => {
+      if (!mounted) return;
+      setSession(sess);
+      if (event === 'SIGNED_IN' && sess && sess.user) {
+        if (!backfilledRef.current) { backfilledRef.current = true; backfillOwnerId(sess.user.id); }
+        showToast(t('auth_welcome_toast'));
+        syncNow(sess.user.id);
+      }
+      if (event === 'SIGNED_OUT') { backfilledRef.current = false; setLastSync(null); }
+    });
+    return () => { mounted = false; authSub.subscription.unsubscribe(); };
+  }, []);
+
+  // Push local changes up shortly after they happen (debounced), while signed in.
+  useEffect(() => {
+    if (!hydrated || !user) return;
+    const id = setTimeout(() => {
+      const rows = collectLocalRows(user.id);
+      if (rows.length) supabase.from('records').upsert(rows, { onConflict: 'owner_id,id' }).then(({ error }) => { if (error) console.warn('[gutly] push failed:', error.message); });
+    }, 1500);
+    return () => clearTimeout(id);
+  }, [log, customFoods, user, hydrated]);
+
+  // Pull fresh data when the app returns to the foreground (catches edits from another device).
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => { if (st === 'active' && userRef.current) syncNow(userRef.current.id); });
+    return () => sub.remove();
+  }, []);
+
+  const signOut = async () => { await supabase.auth.signOut(); showToast(t('auth_signed_out')); };
+
   // Wipe all persisted data and return to onboarding — a fresh start.
   const resetApp = async () => {
+    await supabase.auth.signOut().catch(() => {});
     await AsyncStorage.clear();
     setProfile({});
     setLog([]);
@@ -5846,7 +6097,7 @@ export default function App() {
         setTimeout(() => setPendingReintroPrompt({ foodName: food?.name || 'food', categoryId: testCategory }), 600);
       }
     }
-    // Cultura reacts to the meal — unless a reintro prompt is about to take over.
+    // Flora reacts to the meal — unless a reintro prompt is about to take over.
     if (!reintroMatched) setFeedback(logFeedback('meal', categorizeMeal(items || [], reintroProgress).overall, t));
   };
 
@@ -5876,7 +6127,7 @@ export default function App() {
     <SafeAreaProvider>
     <SafeAreaViewSC style={s.root} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor={THEME.bg} />
-      {tab === 'home' && <HomeScreen profile={profile} log={log} dayCount={dayCount} reintroProgress={reintroProgress} periodActive={periodActive} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onStartElimination={startElimination} onStartReintroduction={startReintroduction} onOpenSettings={() => setModal('settings')} onLogPeriod={() => { setPeriodActive(!periodActive); showToast(periodActive ? t('toast_period_ended') : t('toast_period_started')); }} onEditEntry={(entry) => setModal({ type: 'edit', entry })} onQuickLog={(type) => setModal(type)} onOpenRecipes={() => openRecipes('home')} onOpenRecipe={(recipe) => setModal({ type: 'recipe', recipe })} onOpenColony={() => setModal('colony')} onOpenProgress={() => setModal('progress')} onGoToPlan={() => setTab('plan')} onDiagnosed={() => { setProfile(p => Object.assign({}, p, { ibsDiagnosed: 'yes' })); showToast(t('toast_diagnosed')); }} lang={lang} t={t} />}
+      {tab === 'home' && <HomeScreen profile={profile} log={log} dayCount={dayCount} reintroProgress={reintroProgress} periodActive={periodActive} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onStartElimination={startElimination} onStartReintroduction={startReintroduction} onOpenSettings={() => setModal('settings')} onLogPeriod={() => { setPeriodActive(!periodActive); showToast(periodActive ? t('toast_period_ended') : t('toast_period_started')); }} onEditEntry={(entry) => setModal({ type: 'edit', entry })} onQuickLog={(type) => setModal(type)} onOpenHistory={() => setModal('history')} onOpenRecipes={() => openRecipes('home')} onOpenRecipe={(recipe) => setModal({ type: 'recipe', recipe })} onOpenColony={() => setModal('colony')} onOpenProgress={() => setModal('progress')} onGoToPlan={() => setTab('plan')} onDiagnosed={() => { setProfile(p => Object.assign({}, p, { ibsDiagnosed: 'yes' })); showToast(t('toast_diagnosed')); }} lang={lang} t={t} />}
       {tab === 'recipes' && <RecipesScreen onOpenRecipe={(recipe) => setModal({ type: 'recipe', recipe })} onBack={() => setTab(recipesReturn)} backLabel={recipesReturn === 'foods' ? 'Foods' : 'Home'} isPremium={isPremium} freeLimit={FREE_RECIPE_LIMIT} onUpsell={() => setModal({ type: 'paywall', reason: 'recipes' })} t={t} lang={lang} />}
       {tab === 'foods' && <FoodExplorerScreen reintroProgress={reintroProgress} onOpenRecipes={() => openRecipes('foods')} profile={profile} t={t} lang={lang} />}
       {tab === 'plan' && <PlanScreen profile={profile} reintroProgress={reintroProgress} periodActive={periodActive} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onStartElimination={startElimination} onStartReintroduction={startReintroduction} activeTest={activeTest} onLogReintroDay={logReintroDay} onCancelTest={cancelActiveTest} onPickTestCategory={(catId) => setModal({ type: 'startTest', categoryId: catId })} nextAction={nextAction} isPremium={isPremium} freeReintroLimit={FREE_REINTRO_CATEGORIES} onUpsell={() => setModal({ type: 'paywall', reason: 'reintro' })} t={t} />}
@@ -5893,8 +6144,10 @@ export default function App() {
       <AIScanModal visible={modal === 'aiscan'} onClose={() => setModal(null)} scansRemaining={scansRemaining} onComplete={() => { recordScanUsed(); setModal(null); showToast(t('toast_ai_logged')); }} />
       <ScanLimitModal visible={modal === 'scanLimit'} onClose={() => setModal(null)} allowance={PREMIUM_SCANS_PER_MONTH} t={t} />
       <PaywallModal visible={modal === 'paywall' || modal?.type === 'paywall'} reason={modal?.reason} onClose={() => setModal(null)} t={t} onUpgrade={() => { setIsPremium(true); setModal(null); showToast(t('toast_welcome_premium')); }} />
-      <SettingsModal visible={modal === 'settings'} onClose={() => setModal(null)} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onOverride={overridePhaseWeek} profile={profile} setProfile={setProfile} isPremium={isPremium} onUpgrade={() => setModal({ type: 'paywall', reason: null })} onExport={() => { if (isPremium) setModal('export'); else setModal({ type: 'paywall', reason: 'export' }); }} langPref={langPref} setLangPref={setLangPref} onResetApp={() => { setModal(null); resetApp(); }} onSeedDemo={seedDemo} onTogglePremium={() => setIsPremium(p => !p)} onPreviewLevelUp={(opts) => { setModal(null); setTimeout(() => setLevelUp(opts), 350); }} customFoods={customFoods} onUpdateCustomFood={updateCustomFood} onDeleteCustomFood={deleteCustomFood} t={t} />
+      <SettingsModal visible={modal === 'settings'} onClose={() => setModal(null)} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onOverride={overridePhaseWeek} profile={profile} setProfile={setProfile} isPremium={isPremium} onUpgrade={() => setModal({ type: 'paywall', reason: null })} onExport={() => { if (isPremium) setModal('export'); else setModal({ type: 'paywall', reason: 'export' }); }} langPref={langPref} setLangPref={setLangPref} onResetApp={() => { setModal(null); resetApp(); }} onSeedDemo={seedDemo} onTogglePremium={() => setIsPremium(p => !p)} onPreviewLevelUp={(opts) => { setModal(null); setTimeout(() => setLevelUp(opts), 350); }} customFoods={customFoods} onUpdateCustomFood={updateCustomFood} onDeleteCustomFood={deleteCustomFood} user={user} onOpenAccount={() => { setModal(null); setTimeout(() => setModal('account'), 250); }} onSignOut={signOut} syncing={syncing} lastSync={lastSync} onSync={() => user && syncNow(user.id)} t={t} />
+      <AuthModal visible={modal === 'account'} onClose={() => setModal(null)} user={user} onSignOut={signOut} t={t} />
       <EditEntryModal visible={modal?.type === 'edit'} entry={modal?.entry} onClose={() => setModal(null)} onUpdate={updateLogEntry} onDelete={deleteLogEntry} onLogAgain={(e) => onMealSave(e.items, new Date(), e.mealType, e.mealDishes)} lang={lang} t={t} />
+      <HistoryModal visible={modal === 'history'} onClose={() => setModal(null)} log={log} reintroProgress={reintroProgress} onEditEntry={(entry) => setModal({ type: 'edit', entry })} lang={lang} t={t} />
       <StartTestModal visible={modal?.type === 'startTest'} categoryId={modal?.categoryId} onClose={() => setModal(null)} onStart={(catId, foodId) => { startReintroTest(catId, foodId); setModal(null); }} t={t} />
       <RecipeDetailModal visible={modal?.type === 'recipe'} recipe={modal?.recipe} onClose={() => setModal(null)} lang={lang} t={t} onLogAsMeal={(recipe) => { onMealSave(recipe.ingredientIds.map(id => makeMealItem(id)), new Date()); }} />
       <ExportModal visible={modal === 'export'} onClose={() => setModal(null)} report={buildDoctorReport({ profile, log, reintroProgress, testHistory, currentPhase, phaseStartDate }, lang)} t={t} />
@@ -5989,7 +6242,7 @@ function SafetyStep({ profile, setProfile, t }) {
 function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, t }) {
   const steps = [
     { type: 'text', q: "What's your name?", sub: 'Just your first name is fine.', key: 'name', placeholder: 'Your name' },
-    { type: 'info', key: '_ibs_info', q: t('onb_ibs_q'), culturaMood: 'soso',
+    { type: 'info', key: '_ibs_info', q: t('onb_ibs_q'), floraMood: 'soso',
       cards: [
         { icon: '🫶', title: t('onb_ibs_card1_title'), body: t('onb_ibs_card1_body') },
         { icon: '⚡', title: t('onb_ibs_card2_title'), body: t('onb_ibs_card2_body') },
@@ -6001,7 +6254,7 @@ function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, t })
       { id: 'yes', icon: '🩸', label: t('onb_menstruate_yes') },
       { id: 'no', icon: '🚫', label: t('onb_menstruate_no') },
     ]},
-    { type: 'info', key: '_fodmap_info', q: t('onb_fodmap_q'), culturaMood: 'good',
+    { type: 'info', key: '_fodmap_info', q: t('onb_fodmap_q'), floraMood: 'good',
       cards: [
         { icon: '🔬', title: t('onb_fodmap_card1_title'), body: t('onb_fodmap_card1_body') },
         { icon: '🥬', title: t('onb_fodmap_card2_title'), body: t('onb_fodmap_card2_body') },
@@ -6082,14 +6335,14 @@ function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, t })
       <Text style={{ fontSize: 11, color: '#647264', marginBottom: 24, marginLeft: 44 }}>{t('onb_step', { n: step + 1, total: steps.length })}</Text>
       {step === 0 && (
         <View style={{ alignItems: 'center', marginBottom: 16 }}>
-          <Cultura size={120} />
-          <Text style={{ fontSize: 13, color: THEME.textMuted, marginTop: 6 }}>{t('onb_cultura_intro')}</Text>
+          <Flora size={120} />
+          <Text style={{ fontSize: 13, color: THEME.textMuted, marginTop: 6 }}>{t('onb_flora_intro')}</Text>
         </View>
       )}
       {current.type === 'info' ? (
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
           <View style={{ alignItems: 'center', marginBottom: 20 }}>
-            <Cultura size={100} mood={current.culturaMood} />
+            <Flora size={100} mood={current.floraMood} />
           </View>
           <Text style={{ fontSize: 26, fontWeight: '700', letterSpacing: -0.5, marginBottom: 20 }}>{current.q}</Text>
           {current.cards.map((card, i) => (
@@ -6167,10 +6420,10 @@ function MetricTile({ value, unit, label, icon }) {
 // adherence/symptom bars and quick metric tiles. The score is derived only from
 // what the app actually tracks — low-FODMAP adherence and symptom load today —
 // so it stays honest rather than inventing a number.
-// Derive today's reactive numbers + Cultura mood/form from the log. Used by the
+// Derive today's reactive numbers + Flora mood/form from the log. Used by the
 // Today hero (mascot mood) and the stats sheet below it.
 function homeStats(log, reintroProgress, symptomFreeCount, t) {
-  const form = culturaForm(computeGamification(log, reintroProgress).level);
+  const form = floraForm(computeGamification(log, reintroProgress).level);
   const todayKey = new Date().toISOString().slice(0, 10);
   const today = log.filter(e => (e.timestamp || '').slice(0, 10) === todayKey);
   const todayMeals = today.filter(e => e.type === 'meal');
@@ -6202,11 +6455,11 @@ function homeStats(log, reintroProgress, symptomFreeCount, t) {
   };
 }
 
-// The gamification hero: Cultura's evolving form + a growing colony of friends,
+// The gamification hero: Flora's evolving form + a growing colony of friends,
 // fed by the four point sources. Tapping it opens a breakdown of how to earn more.
 function ColonyCard({ log, reintroProgress, onOpenBreakdown, t }) {
   const g = computeGamification(log, reintroProgress);
-  const form = culturaForm(g.level);
+  const form = floraForm(g.level);
   const complete = g.colonySize >= 12;
   const streak = complete ? calmStreak(log) : 0;
 
@@ -6314,7 +6567,7 @@ function AppBar({ title, onBack, variant = 'large', right = null, backIcon = 'ar
 // each of the four point sources contributed.
 function ColonyModal({ visible, onClose, log, reintroProgress, t }) {
   const g = computeGamification(log, reintroProgress);
-  const form = culturaForm(g.level);
+  const form = floraForm(g.level);
   const complete = g.colonySize >= 12;
   const streak = complete ? calmStreak(log) : 0;
   const rows = [
@@ -6329,7 +6582,7 @@ function ColonyModal({ visible, onClose, log, reintroProgress, t }) {
         <AppBar title={t('colony_title')} onBack={onClose} t={t} />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
           <View style={{ alignItems: 'center', marginBottom: 8 }}>
-            <Cultura size={140} mood="good" form={form} />
+            <Flora size={140} mood="good" form={form} />
             {complete ? (
               <>
                 <Text style={{ fontSize: 22, fontWeight: '700', color: THEME.ink, marginTop: 8 }}>{t('colony_thriving')}</Text>
@@ -6375,7 +6628,7 @@ function ColonyModal({ visible, onClose, log, reintroProgress, t }) {
   );
 }
 
-// Celebratory overlay shown when Cultura levels up: she springs in while a
+// Celebratory overlay shown when Flora levels up: she springs in while a
 // ring of sparkles bursts outward. Driven by the Animated API (no deps).
 function LevelUpCelebration({ visible, level, complete, onClose, t }) {
   const scale = useRef(new Animated.Value(0)).current;
@@ -6391,7 +6644,7 @@ function LevelUpCelebration({ visible, level, complete, onClose, t }) {
     }
   }, [visible, level]);
   if (!visible) return null;
-  const form = complete ? 'thriving' : culturaForm(level);
+  const form = complete ? 'thriving' : floraForm(level);
   // Each level adds one colony microbe; the newest is at index (colonySize-1).
   const colonyNow = Math.max(0, Math.min(12, level - 1));
   const newSpecies = (((colonyNow - 1) % 6) + 6) % 6;
@@ -6409,7 +6662,7 @@ function LevelUpCelebration({ visible, level, complete, onClose, t }) {
           <View style={{ width: 140, height: 140, alignItems: 'center', justifyContent: 'center' }}>
             {sparkles}
             {complete
-              ? <Cultura size={120} mood="good" form={form} />
+              ? <Flora size={120} mood="good" form={form} />
               : <MiniMicrobe size={96} variant={newSpecies} />}
           </View>
           {complete ? (
@@ -6439,7 +6692,7 @@ function LevelUpCelebration({ visible, level, complete, onClose, t }) {
 }
 
 // ─── LOG FEEDBACK ────────────────────────────────────────────────────────
-// After each log entry we give instant, character-led feedback: Cultura reacts
+// After each log entry we give instant, character-led feedback: Flora reacts
 // (good / so-so / bad) with a context emoji and a short, kind message tailored
 // to the entry type. Encouraging on good days, supportive — never scolding —
 // on bad ones.
@@ -6482,7 +6735,7 @@ function LogFeedbackModal({ feedback, onClose, t }) {
         <Animated.View accessibilityViewIsModal style={{ transform: [{ scale }], backgroundColor: 'white', borderRadius: 24, padding: 26, alignItems: 'center', alignSelf: 'stretch' }}>
           <View style={{ width: 132, height: 132, alignItems: 'center', justifyContent: 'center' }}>
             <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: halo }} />
-            <Cultura size={110} mood={feedback.mood} />
+            <Flora size={110} mood={feedback.mood} />
             <View style={{ position: 'absolute', bottom: 4, right: 8, width: 42, height: 42, borderRadius: 21, backgroundColor: 'white', borderWidth: 1, borderColor: THEME.cardBorder, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 22 }}>{feedback.emoji}</Text>
             </View>
@@ -6571,10 +6824,10 @@ function ProgressModal({ visible, onClose, log, reintroProgress, symptomFreeCoun
         <AppBar title={t('progress_title')} onBack={onClose} t={t} />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
           <View style={[s.card, { marginHorizontal: 0, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#f3f8f3', borderColor: '#e0ece0' }]}>
-            <Cultura size={56} mood="good" form={culturaForm(g.level)} />
+            <Flora size={56} mood="good" form={floraForm(g.level)} />
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.ink }}>{tG('progress_level_points', { level: g.level, points: g.points })}</Text>
-              <Text style={{ fontSize: 12, color: THEME.textMuted, marginTop: 2 }}>{t('progress_cultura_body')}</Text>
+              <Text style={{ fontSize: 12, color: THEME.textMuted, marginTop: 2 }}>{t('progress_flora_body')}</Text>
             </View>
           </View>
           {/* Hero ring — the week at a glance (Google Fit style) */}
@@ -6625,7 +6878,118 @@ function ProgressModal({ visible, onClose, log, reintroProgress, symptomFreeCoun
   );
 }
 
-function HomeScreen({ profile, log, dayCount, reintroProgress, periodActive, currentPhase, phaseStartDate, onStartElimination, onStartReintroduction, onOpenSettings, onLogPeriod, onEditEntry, onQuickLog, onOpenRecipes, onOpenRecipe, onOpenColony, onOpenProgress, onGoToPlan, onDiagnosed, lang, t }) {
+// Group log entries into day buckets (most-recent first), each with a localized label
+// (Today / Yesterday / weekday+date). Uses local calendar days.
+function groupLogByDay(entries, t, lang) {
+  const groups = new Map();
+  (entries || []).forEach(e => {
+    if (!e.timestamp) return;
+    const d = new Date(e.timestamp); d.setHours(0, 0, 0, 0);
+    const k = d.getTime();
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(e);
+  });
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const ykey = today.getTime() - 86400000;
+  return Array.from(groups.keys()).sort((a, b) => b - a).map(k => {
+    const items = groups.get(k).slice().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    let label;
+    if (k === today.getTime()) label = t('home_today');
+    else if (k === ykey) label = t('home_yesterday');
+    else { try { label = new Date(k).toLocaleDateString(lang, { weekday: 'short', day: 'numeric', month: 'short' }); } catch (e2) { label = new Date(k).toLocaleDateString(); } }
+    return { key: k, label, items };
+  });
+}
+
+const s_dayHeader = { fontSize: 12, fontWeight: '700', color: THEME.textMuted, marginHorizontal: 20, marginTop: 10, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.3 };
+
+// One row in the log timeline — shared by the Home preview and the full History screen.
+function LogEntryRow({ entry, reintroProgress, lang, t, onPress }) {
+  // Combined, spoken-friendly label so screen readers announce the whole row + its action.
+  const catLabel = (c) => c === 'high' ? t('meal_high') : c === 'mod' ? t('meal_moderate') : t('meal_low');
+  const editHint = t('edit_title');
+  if (entry.type === 'symptom') return (
+    <TouchableOpacity onPress={onPress} accessibilityRole="button" accessibilityLabel={`${entry.symptom}, ${t('timeline_intensity', { n: entry.intensity })}, ${entry.time}`} accessibilityHint={editHint} style={s.timelineRow}>
+      <View style={[s.timelineDot, { backgroundColor: '#fde0e0' }]}><Text style={{ fontSize: 16 }}>⚠️</Text></View>
+      <View style={{ flex: 1 }}><Text style={s.timelineTitle}>{entry.symptom}</Text><Text style={s.timelineMeta}>{t('timeline_intensity', { n: entry.intensity })}</Text></View>
+      <Text style={s.timelineTime}>{entry.time}</Text>
+      <View importantForAccessibility="no" style={{ marginLeft: 6 }}><ChevronIcon size={16} color="#647264" /></View>
+    </TouchableOpacity>
+  );
+  if (entry.type === 'sleep') return (
+    <TouchableOpacity onPress={onPress} accessibilityRole="button" accessibilityLabel={`${t('sleep_title')}, ${entry.hours}h, ${entry.time}`} accessibilityHint={editHint} style={s.timelineRow}>
+      <View style={[s.timelineDot, { backgroundColor: '#e0e8f0' }]}><Text style={{ fontSize: 16 }}>😴</Text></View>
+      <View style={{ flex: 1 }}><Text style={s.timelineTitle}>{t('sleep_title')}</Text><Text style={s.timelineMeta}>{entry.hours}h</Text></View>
+      <Text style={s.timelineTime}>{entry.time}</Text>
+      <View importantForAccessibility="no" style={{ marginLeft: 6 }}><ChevronIcon size={16} color="#647264" /></View>
+    </TouchableOpacity>
+  );
+  if (entry.type === 'stress') return (
+    <TouchableOpacity onPress={onPress} accessibilityRole="button" accessibilityLabel={`${t('timeline_stress', { n: entry.level })}, ${entry.time}`} accessibilityHint={editHint} style={s.timelineRow}>
+      <View style={[s.timelineDot, { backgroundColor: '#fff4d0' }]}><Text style={{ fontSize: 16 }}>🧘</Text></View>
+      <View style={{ flex: 1 }}><Text style={s.timelineTitle}>{t('timeline_stress', { n: entry.level })}</Text></View>
+      <Text style={s.timelineTime}>{entry.time}</Text>
+      <View importantForAccessibility="no" style={{ marginLeft: 6 }}><ChevronIcon size={16} color="#647264" /></View>
+    </TouchableOpacity>
+  );
+  if (entry.productName) {
+    const col = CAT_COLORS[entry.productRisk || 'low'];
+    return (
+      <TouchableOpacity onPress={onPress} accessibilityRole="button" accessibilityLabel={`${entry.productName}${entry.productRisk ? ', ' + catLabel(entry.productRisk) : ''}, ${entry.time}`} accessibilityHint={editHint} style={s.timelineRow}>
+        <View style={[s.timelineDot, { backgroundColor: col.bg }]}><Text style={{ fontSize: 16 }}>📦</Text></View>
+        <View style={{ flex: 1, minWidth: 0 }}><Text style={s.timelineTitle} numberOfLines={1}>{entry.productName}</Text><Text style={s.timelineMeta}>{entry.time}</Text></View>
+        {entry.productRisk ? <RiskPill cat={entry.productRisk} t={t} /> : <Text style={s.timelineTime}>{entry.time}</Text>}
+        <View importantForAccessibility="no" style={{ marginLeft: 6 }}><ChevronIcon size={16} color="#647264" /></View>
+      </TouchableOpacity>
+    );
+  }
+  const meal = categorizeMeal(entry.items || [], reintroProgress);
+  const col = CAT_COLORS[meal.overall];
+  const names = (entry.items || []).map(i => { const f = FOODS.find(x => x.id === i.foodId); return f ? foodName(f, lang) : null; }).filter(Boolean).join(', ');
+  const dishNames = (entry.mealDishes || []).map(id => { const f = FOODS.find(x => x.id === id); return f ? foodName(f, lang) : null; }).filter(Boolean).join(', ');
+  const title = dishNames || names || t('timeline_meal_fallback');
+  const firstFood = FOODS.find(f => f.id === (entry.mealDishes?.[0] || entry.items?.[0]?.foodId));
+  const mtLabel = entry.mealType ? t('meal_type_' + entry.mealType) : '';
+  const why = mealWhyText(meal, lang);
+  const a11yLabel = `${title}${dishNames && names ? ', ' + names : ''}, ${catLabel(meal.overall)}${mtLabel ? ', ' + mtLabel : ''}, ${entry.time}`;
+  return (
+    <TouchableOpacity onPress={onPress} accessibilityRole="button" accessibilityLabel={a11yLabel} accessibilityHint={editHint} style={s.timelineRow}>
+      <View style={[s.timelineDot, { backgroundColor: col.bg }]}><Text style={{ fontSize: 16 }}>{firstFood?.emoji || '🍽️'}</Text></View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={s.timelineTitle} numberOfLines={1}>{title}</Text>
+        {dishNames && names ? <Text style={{ fontSize: 11, color: THEME.textMuted, marginTop: 1 }} numberOfLines={1}>{names}</Text> : null}
+        <Text style={s.timelineMeta} numberOfLines={1}>{mtLabel ? mtLabel + ' · ' : ''}{entry.time}</Text>
+        {why ? <Text style={{ fontSize: 11, color: col.text, marginTop: 3, lineHeight: 15 }} numberOfLines={2}>{t('meal_why_label')}: {why}</Text> : null}
+      </View>
+      <RiskPill cat={meal.overall} t={t} />
+      <View importantForAccessibility="no" style={{ marginLeft: 6 }}><ChevronIcon size={16} color="#647264" /></View>
+    </TouchableOpacity>
+  );
+}
+
+// Full-screen list of every log entry, grouped by day.
+function HistoryModal({ visible, onClose, log, reintroProgress, onEditEntry, lang, t }) {
+  const groups = groupLogByDay(log, t, lang);
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaViewSC style={{ flex: 1, backgroundColor: THEME.bg }}>
+        <AppBar title={t('history_title')} onBack={onClose} backIcon="close" t={t} />
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+          {groups.length === 0
+            ? <Text style={{ fontSize: 14, color: THEME.textMuted, textAlign: 'center', marginTop: 40 }}>{t('patterns_empty_none')}</Text>
+            : groups.map(group => (
+              <View key={group.key}>
+                <Text style={s_dayHeader}>{group.label}</Text>
+                {group.items.map(entry => <LogEntryRow key={entry.id} entry={entry} reintroProgress={reintroProgress} lang={lang} t={t} onPress={() => onEditEntry(entry)} />)}
+              </View>
+            ))}
+        </ScrollView>
+      </SafeAreaViewSC>
+    </Modal>
+  );
+}
+
+function HomeScreen({ profile, log, dayCount, reintroProgress, periodActive, currentPhase, phaseStartDate, onStartElimination, onStartReintroduction, onOpenSettings, onLogPeriod, onEditEntry, onQuickLog, onOpenHistory, onOpenRecipes, onOpenRecipe, onOpenColony, onOpenProgress, onGoToPlan, onDiagnosed, lang, t }) {
   const greeting = profile.name ? t('home_hi_name', { name: profile.name }) : t('home_hi');
   const showPeriod = profile.menstruates === 'yes';
   const [showDoctorInfo, setShowDoctorInfo] = useState(false);
@@ -6640,7 +7004,7 @@ function HomeScreen({ profile, log, dayCount, reintroProgress, periodActive, cur
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={{ paddingBottom: 16 }} showsVerticalScrollIndicator={false}>
-      {/* Gradient hero — greeting + reactive Cultura, no card around the mascot */}
+      {/* Gradient hero — greeting + reactive Flora, no card around the mascot */}
       <LinearGradient colors={['#d7ecd0', '#e7f3e1', '#eef6e9']} locations={[0, 0.7, 1]} style={{ paddingBottom: 46 }}>
         <View style={s.headerRow}>
           <View style={{ flex: 1 }}>
@@ -6659,8 +7023,8 @@ function HomeScreen({ profile, log, dayCount, reintroProgress, periodActive, cur
         </View>
         <View style={{ alignItems: 'center', marginTop: 2 }}>
           {hasData
-            ? <BlinkingCultura size={150} mood={stats.mood} form={stats.form} />
-            : <AnimatedCulturaCare width={200} />}
+            ? <BlinkingFlora size={150} mood={stats.mood} form={stats.form} />
+            : <AnimatedFloraCare width={200} />}
         </View>
       </LinearGradient>
 
@@ -6797,101 +7161,54 @@ function HomeScreen({ profile, log, dayCount, reintroProgress, periodActive, cur
         </View>
       )}
 
-      {log.length > 0 && (
-        <>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 20, marginBottom: 12 }}>
-            <Text style={{ fontSize: 15, fontWeight: '600' }}>{t('home_today')}</Text>
-            <Text style={{ fontSize: 12, color: '#647264' }}>{t('timeline_entries', { n: log.length })}</Text>
-          </View>
-          {(() => {
-            // Gentle nudge to log the two once-a-day lifestyle factors, since the pattern
-            // engine needs them. Only shows when the day already has entries (this block),
-            // and only for the factor(s) still missing today.
-            const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
-            const loggedToday = (type) => log.some(e => e.type === type && e.timestamp && new Date(e.timestamp) >= startOfToday);
-            const needSleep = !loggedToday('sleep');
-            const needStress = !loggedToday('stress');
-            if (!needSleep && !needStress) return null;
-            const Chip = ({ emoji, label, onPress }) => (
-              <TouchableOpacity onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'white', borderWidth: 1, borderColor: '#c4cec4', borderRadius: 20, paddingLeft: 10, paddingRight: 14, paddingVertical: 7 }}>
-                <Text importantForAccessibility="no" style={{ fontSize: 15 }}>{emoji}</Text>
-                <Text importantForAccessibility="no" style={{ fontSize: 13, fontWeight: '600', color: THEME.primaryDark }}>{label}</Text>
-              </TouchableOpacity>
-            );
-            return (
+      {log.length > 0 && (() => {
+        const HOME_LOG_LIMIT = 12;
+        const homeEntries = log.slice().sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0)).slice(0, HOME_LOG_LIMIT);
+        const homeGroups = groupLogByDay(homeEntries, t, lang);
+        const hasMore = log.length > HOME_LOG_LIMIT;
+        // Nudge: prompt the two once-a-day lifestyle logs when the day has entries but they're missing.
+        const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+        const loggedToday = (type) => log.some(e => e.type === type && e.timestamp && new Date(e.timestamp) >= startOfToday);
+        const needSleep = !loggedToday('sleep');
+        const needStress = !loggedToday('stress');
+        const NudgeChip = ({ emoji, label, onPress }) => (
+          <TouchableOpacity onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'white', borderWidth: 1, borderColor: '#c4cec4', borderRadius: 20, paddingLeft: 10, paddingRight: 14, paddingVertical: 7 }}>
+            <Text importantForAccessibility="no" style={{ fontSize: 15 }}>{emoji}</Text>
+            <Text importantForAccessibility="no" style={{ fontSize: 13, fontWeight: '600', color: THEME.primaryDark }}>{label}</Text>
+          </TouchableOpacity>
+        );
+        return (
+          <>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: 20, marginBottom: 12 }}>
+              <Text style={{ fontSize: 15, fontWeight: '600' }}>{t('home_journal')}</Text>
+              <Text style={{ fontSize: 12, color: '#647264' }}>{t('timeline_entries', { n: log.length })}</Text>
+            </View>
+            {(needSleep || needStress) && (
               <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: '#dcebdc', borderRadius: 14, padding: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
                   <BulbIcon size={24} color={THEME.primaryDark} />
                   <Text style={{ flex: 1, fontSize: 12.5, color: '#3d4d3d', lineHeight: 17 }}>{t('nudge_lifestyle')}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
-                  {needSleep && <Chip emoji="😴" label={t('log_sleep')} onPress={() => onQuickLog && onQuickLog('sleep')} />}
-                  {needStress && <Chip emoji="🧘" label={t('log_stress')} onPress={() => onQuickLog && onQuickLog('stress')} />}
+                  {needSleep && <NudgeChip emoji="😴" label={t('log_sleep')} onPress={() => onQuickLog && onQuickLog('sleep')} />}
+                  {needStress && <NudgeChip emoji="🧘" label={t('log_stress')} onPress={() => onQuickLog && onQuickLog('stress')} />}
                 </View>
               </View>
-            );
-          })()}
-          {log.slice().reverse().slice(0, 8).map(entry => {
-            if (entry.type === 'symptom') return (
-              <TouchableOpacity key={entry.id} onPress={() => onEditEntry(entry)} style={s.timelineRow}>
-                <View style={[s.timelineDot, { backgroundColor: '#fde0e0' }]}><Text style={{ fontSize: 16 }}>⚠️</Text></View>
-                <View style={{ flex: 1 }}><Text style={s.timelineTitle}>{entry.symptom}</Text><Text style={s.timelineMeta}>{t('timeline_intensity', { n: entry.intensity })}</Text></View>
-                <Text style={s.timelineTime}>{entry.time}</Text>
-                <View importantForAccessibility="no" style={{ marginLeft: 6 }}><ChevronIcon size={16} color="#647264" /></View>
+            )}
+            {homeGroups.map(group => (
+              <View key={group.key}>
+                <Text style={s_dayHeader}>{group.label}</Text>
+                {group.items.map(entry => <LogEntryRow key={entry.id} entry={entry} reintroProgress={reintroProgress} lang={lang} t={t} onPress={() => onEditEntry(entry)} />)}
+              </View>
+            ))}
+            {hasMore && (
+              <TouchableOpacity onPress={onOpenHistory} accessibilityRole="button" accessibilityLabel={t('see_history')} style={{ marginTop: 6, paddingVertical: 12, alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, color: THEME.primary, fontWeight: '700' }}>{t('see_history')}</Text>
               </TouchableOpacity>
-            );
-            if (entry.type === 'sleep') return (
-              <TouchableOpacity key={entry.id} onPress={() => onEditEntry(entry)} style={s.timelineRow}>
-                <View style={[s.timelineDot, { backgroundColor: '#e0e8f0' }]}><Text style={{ fontSize: 16 }}>😴</Text></View>
-                <View style={{ flex: 1 }}><Text style={s.timelineTitle}>{t('sleep_title')}</Text><Text style={s.timelineMeta}>{entry.hours}h</Text></View>
-                <Text style={s.timelineTime}>{entry.time}</Text>
-                <View importantForAccessibility="no" style={{ marginLeft: 6 }}><ChevronIcon size={16} color="#647264" /></View>
-              </TouchableOpacity>
-            );
-            if (entry.type === 'stress') return (
-              <TouchableOpacity key={entry.id} onPress={() => onEditEntry(entry)} style={s.timelineRow}>
-                <View style={[s.timelineDot, { backgroundColor: '#fff4d0' }]}><Text style={{ fontSize: 16 }}>🧘</Text></View>
-                <View style={{ flex: 1 }}><Text style={s.timelineTitle}>{t('timeline_stress', { n: entry.level })}</Text></View>
-                <Text style={s.timelineTime}>{entry.time}</Text>
-                <View importantForAccessibility="no" style={{ marginLeft: 6 }}><ChevronIcon size={16} color="#647264" /></View>
-              </TouchableOpacity>
-            );
-            if (entry.productName) {
-              const col = CAT_COLORS[entry.productRisk || 'low'];
-              return (
-                <TouchableOpacity key={entry.id} onPress={() => onEditEntry(entry)} style={s.timelineRow}>
-                  <View style={[s.timelineDot, { backgroundColor: col.bg }]}><Text style={{ fontSize: 16 }}>📦</Text></View>
-                  <View style={{ flex: 1, minWidth: 0 }}><Text style={s.timelineTitle} numberOfLines={1}>{entry.productName}</Text><Text style={s.timelineMeta}>{entry.time}</Text></View>
-                  {entry.productRisk ? <RiskPill cat={entry.productRisk} t={t} /> : <Text style={s.timelineTime}>{entry.time}</Text>}
-                  <View importantForAccessibility="no" style={{ marginLeft: 6 }}><ChevronIcon size={16} color="#647264" /></View>
-                </TouchableOpacity>
-              );
-            }
-            const meal = categorizeMeal(entry.items || [], reintroProgress);
-            const col = CAT_COLORS[meal.overall];
-            const names = (entry.items || []).map(i => { const f = FOODS.find(x => x.id === i.foodId); return f ? foodName(f, lang) : null; }).filter(Boolean).join(', ');
-            // Dishes titled the meal (e.g. "Pizza"); the ingredients then show as a subtitle.
-            const dishNames = (entry.mealDishes || []).map(id => { const f = FOODS.find(x => x.id === id); return f ? foodName(f, lang) : null; }).filter(Boolean).join(', ');
-            const title = dishNames || names || t('timeline_meal_fallback');
-            const firstFood = FOODS.find(f => f.id === (entry.mealDishes?.[0] || entry.items?.[0]?.foodId));
-            const mtLabel = entry.mealType ? t('meal_type_' + entry.mealType) : '';
-            const why = mealWhyText(meal, lang);
-            return (
-              <TouchableOpacity key={entry.id} onPress={() => onEditEntry(entry)} style={s.timelineRow}>
-                <View style={[s.timelineDot, { backgroundColor: col.bg }]}><Text style={{ fontSize: 16 }}>{firstFood?.emoji || '🍽️'}</Text></View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={s.timelineTitle} numberOfLines={1}>{title}</Text>
-                  {dishNames && names ? <Text style={{ fontSize: 11, color: THEME.textMuted, marginTop: 1 }} numberOfLines={1}>{names}</Text> : null}
-                  <Text style={s.timelineMeta} numberOfLines={1}>{mtLabel ? mtLabel + ' · ' : ''}{entry.time}</Text>
-                  {why ? <Text style={{ fontSize: 11, color: col.text, marginTop: 3, lineHeight: 15 }} numberOfLines={2}>{t('meal_why_label')}: {why}</Text> : null}
-                </View>
-                <RiskPill cat={meal.overall} t={t} />
-                <View importantForAccessibility="no" style={{ marginLeft: 6 }}><ChevronIcon size={16} color="#647264" /></View>
-              </TouchableOpacity>
-            );
-          })}
-        </>
-      )}
+            )}
+          </>
+        );
+      })()}
         <View style={{ height: 100 }} />
       </View>
     </ScrollView>
@@ -6998,7 +7315,7 @@ function FoodExplorerScreen({ reintroProgress, onOpenRecipes, profile, t, lang }
     return true;
   }).sort((a, b) => {
     if (q) { const r = searchRank(a) - searchRank(b); if (r !== 0) return r; }  // relevance first when searching
-    return b.popTrigger - a.popTrigger;
+    return foodName(a, lang).localeCompare(foodName(b, lang), lang);   // alphabetical (localized)
   });
   const filters = [{ id: 'all', label: t('filter_all') }, { id: 'high', label: t('filter_high') }, { id: 'mod', label: t('filter_mod') }, { id: 'low', label: t('filter_low') }];
   if (selected) return <FoodDetailView food={selected} status={reintroProgress[selected.groups[0]]} profile={profile} t={t} lang={lang} onBack={() => setSelected(null)} />;
@@ -7066,7 +7383,7 @@ function FoodExplorerScreen({ reintroProgress, onOpenRecipes, profile, t, lang }
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 15, fontWeight: '700', color: '#ffffff' }}>{t('recipes_title')}</Text>
-          <Text style={{ fontSize: 12, color: '#d5e6d5', marginTop: 2, lineHeight: 16 }}>{t('recipes_cultura_sub')}</Text>
+          <Text style={{ fontSize: 12, color: '#d5e6d5', marginTop: 2, lineHeight: 16 }}>{t('recipes_flora_sub')}</Text>
         </View>
         <ChevronIcon size={16} color="#eaf3ea" />
       </TouchableOpacity>
@@ -7083,7 +7400,7 @@ function FoodExplorerScreen({ reintroProgress, onOpenRecipes, profile, t, lang }
   );
   const emptyState = (
     <View style={{ alignItems: 'center', paddingHorizontal: 40, paddingTop: 24 }}>
-      <View style={{ marginBottom: 4 }}><BlinkingCultura size={120} mood="soso" /></View>
+      <View style={{ marginBottom: 4 }}><BlinkingFlora size={120} mood="soso" /></View>
       <Text style={{ fontSize: 15, color: '#647264', textAlign: 'center', lineHeight: 21, marginBottom: 16 }}>{t('foods_no_results')}</Text>
       {hasFilters && (
         <TouchableOpacity onPress={clearFilters} accessibilityRole="button" style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 14, borderWidth: 1, borderColor: '#c4cec4' }}>
@@ -7348,7 +7665,7 @@ function PlanScreen({ profile, reintroProgress, periodActive, currentPhase, phas
       )}
 
       <View style={[s.shadow, { marginHorizontal: 20, marginBottom: 16, backgroundColor: 'white', borderRadius: 20, opacity: eliminationStatus === 'upcoming' ? 0.85 : 1 }]}>
-        <PhaseHeader band="#eef5ee" illustration={<CulturaPauseB width={196} />} eyebrow={t('plan_phase1_eyebrow')} title={t('plan_phase1_title')} status={eliminationStatus} />
+        <PhaseHeader band="#eef5ee" illustration={<FloraPauseB width={196} />} eyebrow={t('plan_phase1_eyebrow')} title={t('plan_phase1_title')} status={eliminationStatus} />
         <View style={{ paddingHorizontal: 18, paddingTop: 10, paddingBottom: 18 }}>
           <Text style={{ fontSize: 13, color: THEME.textSoft, lineHeight: 20, marginBottom: 14 }}>
             {t('plan_phase1_body')}
@@ -7374,7 +7691,7 @@ function PlanScreen({ profile, reintroProgress, periodActive, currentPhase, phas
       </View>
 
       <View style={[s.shadow, { marginHorizontal: 20, marginBottom: 16, backgroundColor: 'white', borderRadius: 20 }]}>
-        <PhaseHeader band="#fdf3e3" illustration={<CulturaExplore width={196} />} eyebrow={t('plan_phase2_eyebrow')} title={t('plan_phase2_title')} status={reintroStatus} />
+        <PhaseHeader band="#fdf3e3" illustration={<FloraExplore width={196} />} eyebrow={t('plan_phase2_eyebrow')} title={t('plan_phase2_title')} status={reintroStatus} />
         <View style={{ paddingHorizontal: 18, paddingTop: 10, paddingBottom: 18 }}>
           <Text style={{ fontSize: 13, color: THEME.textSoft, lineHeight: 20, marginBottom: 14 }}>
             {t('plan_phase2_body')}
@@ -7520,7 +7837,7 @@ function GutGuideScreen({ t: tr, lang }) {
       <View style={{ alignItems: 'center', marginBottom: 16, marginTop: 6 }}>
         <View style={{ width: 152, height: 152, borderRadius: 76, backgroundColor: '#edf5e7', alignItems: 'center', justifyContent: 'center' }}>
           <View style={{ width: 124, height: 124, borderRadius: 62, backgroundColor: '#e2efd9', alignItems: 'center', justifyContent: 'center' }}>
-            <CulturaGuide size={104} />
+            <FloraGuide size={104} />
           </View>
         </View>
       </View>
@@ -7566,7 +7883,7 @@ function GutGuideScreen({ t: tr, lang }) {
         })}
         {list.length === 0 && (
           <View style={{ alignItems: 'center', padding: 30 }}>
-            <Cultura size={84} mood="soso" />
+            <Flora size={84} mood="soso" />
             <Text style={{ fontSize: 14, color: '#6b7a6b', textAlign: 'center', marginTop: 8 }}>{tr('guide_no_results')}</Text>
           </View>
         )}
@@ -8301,7 +8618,7 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
           <View accessibilityViewIsModal style={{ backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 32 }}>
             <View style={{ alignItems: 'center', marginBottom: 16 }}>
               <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                <Cultura size={96} mood="good" />
+                <Flora size={96} mood="good" />
                 <View style={{ position: 'absolute', bottom: -4, right: -8, backgroundColor: '#e8f0e8', borderRadius: 16, padding: 8, borderWidth: 2, borderColor: 'white' }}>
                   <BarcodeIcon size={26} color={THEME.primaryDark} />
                 </View>
@@ -8483,7 +8800,136 @@ function PaywallModal({ visible, onClose, onUpgrade, reason, t }) {
   );
 }
 
-function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverride, profile, setProfile, isPremium, onUpgrade, onExport, langPref, setLangPref, onResetApp, onSeedDemo, onTogglePremium, onPreviewLevelUp, customFoods, onUpdateCustomFood, onDeleteCustomFood, t }) {
+// Account screen: sign in, create an account, or request a password reset.
+// The app works fully signed-out; this only layers an account on top. Sign-in
+// success is handled by the App's onAuthStateChange listener (toast + ownerId
+// backfill), so on success we simply close.
+function AuthModal({ visible, onClose, user, onSignOut, t }) {
+  const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'reset'
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState(''); // success message (check email / reset sent)
+
+  // Reset transient state whenever the modal is opened or closed.
+  useEffect(() => {
+    if (!visible) { setMode('login'); setEmail(''); setPassword(''); setError(''); setNotice(''); setBusy(false); }
+  }, [visible]);
+  useEffect(() => { setError(''); setNotice(''); }, [mode]);
+
+  // If the user signs in successfully, the App listener fires and we close.
+  useEffect(() => { if (visible && user) onClose(); }, [user, visible]);
+
+  const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+
+  const submit = async () => {
+    const em = email.trim();
+    setError(''); setNotice('');
+    if (!emailOk(em)) { setError(t('auth_err_email')); return; }
+    if (mode !== 'reset') {
+      if (!password) { setError(t('auth_err_empty')); return; }
+      if (password.length < 6) { setError(t('auth_err_password_short')); return; }
+    }
+    setBusy(true);
+    try {
+      if (mode === 'login') {
+        const { error: err } = await supabase.auth.signInWithPassword({ email: em, password });
+        if (err) { setError(err.message); return; }
+        // success → App listener closes the modal
+      } else if (mode === 'signup') {
+        const { error: err } = await supabase.auth.signUp({ email: em, password });
+        if (err) { setError(err.message); return; }
+        setNotice(t('auth_check_email'));
+      } else {
+        // reset: always show the same message so we don't reveal which emails exist
+        await supabase.auth.resetPasswordForEmail(em);
+        setNotice(t('auth_reset_sent'));
+      }
+    } catch (e) {
+      setError((e && e.message) || t('auth_err_empty'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const title = mode === 'signup' ? t('auth_title_signup') : mode === 'reset' ? t('auth_title_reset') : t('auth_title_login');
+  const subtitle = mode === 'signup' ? t('auth_sub_signup') : mode === 'reset' ? t('auth_sub_reset') : t('auth_sub_login');
+  const cta = mode === 'signup' ? t('sign_up') : mode === 'reset' ? t('auth_send_reset') : t('sign_in');
+  const inputStyle = { backgroundColor: '#f0f4f0', borderRadius: 12, padding: 14, fontSize: 16, marginTop: 6 };
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f4f0' }}>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><Text style={{ fontSize: 16 }}>✕</Text></TouchableOpacity>
+          <Text style={{ fontSize: 20, fontWeight: '700' }}>{t('account')}</Text>
+        </View>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20 }}>
+            <Text style={{ fontSize: 40, textAlign: 'center', marginTop: 8 }}>🌿</Text>
+            <Text style={{ fontSize: 22, fontWeight: '700', textAlign: 'center', marginTop: 8 }}>{title}</Text>
+            <Text style={{ fontSize: 14, color: '#6b7a6b', textAlign: 'center', marginTop: 6, lineHeight: 20 }}>{subtitle}</Text>
+
+            <View style={{ marginTop: 24 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#3d4a3d' }}>{t('auth_email')}</Text>
+              <TextInput
+                value={email} onChangeText={setEmail}
+                accessibilityLabel={t('auth_email')} placeholder={t('auth_email_ph')} placeholderTextColor="#9aa89a"
+                autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress"
+                editable={!busy} style={inputStyle}
+              />
+            </View>
+
+            {mode !== 'reset' && (
+              <View style={{ marginTop: 16 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#3d4a3d' }}>{t('auth_password')}</Text>
+                <TextInput
+                  value={password} onChangeText={setPassword}
+                  accessibilityLabel={t('auth_password')} placeholder={t('auth_password_ph')} placeholderTextColor="#9aa89a"
+                  autoCapitalize="none" autoCorrect={false} secureTextEntry
+                  textContentType={mode === 'signup' ? 'newPassword' : 'password'}
+                  editable={!busy} onSubmitEditing={submit} returnKeyType="go" style={inputStyle}
+                />
+              </View>
+            )}
+
+            {mode === 'login' && (
+              <TouchableOpacity onPress={() => setMode('reset')} accessibilityRole="button" style={{ alignSelf: 'flex-end', marginTop: 10 }}>
+                <Text style={{ fontSize: 13, color: '#4e7d4e', fontWeight: '600' }}>{t('auth_forgot')}</Text>
+              </TouchableOpacity>
+            )}
+
+            {!!error && <Text style={{ color: '#a03030', fontSize: 13, marginTop: 14, textAlign: 'center' }}>{error}</Text>}
+            {!!notice && <Text style={{ color: '#2d6a2d', fontSize: 13, marginTop: 14, textAlign: 'center', lineHeight: 19 }}>{notice}</Text>}
+
+            <TouchableOpacity onPress={submit} disabled={busy} accessibilityRole="button" style={[s.btnPrimary, { alignSelf: 'stretch', marginTop: 20 }, busy && { backgroundColor: '#c0d0c0' }]}>
+              {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.btnPrimaryText}>{cta}</Text>}
+            </TouchableOpacity>
+
+            {mode === 'login' && (
+              <TouchableOpacity onPress={() => setMode('signup')} accessibilityRole="button" style={{ marginTop: 18, alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, color: '#4e7d4e', fontWeight: '600' }}>{t('auth_to_signup')}</Text>
+              </TouchableOpacity>
+            )}
+            {mode === 'signup' && (
+              <TouchableOpacity onPress={() => setMode('login')} accessibilityRole="button" style={{ marginTop: 18, alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, color: '#4e7d4e', fontWeight: '600' }}>{t('auth_to_login')}</Text>
+              </TouchableOpacity>
+            )}
+            {mode === 'reset' && (
+              <TouchableOpacity onPress={() => setMode('login')} accessibilityRole="button" style={{ marginTop: 18, alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, color: '#4e7d4e', fontWeight: '600' }}>{t('auth_back_to_login')}</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaViewSC>
+    </Modal>
+  );
+}
+
+function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverride, profile, setProfile, isPremium, onUpgrade, onExport, langPref, setLangPref, onResetApp, onSeedDemo, onTogglePremium, onPreviewLevelUp, customFoods, onUpdateCustomFood, onDeleteCustomFood, user, onOpenAccount, onSignOut, syncing, lastSync, onSync, t }) {
   const [confirmReset, setConfirmReset] = useState(false);
   useEffect(() => { if (!visible) setConfirmReset(false); }, [visible]);
   const [editPhase, setEditPhase] = useState(currentPhase);
@@ -8505,6 +8951,41 @@ function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverr
         </View>
         <ScrollView style={{ flex: 1 }}>
           <View style={{ padding: 20 }}>
+            {/* Account: sign in to back up & sync, or manage the signed-in account. */}
+            {user ? (
+              <View style={[s.card, { borderColor: '#c4cec4', marginHorizontal: 0 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={{ fontSize: 22 }}>🌿</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, color: '#6b7a6b' }}>{t('account_signed_in')}</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700' }} numberOfLines={1}>{user.email}</Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                  {syncing && <ActivityIndicator size="small" color="#4e7d4e" />}
+                  <Text style={{ flex: 1, fontSize: 12, color: '#6b7a6b' }}>
+                    {syncing ? t('sync_syncing') : lastSync ? t('sync_last', { time: new Date(lastSync).toLocaleTimeString(_uiLang, { hour: '2-digit', minute: '2-digit' }) }) : t('sync_never')}
+                  </Text>
+                  <TouchableOpacity onPress={onSync} disabled={syncing} accessibilityRole="button" accessibilityLabel={t('sync_now')}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: syncing ? '#a9b6a9' : '#4e7d4e' }}>{t('sync_now')}</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity onPress={onSignOut} accessibilityRole="button" style={[s.btnSecondary, { marginTop: 12 }]}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#4e7d4e' }}>{t('sign_out')}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={onOpenAccount} accessibilityRole="button" accessibilityLabel={t('account')} style={[s.card, { borderColor: '#4e7d4e', backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={{ fontSize: 22 }}>🌿</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700' }}>{t('account')}</Text>
+                    <Text style={{ fontSize: 12, color: '#6b7a6b', marginTop: 2 }}>{t('account_sub')}</Text>
+                  </View>
+                  <View importantForAccessibility="no"><ChevronIcon size={16} color="#4e7d4e" /></View>
+                </View>
+              </TouchableOpacity>
+            )}
             {isPremium ? (
               <View style={[s.card, { borderColor: '#c4cec4', backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -8761,6 +9242,16 @@ function EditEntryModal({ visible, entry, onClose, onUpdate, onDelete, onLogAgai
             <DateTimeRow value={when} onChange={setWhen} />
             {entry.type === 'meal' && entry.items && (
               <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#c4cec4', marginBottom: 16 }}>
+                {/* Dish context — this meal was logged from a prepared dish; the foods below are its ingredients */}
+                {entry.mealDishes && entry.mealDishes.length > 0 && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#f0f6ef', borderRadius: 10, padding: 10, marginBottom: 14 }}>
+                    <Text importantForAccessibility="no" style={{ fontSize: 18 }}>{FOODS.find(f => f.id === entry.mealDishes[0])?.emoji || '🍽️'}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 11, color: THEME.textMuted, fontWeight: '600' }}>{t('edit_dish')}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.ink }}>{entry.mealDishes.map(id => foodName(FOODS.find(f => f.id === id), lang)).filter(Boolean).join(', ')}</Text>
+                    </View>
+                  </View>
+                )}
                 {/* Meal-of-day */}
                 <Text style={{ fontSize: 13, color: '#6b7a6b', marginBottom: 8 }}>{t('meal_type_label')}</Text>
                 <MealTypeSelector value={effMealType} onChange={setMealType} t={t} style={{ marginBottom: 14 }} />
@@ -9042,6 +9533,7 @@ function InsightsCard({ log, lang }) {
 
   const SEV = {
     watch: { bg: '#fff4f0', border: '#f0d0c0', tag: '#a04030', label: tG('sev_watch') },
+    maybe: { bg: '#fbeed3', border: '#f0dca8', tag: '#a05a10', label: tG('sev_maybe') },
     info: { bg: '#f0f4f8', border: '#d8e0ea', tag: '#4a6a8a', label: tG('sev_info') },
     good: { bg: '#f0f7f0', border: '#cfe0cf', tag: '#2d6a2d', label: tG('sev_good') },
   };
@@ -9131,7 +9623,7 @@ function RecipesScreen({ onOpenRecipe, onBack, backLabel, isPremium, freeLimit, 
         <TouchableOpacity onPress={onUpsell} activeOpacity={0.9} style={{ marginHorizontal: 20, marginBottom: 14, borderRadius: 22, borderWidth: 1, borderColor: '#e8d8a8', backgroundColor: '#fffdf5', overflow: 'hidden' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, paddingBottom: 12 }}>
             <View style={{ width: 92, height: 92, borderRadius: 20, backgroundColor: '#f3eede', alignItems: 'center', justifyContent: 'center' }}>
-              <CulturaCookbook size={84} />
+              <FloraCookbook size={84} />
             </View>
             <View style={{ flex: 1 }}>
               <View style={{ alignSelf: 'flex-start', backgroundColor: '#f4e4b4', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 3, marginBottom: 7 }}>
