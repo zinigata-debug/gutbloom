@@ -1,0 +1,44 @@
+<!-- Supabase → Authentication → Emails → Templates → "Confirm signup"
+     Paste this into the Message body (HTML) box. Keep {{ .ConfirmationURL }} intact. -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fafbfa;padding:32px 0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="440" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #eef2ee;border-radius:16px;overflow:hidden;">
+        <tr>
+          <td style="background:#f5faf5;padding:28px 32px 20px;text-align:center;">
+            <img src="https://fgpwifrdyhdigrqagnks.supabase.co/storage/v1/object/public/assets/flora.png" width="72" height="72" alt="Flora, the Gutly microbe" style="display:block;margin:0 auto;border:0;outline:none;text-decoration:none;" />
+            <div style="font-size:22px;font-weight:700;color:#2d6a2d;margin-top:8px;">Gutly</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 32px 8px;">
+            <h1 style="margin:0 0 12px;font-size:20px;color:#26302a;">Confirm your email</h1>
+            <p style="margin:0 0 20px;font-size:15px;line-height:22px;color:#5b6a5b;">
+              Welcome to Gutly! Tap the button below to confirm your address and start syncing your gut-health journey across devices.
+            </p>
+            <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 20px;">
+              <tr>
+                <td style="border-radius:12px;background:#4e7d4e;">
+                  <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Confirm my email</a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:0 0 6px;font-size:12px;line-height:18px;color:#8a988a;">
+              If the button doesn't work, copy and paste this link into your browser:
+            </p>
+            <p style="margin:0 0 20px;font-size:12px;line-height:18px;word-break:break-all;">
+              <a href="{{ .ConfirmationURL }}" style="color:#4e7d4e;">{{ .ConfirmationURL }}</a>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 32px 26px;border-top:1px solid #f0f4f0;">
+            <p style="margin:0;font-size:12px;line-height:18px;color:#9aa89a;">
+              Didn't create a Gutly account? You can safely ignore this email.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

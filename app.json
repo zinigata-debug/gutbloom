@@ -3,6 +3,7 @@
     "name": "GutBloom",
     "slug": "gutly",
     "version": "1.0.0",
+    "scheme": "gutly",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -33,7 +34,14 @@
         {
           "cameraPermission": "GutBloom needs camera access to scan food barcodes and photos."
         }
-      ]
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#e7f3df"
+        }
+      ],
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

@@ -4,7 +4,9 @@ import { supabase } from './supabaseClient';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Localization from 'expo-localization';
-import React, { useEffect, useRef, useState } from 'react';
+import * as NativeSplash from 'expo-splash-screen';
+import * as WebBrowser from 'expo-web-browser';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -31,6 +33,14 @@ import {
 import Svg, { Circle, Defs, Ellipse, G, Line, Path, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { SafeAreaProvider, SafeAreaView as SafeAreaViewSC, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FERMENTATION_I18N, PATTERN_I18N, RECIPES_I18N, SWAPS_I18N, GROUPS_I18N, LIGHTEN_TIPS } from './translations_medical';
+import { getElevation } from './elevation';
+import { Surface } from './Surface';
+
+// Keep the native launch splash (configured in app.json, same #e7f3df background)
+// visible until our JS splash mounts. Without this, the OS hides its splash the
+// instant JS starts, exposing the bare app icon / launch-zoom before our animated
+// SplashScreen renders. Hidden in SplashScreen's mount effect for a seamless handoff.
+NativeSplash.preventAutoHideAsync().catch(() => {});
 
 const { width } = Dimensions.get('window');
 
@@ -64,6 +74,18 @@ const STRINGS = {
     auth_err_empty: 'Please enter your email and password.',
     auth_err_email: 'Please enter a valid email address.',
     auth_err_password_short: 'Password must be at least 6 characters.',
+    auth_err_generic: 'Something went wrong. Please try again.',
+    auth_err_credentials: 'Wrong email or password.',
+    auth_err_exists: 'That email is already registered — try signing in.',
+    auth_err_send: "We couldn't send the confirmation email. Check the address or try again shortly.",
+    auth_err_unconfirmed: 'Please confirm your email first — check your inbox.',
+    auth_err_mismatch: 'Passwords do not match.',
+    auth_confirm_password: 'Confirm password', auth_confirm_password_ph: 'Re-enter your password',
+    auth_show_password: 'Show password', auth_hide_password: 'Hide password',
+    auth_sent_title: 'Check your email', auth_sent_body: 'We sent a confirmation link to {email}. Open it to activate your account, then come back and sign in.',
+    auth_reset_sent_body: 'If {email} has an account, a password reset link is on its way. Open it to choose a new password.',
+    account_nudge_title: 'Save your progress', account_nudge_sub: 'Create a free account to back up your diary and colony.', account_nudge_cta: 'Create free account', account_nudge_row_sub: 'Back up your diary & colony',
+    levelup_save_cta: 'Save your colony — create a free account',
     auth_check_email: 'Almost there! Check your email to confirm your account, then sign in.',
     auth_reset_sent: 'If that email is registered, a reset link is on its way.',
     auth_signed_out: 'Signed out.', auth_welcome_toast: 'Signed in. Welcome back! 🌱',
@@ -77,7 +99,7 @@ const STRINGS = {
     onb_safety_q: 'Before we begin', onb_safety_sub: 'A quick health check — this matters.',
     onb_start: 'Start GutBloom',
     home_greeting: 'Hi',
-    home_patterns: 'Your patterns', home_todays_meals: "Today's meals",
+    home_patterns: 'My patterns', home_todays_meals: "Today's meals",
     foods_title: 'Food Explorer', foods_sub: 'Search any food, see triggers and safe portions',
     foods_search: 'Search any food', foods_count: '{n} foods',
     foods_no_results: 'No foods match these filters.', foods_clear_filters: 'Clear filters',
@@ -88,6 +110,7 @@ const STRINGS = {
     guide_title: 'GutGuide', guide_sub: '50 honest answers to common FODMAP questions',
     guide_search: 'Search questions',
     log_meal: 'Log meal', log_symptom: 'Log symptom', log_sleep: 'Log sleep', log_stress: 'Log stress',
+    log_water: 'Log water', log_water_sub: 'Track your hydration', water_title: 'Water', water_amount_label: 'How many glasses did you drink?', water_glasses_one: '{n} glass', water_glasses: '{n} glasses', water_unit_hint: '1 glass ≈ 200 ml', water_why_title: 'Why hydration matters', water_why: 'Staying hydrated keeps digestion moving and stools soft — it helps prevent the constipation and bloating that often come with IBS, especially as you adjust your fibre.', lf_water_title: 'Nicely done', lf_water_msg: 'Every glass helps your gut keep things moving.', lf_water_goal_title: 'Hydration goal reached!', lf_water_goal_msg: 'All {goal} glasses done — about {liters} L today. Your gut loves the steady flow.', edit_water_label: 'Glasses', water_progress: '{n} / {goal} glasses · ≈ {liters} L', water_goal_reached: 'Goal reached — nicely hydrated!',
     settings: 'Settings', upgrade: 'Upgrade to Premium', premium_active: 'GutBloom Premium',
     paywall_cta: 'Get Premium', plan_annual: 'Annual', plan_monthly: 'Monthly',
     save_meal: 'Save meal', doctor_summary: 'Doctor summary',
@@ -227,8 +250,8 @@ const STRINGS = {
     home_lets_start: "Let's get started",
 
     // Home screen — hasData
-    home_today: 'Today', home_yesterday: 'Yesterday', home_journal: 'Journal', history_title: 'History', see_history: 'See all log entries', home_see_progress: 'See My Progress',
-    home_hi_name: 'Hi {name}', home_hi: 'Hi there', home_journey_day: 'Day {n} of your gut journey', home_eat_well: 'Eat well today', picker_select_day: 'Select a day', meal_select_type: 'Select a Type', progress_level_points: 'Level {level} · {points} points', a11y_take_photo: 'Take photo', a11y_week_number: 'Week number', week_number_ph: 'e.g. 2',
+    home_today: 'Today', home_yesterday: 'Yesterday', home_journal: 'Journal', history_title: 'History', see_history: 'See all log entries', home_see_progress: 'See My Progress', patterns_see_all: 'See all patterns',
+    home_hi_name: 'Hi {name}', home_hi: 'Hi there', home_journey_day: 'Day {n} of your gut journey', home_eat_well: 'Eat well today', picker_select_day: 'Select a day', meal_select_type: 'Select a Type', progress_level_points: 'Level {level} · {points} points', a11y_take_photo: 'Take photo', a11y_week_number: 'Week number', a11y_week_decrease: 'Decrease week', a11y_week_increase: 'Increase week', week_number_ph: 'e.g. 2',
     recipes_all: 'All recipes', home_meals_sub: '4 elimination-safe meals picked for you. Tap any to see it.', patterns_empty_early: 'Keep logging meals and how you feel. Patterns usually start to show after about a week of data.', patterns_empty_none: 'No clear patterns yet. Keep logging — the more consistent your entries, the sharper the insights.', patterns_sub: 'Correlations from your log — not diagnoses. Use them to decide what to test.', patterns_window: 'Last {n} days', sev_watch: 'WORTH WATCHING', sev_maybe: 'EARLY SIGN', sev_info: 'NOTICED', sev_good: 'GOOD SIGN', show_less: 'Show less', show_more: 'Show {n} more',
     colony_lv: 'Lv {n} · {form}', colony_pts: '{n} points', colony_form_spore: 'Spore', colony_form_sprout: 'Sprout', colony_form_grown: 'Grown', colony_form_thriving: 'Thriving', colony_level_form: 'Level {n} · {form}',
     home_low_fodmap: 'Low-FODMAP', home_symptoms: 'Symptoms', home_sleep: 'Sleep',
@@ -250,6 +273,7 @@ const STRINGS = {
     timeline_intensity: 'Intensity {n}/5',
     timeline_stress: 'Stress level {n}/5',
     timeline_meal_fallback: 'Meal',
+    timeline_extra_one: '+ {n} ingredient', timeline_extra: '+ {n} ingredients',
 
     // Phase progress widget
     phase_ready_title: 'Ready to start?',
@@ -327,6 +351,10 @@ const STRINGS = {
     progress_sleep_title: 'Sleep',
     progress_sleep_sub: 'Hours per night',
     progress_sleep_avg: '{n}h avg',
+    progress_avg_water: 'Avg water',
+    progress_water_title: 'Water',
+    progress_water_sub: 'Glasses per day',
+    progress_water_avg: '{n} avg',
     progress_score_null: 'Keep logging to see your weekly score',
     progress_score_good: 'Your gut had a calm, steady week',
     progress_score_mid: 'A mixed week — a few things to spot',
@@ -339,7 +367,7 @@ const STRINGS = {
     log_symptom_sub: 'Log how you feel',
     log_sleep_sub: 'Track hours',
     log_stress_sub: 'Capture stress level',
-    nudge_lifestyle: 'Add sleep & stress too — it sharpens your patterns.',
+    nudge_lifestyle: 'Add sleep, stress & water too — it sharpens your patterns.',
 
     // Sleep modal
     sleep_title: 'Log sleep',
@@ -397,9 +425,9 @@ const STRINGS = {
     settings_week_sub: "We'll set your start date back accordingly.",
     settings_menstruate_q: 'Do you menstruate?',
     settings_menstruate_sub: 'If yes, we surface a period tracker on Home to help you spot hormone-related patterns.',
-    settings_other_intolerances: 'Other intolerances',
+    settings_other_intolerances: 'Other intolerances', settings_none: 'None',
     settings_other_intolerances_sub: "We'll flag foods that are low-FODMAP but problematic for these.",
-    settings_doctor_summary: 'Doctor summary',
+    settings_doctor_summary: 'Doctor summary', settings_doctor_export_btn: 'Export doctor summary',
     settings_doctor_sub: 'Export your data as a summary to share with your doctor or dietitian.',
     settings_save_phase: 'Save phase changes',
     settings_custom_foods: 'Your custom foods', settings_custom_foods_sub: 'Foods you added yourself. Tap a dot to change its FODMAP level, or ✕ to remove.',
@@ -512,6 +540,10 @@ const STRINGS = {
 
     // Meal modal
     meal_modal_title: 'Log a meal',
+    meal_discard_title: 'Discard this meal?',
+    meal_discard_body: 'This meal has not been saved yet — your selected items will be lost.',
+    meal_discard_keep: 'Keep editing',
+    meal_discard_confirm: 'Discard',
     meal_modal_search_ph: 'Search any food',
     meal_modal_scan_btn: 'Scan barcode',
     barcode_intro_title: 'Scan a barcode',
@@ -519,6 +551,7 @@ const STRINGS = {
     barcode_intro_cta: 'Scan now',
     barcode_intro_later: 'Maybe later',
     meal_modal_your_meal: 'Your meal',
+    meal_edit_portion_of: 'Edit portion: {food}', meal_remove_item: 'Remove from meal', meal_dish_remove_hint: 'Tap an ingredient to leave it out', meal_dish_add_hint: 'Had it with extras (a sauce, dip or side)? Add them from the search on the meal screen.', meal_ingredient_removed: 'removed',
     meal_base_hint: 'This is a base — add the other ingredients you used (cheese, veg, toppings…) so the score matches your plate.',
     meal_modal_hist_alert: 'Histamine alert',
     meal_modal_high_hist: 'High histamine: {foods}.',
@@ -528,7 +561,8 @@ const STRINGS = {
     meal_modal_recent: 'Recent foods',
     meal_modal_recent_meals: 'Recent meals',
     meal_type_label: 'Type', meal_type_breakfast: 'Breakfast', meal_type_lunch: 'Lunch', meal_type_dinner: 'Dinner', meal_type_snack: 'Snack',
-    edit_dish: 'Dish', meal_edit_foods: 'Foods', meal_edit_add: 'Add a food', meal_edit_none: 'No foods — add at least one.',
+    meal_my_breakfast: 'My Breakfast', meal_my_lunch: 'My Lunch', meal_my_dinner: 'My Dinner', meal_my_snack: 'My Snack',
+    edit_dish: 'Dish', meal_edit_extras: 'Added ingredients', meal_edit_foods: 'Foods', meal_edit_add: 'Add a food', meal_edit_none: 'No foods — add at least one.', edit_now_custom: 'You changed the ingredients, so this is now a custom meal.',
     meal_custom_q: 'Can\'t find "{name}"?',
     meal_custom_tip: 'Tip: if it\'s a mix (like spaghetti bolognese), add the single ingredients instead — you\'ll get more accurate verdicts.',
     meal_custom_add: 'Choose its FODMAP level:',
@@ -559,6 +593,20 @@ const STRINGS = {
     auth_err_empty: 'Bitte gib E-Mail und Passwort ein.',
     auth_err_email: 'Bitte gib eine gültige E-Mail-Adresse ein.',
     auth_err_password_short: 'Das Passwort muss mindestens 6 Zeichen haben.',
+    auth_err_generic: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
+    auth_err_credentials: 'Falsche E-Mail oder falsches Passwort.',
+    auth_err_exists: 'Diese E-Mail ist bereits registriert — bitte melde dich an.',
+    auth_err_send: 'Die Bestätigungs-E-Mail konnte nicht gesendet werden. Prüfe die Adresse oder versuche es gleich erneut.',
+    auth_err_unconfirmed: 'Bitte bestätige zuerst deine E-Mail — sieh in deinem Posteingang nach.',
+    auth_err_mismatch: 'Die Passwörter stimmen nicht überein.',
+    auth_confirm_password: 'Passwort bestätigen', auth_confirm_password_ph: 'Passwort erneut eingeben',
+    auth_show_password: 'Passwort anzeigen', auth_hide_password: 'Passwort verbergen',
+    auth_sent_title: 'Prüfe deine E-Mails', auth_sent_body: 'Wir haben einen Bestätigungslink an {email} gesendet. Öffne ihn, um dein Konto zu aktivieren, und melde dich dann an.',
+    auth_reset_sent_body: 'Falls {email} ein Konto hat, ist ein Link zum Zurücksetzen unterwegs. Öffne ihn, um ein neues Passwort zu wählen.',
+    account_nudge_title: 'Sichere deinen Fortschritt', account_nudge_sub: 'Erstelle ein kostenloses Konto, um dein Tagebuch und deine Kolonie zu sichern.', account_nudge_cta: 'Kostenloses Konto erstellen', account_nudge_row_sub: 'Tagebuch & Kolonie sichern',
+    levelup_save_cta: 'Kolonie sichern — kostenloses Konto erstellen',
+    sync_now: 'Jetzt synchronisieren', sync_syncing: 'Synchronisiere…', sync_last: 'Zuletzt synchronisiert {time}', sync_never: 'Noch nicht synchronisiert', sync_failed: 'Synchronisierung fehlgeschlagen — erneuter Versuch folgt.',
+    account_sync_sub: 'Deine Einträge und eigenen Lebensmittel werden automatisch gesichert und synchronisiert.',
     auth_check_email: 'Fast geschafft! Prüfe deine E-Mails, um dein Konto zu bestätigen, und melde dich dann an.',
     auth_reset_sent: 'Falls diese E-Mail registriert ist, ist ein Link unterwegs.',
     auth_signed_out: 'Abgemeldet.', auth_welcome_toast: 'Angemeldet. Willkommen zurück! 🌱',
@@ -572,7 +620,7 @@ const STRINGS = {
     onb_safety_q: 'Bevor wir beginnen', onb_safety_sub: 'Ein kurzer Gesundheits-Check — das ist wichtig.',
     onb_start: 'GutBloom starten',
     home_greeting: 'Hallo',
-    home_patterns: 'Deine Muster', home_todays_meals: 'Mahlzeiten heute',
+    home_patterns: 'Meine Muster', home_todays_meals: 'Mahlzeiten heute',
     foods_title: 'Lebensmittel', foods_sub: 'Suche Lebensmittel, sieh Auslöser und sichere Portionen',
     foods_search: 'Lebensmittel suchen', foods_count: '{n} Lebensmittel',
     foods_no_results: 'Keine Lebensmittel passen zu diesen Filtern.', foods_clear_filters: 'Filter zurücksetzen',
@@ -583,6 +631,7 @@ const STRINGS = {
     guide_title: 'GutGuide', guide_sub: '50 ehrliche Antworten auf häufige FODMAP-Fragen',
     guide_search: 'Fragen durchsuchen',
     log_meal: 'Mahlzeit erfassen', log_symptom: 'Symptom erfassen', log_sleep: 'Schlaf erfassen', log_stress: 'Stress erfassen',
+    log_water: 'Wasser erfassen', log_water_sub: 'Verfolge deine Flüssigkeitszufuhr', water_title: 'Wasser', water_amount_label: 'Wie viele Gläser hast du getrunken?', water_glasses_one: '{n} Glas', water_glasses: '{n} Gläser', water_unit_hint: '1 Glas ≈ 200 ml', water_why_title: 'Warum Trinken wichtig ist', water_why: 'Ausreichend zu trinken hält die Verdauung in Bewegung und den Stuhl weich — das beugt Verstopfung und Blähungen vor, die bei RDS häufig sind, besonders wenn du mehr Ballaststoffe isst.', lf_water_title: 'Gut gemacht', lf_water_msg: 'Jedes Glas hilft deinem Darm, in Bewegung zu bleiben.', lf_water_goal_title: 'Trinkziel erreicht!', lf_water_goal_msg: 'Alle {goal} Gläser geschafft — rund {liters} L heute. Dein Darm dankt dir.', edit_water_label: 'Gläser', water_progress: '{n} / {goal} Gläser · ≈ {liters} L', water_goal_reached: 'Ziel erreicht — gut hydriert!',
     settings: 'Einstellungen', upgrade: 'Premium freischalten', premium_active: 'GutBloom Premium',
     paywall_cta: 'Premium holen', plan_annual: 'Jährlich', plan_monthly: 'Monatlich',
     save_meal: 'Mahlzeit speichern', doctor_summary: 'Arzt-Zusammenfassung',
@@ -715,8 +764,8 @@ const STRINGS = {
     home_how_more: 'Mehr lesen', home_how_less: 'Weniger anzeigen',
     home_start_elim: 'Eliminationsphase starten',
     home_lets_start: "Los geht's",
-    home_today: 'Heute', home_yesterday: 'Gestern', home_journal: 'Journal', history_title: 'Verlauf', see_history: 'Alle Einträge ansehen', home_see_progress: 'Mein Fortschritt',
-    home_hi_name: 'Hallo {name}', home_hi: 'Hallo', home_journey_day: 'Tag {n} deiner Darmreise', home_eat_well: 'Iss heute gut', picker_select_day: 'Wähle einen Tag', meal_select_type: 'Wähle eine Art', progress_level_points: 'Level {level} · {points} Punkte', a11y_take_photo: 'Foto aufnehmen', a11y_week_number: 'Wochennummer', week_number_ph: 'z. B. 2',
+    home_today: 'Heute', home_yesterday: 'Gestern', home_journal: 'Journal', history_title: 'Verlauf', see_history: 'Alle Einträge ansehen', home_see_progress: 'Mein Fortschritt', patterns_see_all: 'Alle Muster ansehen',
+    home_hi_name: 'Hallo {name}', home_hi: 'Hallo', home_journey_day: 'Tag {n} deiner Darmreise', home_eat_well: 'Iss heute gut', picker_select_day: 'Wähle einen Tag', meal_select_type: 'Wähle eine Art', progress_level_points: 'Level {level} · {points} Punkte', a11y_take_photo: 'Foto aufnehmen', a11y_week_number: 'Wochennummer', a11y_week_decrease: 'Woche verringern', a11y_week_increase: 'Woche erhöhen', week_number_ph: 'z. B. 2',
     recipes_all: 'Alle Rezepte', home_meals_sub: '4 eliminationssichere Mahlzeiten für dich ausgewählt. Tippe auf eine, um sie zu sehen.', patterns_empty_early: 'Erfasse weiter Mahlzeiten und dein Befinden. Muster zeigen sich meist nach etwa einer Woche Daten.', patterns_empty_none: 'Noch keine klaren Muster. Erfasse weiter – je konsistenter deine Einträge, desto klarer die Erkenntnisse.', patterns_sub: 'Korrelationen aus deinem Protokoll – keine Diagnosen. Nutze sie, um zu entscheiden, was du testest.', patterns_window: 'Letzte {n} Tage', sev_watch: 'IM BLICK BEHALTEN', sev_maybe: 'FRÜHES ZEICHEN', sev_info: 'BEMERKT', sev_good: 'GUTES ZEICHEN', show_less: 'Weniger anzeigen', show_more: '{n} weitere anzeigen',
     colony_lv: 'Lv {n} · {form}', colony_pts: '{n} Punkte', colony_form_spore: 'Spore', colony_form_sprout: 'Spross', colony_form_grown: 'Gewachsen', colony_form_thriving: 'Blühend', colony_level_form: 'Level {n} · {form}',
     home_low_fodmap: 'Low-FODMAP', home_symptoms: 'Symptome', home_sleep: 'Schlaf',
@@ -734,6 +783,7 @@ const STRINGS = {
     timeline_intensity: 'Intensität {n}/5',
     timeline_stress: 'Stressniveau {n}/5',
     timeline_meal_fallback: 'Mahlzeit',
+    timeline_extra_one: '+ {n} Zutat', timeline_extra: '+ {n} Zutaten',
     phase_ready_title: 'Bereit loszulegen?',
     phase_ready_body: 'Starte die Eliminationsphase, um deine Auslöser zu finden. Dauert 4–6 Wochen.',
     phase_plan_link: 'Mein Plan',
@@ -799,6 +849,10 @@ const STRINGS = {
     progress_sleep_title: 'Schlaf',
     progress_sleep_sub: 'Stunden pro Nacht',
     progress_sleep_avg: 'Ø {n} Std.',
+    progress_avg_water: 'Ø Wasser',
+    progress_water_title: 'Wasser',
+    progress_water_sub: 'Gläser pro Tag',
+    progress_water_avg: 'Ø {n}',
     progress_score_null: 'Erfasse weiter, um deinen Wochen-Score zu sehen',
     progress_score_good: 'Dein Darm hatte eine ruhige, stetige Woche',
     progress_score_mid: 'Eine gemischte Woche — ein paar Dinge zu beobachten',
@@ -809,7 +863,7 @@ const STRINGS = {
     log_symptom_sub: 'Wie fühlst du dich?',
     log_sleep_sub: 'Stunden erfassen',
     log_stress_sub: 'Stressniveau festhalten',
-    nudge_lifestyle: 'Erfasse auch Schlaf & Stress — das schärft deine Muster.',
+    nudge_lifestyle: 'Erfasse auch Schlaf, Stress & Wasser — das schärft deine Muster.',
     sleep_title: 'Schlaf erfassen',
     sleep_hours_label: 'Geschlafene Stunden: {n} Std.',
     stress_title: 'Stress erfassen',
@@ -857,9 +911,9 @@ const STRINGS = {
     settings_week_sub: 'Wir setzen dein Startdatum entsprechend zurück.',
     settings_menstruate_q: 'Menstruierst du?',
     settings_menstruate_sub: 'Wenn ja, zeigen wir auf der Startseite einen Perioden-Tracker, um hormonbedingte Muster zu erkennen.',
-    settings_other_intolerances: 'Weitere Unverträglichkeiten',
+    settings_other_intolerances: 'Weitere Unverträglichkeiten', settings_none: 'Keine',
     settings_other_intolerances_sub: 'Wir markieren Lebensmittel, die Low-FODMAP sind, aber bei diesen Unverträglichkeiten problematisch sein können.',
-    settings_doctor_summary: 'Arzt-Zusammenfassung',
+    settings_doctor_summary: 'Arzt-Zusammenfassung', settings_doctor_export_btn: 'Arzt-Zusammenfassung exportieren',
     settings_doctor_sub: 'Exportiere deine Daten als Zusammenfassung zum Teilen mit deinem Arzt oder Ernährungsberater.',
     settings_save_phase: 'Phasenänderungen speichern',
     settings_custom_foods: 'Deine eigenen Lebensmittel', settings_custom_foods_sub: 'Selbst hinzugefügte Lebensmittel. Tippe einen Punkt, um die FODMAP-Stufe zu ändern, oder ✕ zum Entfernen.',
@@ -958,6 +1012,10 @@ const STRINGS = {
 
     // Meal modal
     meal_modal_title: 'Mahlzeit erfassen',
+    meal_discard_title: 'Mahlzeit verwerfen?',
+    meal_discard_body: 'Noch nicht gespeichert — deine ausgewählten Zutaten gehen verloren.',
+    meal_discard_keep: 'Weiter bearbeiten',
+    meal_discard_confirm: 'Verwerfen',
     meal_modal_search_ph: 'Lebensmittel suchen',
     meal_modal_scan_btn: 'Barcode scannen',
     barcode_intro_title: 'Barcode scannen',
@@ -965,6 +1023,7 @@ const STRINGS = {
     barcode_intro_cta: 'Jetzt scannen',
     barcode_intro_later: 'Vielleicht später',
     meal_modal_your_meal: 'Deine Mahlzeit',
+    meal_edit_portion_of: 'Portion bearbeiten: {food}', meal_remove_item: 'Aus Mahlzeit entfernen', meal_dish_remove_hint: 'Tippe eine Zutat an, um sie wegzulassen', meal_dish_add_hint: 'Mit Extras gegessen (Soße, Dip oder Beilage)? Füge sie über die Suche im Mahlzeit-Screen hinzu.', meal_ingredient_removed: 'entfernt',
     meal_base_hint: 'Das ist eine Basis — füge die weiteren Zutaten hinzu, die du verwendet hast (Käse, Gemüse, Belag…), damit die Bewertung zu deinem Teller passt.',
     meal_modal_hist_alert: 'Histamin-Alarm',
     meal_modal_high_hist: 'Hohes Histamin: {foods}.',
@@ -974,7 +1033,8 @@ const STRINGS = {
     meal_modal_recent: 'Zuletzt verwendet',
     meal_modal_recent_meals: 'Letzte Mahlzeiten',
     meal_type_label: 'Art', meal_type_breakfast: 'Frühstück', meal_type_lunch: 'Mittagessen', meal_type_dinner: 'Abendessen', meal_type_snack: 'Snack',
-    edit_dish: 'Gericht', meal_edit_foods: 'Lebensmittel', meal_edit_add: 'Lebensmittel hinzufügen', meal_edit_none: 'Keine Lebensmittel — füge mindestens eins hinzu.',
+    meal_my_breakfast: 'Mein Frühstück', meal_my_lunch: 'Mein Mittagessen', meal_my_dinner: 'Mein Abendessen', meal_my_snack: 'Mein Snack',
+    edit_dish: 'Gericht', meal_edit_extras: 'Zusätzliche Zutaten', meal_edit_foods: 'Lebensmittel', meal_edit_add: 'Lebensmittel hinzufügen', meal_edit_none: 'Keine Lebensmittel — füge mindestens eins hinzu.', edit_now_custom: 'Du hast die Zutaten geändert — das ist jetzt eine eigene Mahlzeit.',
     meal_custom_q: '"{name}" nicht gefunden?',
     meal_custom_tip: 'Tipp: Wenn es eine Mischung ist (wie Käsespätzle), füge stattdessen die einzelnen Zutaten hinzu — du erhältst genauere Urteile.',
     meal_custom_add: 'FODMAP-Stufe wählen:',
@@ -1005,6 +1065,20 @@ const STRINGS = {
     auth_err_empty: 'Introduce tu correo y contraseña.',
     auth_err_email: 'Introduce una dirección de correo válida.',
     auth_err_password_short: 'La contraseña debe tener al menos 6 caracteres.',
+    auth_err_generic: 'Algo salió mal. Inténtalo de nuevo.',
+    auth_err_credentials: 'Correo o contraseña incorrectos.',
+    auth_err_exists: 'Ese correo ya está registrado: inicia sesión.',
+    auth_err_send: 'No pudimos enviar el correo de confirmación. Revisa la dirección o inténtalo en un momento.',
+    auth_err_unconfirmed: 'Confirma primero tu correo: revisa tu bandeja de entrada.',
+    auth_err_mismatch: 'Las contraseñas no coinciden.',
+    auth_confirm_password: 'Confirmar contraseña', auth_confirm_password_ph: 'Vuelve a escribir tu contraseña',
+    auth_show_password: 'Mostrar contraseña', auth_hide_password: 'Ocultar contraseña',
+    auth_sent_title: 'Revisa tu correo', auth_sent_body: 'Enviamos un enlace de confirmación a {email}. Ábrelo para activar tu cuenta y luego inicia sesión.',
+    auth_reset_sent_body: 'Si {email} tiene una cuenta, el enlace para restablecer la contraseña ya va en camino. Ábrelo para elegir una nueva contraseña.',
+    account_nudge_title: 'Guarda tu progreso', account_nudge_sub: 'Crea una cuenta gratis para respaldar tu diario y tu colonia.', account_nudge_cta: 'Crear cuenta gratis', account_nudge_row_sub: 'Respalda tu diario y colonia',
+    levelup_save_cta: 'Guarda tu colonia: crea una cuenta gratis',
+    sync_now: 'Sincronizar ahora', sync_syncing: 'Sincronizando…', sync_last: 'Última sincronización {time}', sync_never: 'Sin sincronizar todavía', sync_failed: 'Error de sincronización — se reintentará.',
+    account_sync_sub: 'Tus registros y alimentos personalizados se guardan y sincronizan automáticamente.',
     auth_check_email: '¡Casi listo! Revisa tu correo para confirmar tu cuenta y luego inicia sesión.',
     auth_reset_sent: 'Si ese correo está registrado, el enlace ya va en camino.',
     auth_signed_out: 'Sesión cerrada.', auth_welcome_toast: 'Sesión iniciada. ¡Bienvenido de nuevo! 🌱',
@@ -1018,7 +1092,7 @@ const STRINGS = {
     onb_safety_q: 'Antes de empezar', onb_safety_sub: 'Una breve comprobación de salud — esto importa.',
     onb_start: 'Empezar GutBloom',
     home_greeting: 'Hola',
-    home_patterns: 'Tus patrones', home_todays_meals: 'Comidas de hoy',
+    home_patterns: 'Mis patrones', home_todays_meals: 'Comidas de hoy',
     foods_title: 'Explorador de alimentos', foods_sub: 'Busca alimentos, ve desencadenantes y porciones seguras',
     foods_search: 'Buscar alimentos', foods_count: '{n} alimentos',
     foods_no_results: 'Ningún alimento coincide con estos filtros.', foods_clear_filters: 'Borrar filtros',
@@ -1029,6 +1103,7 @@ const STRINGS = {
     guide_title: 'GutGuide', guide_sub: '50 respuestas honestas a preguntas comunes sobre FODMAP',
     guide_search: 'Buscar preguntas',
     log_meal: 'Registrar comida', log_symptom: 'Registrar síntoma', log_sleep: 'Registrar sueño', log_stress: 'Registrar estrés',
+    log_water: 'Registrar agua', log_water_sub: 'Controla tu hidratación', water_title: 'Agua', water_amount_label: '¿Cuántos vasos bebiste?', water_glasses_one: '{n} vaso', water_glasses: '{n} vasos', water_unit_hint: '1 vaso ≈ 200 ml', water_why_title: 'Por qué es importante hidratarse', water_why: 'Mantenerte hidratado ayuda a que la digestión siga su curso y las heces estén blandas — previene el estreñimiento y la hinchazón habituales en el SII, sobre todo al aumentar la fibra.', lf_water_title: 'Bien hecho', lf_water_msg: 'Cada vaso ayuda a que tu intestino siga funcionando.', lf_water_goal_title: '¡Meta de hidratación lograda!', lf_water_goal_msg: 'Los {goal} vasos completos — unos {liters} L hoy. Tu intestino te lo agradece.', edit_water_label: 'Vasos', water_progress: '{n} / {goal} vasos · ≈ {liters} L', water_goal_reached: '¡Meta alcanzada, bien hidratado!',
     settings: 'Ajustes', upgrade: 'Pasar a Premium', premium_active: 'GutBloom Premium',
     paywall_cta: 'Obtener Premium', plan_annual: 'Anual', plan_monthly: 'Mensual',
     save_meal: 'Guardar comida', doctor_summary: 'Resumen para el médico',
@@ -1161,8 +1236,8 @@ const STRINGS = {
     home_how_more: 'Leer más', home_how_less: 'Ver menos',
     home_start_elim: 'Iniciar fase de eliminación',
     home_lets_start: 'Empecemos',
-    home_today: 'Hoy', home_yesterday: 'Ayer', home_journal: 'Diario', history_title: 'Historial', see_history: 'Ver todas las entradas', home_see_progress: 'Ver mi progreso',
-    home_hi_name: 'Hola {name}', home_hi: 'Hola', home_journey_day: 'Día {n} de tu viaje intestinal', home_eat_well: 'Come bien hoy', picker_select_day: 'Elige un día', meal_select_type: 'Elige un tipo', progress_level_points: 'Nivel {level} · {points} puntos', a11y_take_photo: 'Hacer foto', a11y_week_number: 'Número de semana', week_number_ph: 'p. ej. 2',
+    home_today: 'Hoy', home_yesterday: 'Ayer', home_journal: 'Diario', history_title: 'Historial', see_history: 'Ver todas las entradas', home_see_progress: 'Ver mi progreso', patterns_see_all: 'Ver todos los patrones',
+    home_hi_name: 'Hola {name}', home_hi: 'Hola', home_journey_day: 'Día {n} de tu viaje intestinal', home_eat_well: 'Come bien hoy', picker_select_day: 'Elige un día', meal_select_type: 'Elige un tipo', progress_level_points: 'Nivel {level} · {points} puntos', a11y_take_photo: 'Hacer foto', a11y_week_number: 'Número de semana', a11y_week_decrease: 'Disminuir semana', a11y_week_increase: 'Aumentar semana', week_number_ph: 'p. ej. 2',
     recipes_all: 'Todas las recetas', home_meals_sub: '4 comidas seguras en eliminación elegidas para ti. Toca una para verla.', patterns_empty_early: 'Sigue registrando comidas y cómo te sientes. Los patrones suelen aparecer tras una semana de datos.', patterns_empty_none: 'Aún no hay patrones claros. Sigue registrando: cuanto más constantes sean tus entradas, más nítidas serán las conclusiones.', patterns_sub: 'Correlaciones de tu registro, no diagnósticos. Úsalas para decidir qué probar.', patterns_window: 'Últimos {n} días', sev_watch: 'A VIGILAR', sev_maybe: 'SEÑAL TEMPRANA', sev_info: 'OBSERVADO', sev_good: 'BUENA SEÑAL', show_less: 'Ver menos', show_more: 'Ver {n} más',
     colony_lv: 'Niv. {n} · {form}', colony_pts: '{n} puntos', colony_form_spore: 'Espora', colony_form_sprout: 'Brote', colony_form_grown: 'Crecida', colony_form_thriving: 'Próspera', colony_level_form: 'Nivel {n} · {form}',
     home_low_fodmap: 'Bajo en FODMAP', home_symptoms: 'Síntomas', home_sleep: 'Sueño',
@@ -1180,6 +1255,7 @@ const STRINGS = {
     timeline_intensity: 'Intensidad {n}/5',
     timeline_stress: 'Nivel de estrés {n}/5',
     timeline_meal_fallback: 'Comida',
+    timeline_extra_one: '+ {n} ingrediente', timeline_extra: '+ {n} ingredientes',
     phase_ready_title: '¿Listo/a para empezar?',
     phase_ready_body: 'Inicia la fase de eliminación para identificar tus desencadenantes. Dura 4–6 semanas.',
     phase_plan_link: 'Ver mi plan',
@@ -1245,6 +1321,10 @@ const STRINGS = {
     progress_sleep_title: 'Sueño',
     progress_sleep_sub: 'Horas por noche',
     progress_sleep_avg: 'promedio {n}h',
+    progress_avg_water: 'Agua media',
+    progress_water_title: 'Agua',
+    progress_water_sub: 'Vasos por día',
+    progress_water_avg: 'promedio {n}',
     progress_score_null: 'Sigue registrando para ver tu puntuación semanal',
     progress_score_good: 'Tu intestino tuvo una semana tranquila y estable',
     progress_score_mid: 'Una semana mixta — algunas cosas a observar',
@@ -1255,7 +1335,7 @@ const STRINGS = {
     log_symptom_sub: 'Cómo te sientes',
     log_sleep_sub: 'Registrar horas',
     log_stress_sub: 'Capturar nivel de estrés',
-    nudge_lifestyle: 'Añade también sueño y estrés: afina tus patrones.',
+    nudge_lifestyle: 'Añade también sueño, estrés y agua: afina tus patrones.',
     sleep_title: 'Registrar sueño',
     sleep_hours_label: 'Horas dormidas: {n}h',
     stress_title: 'Registrar estrés',
@@ -1303,9 +1383,9 @@ const STRINGS = {
     settings_week_sub: 'Ajustaremos tu fecha de inicio en consecuencia.',
     settings_menstruate_q: '¿Tienes menstruación?',
     settings_menstruate_sub: 'Si es así, mostramos un rastreador de período en la pantalla de inicio para detectar patrones hormonales.',
-    settings_other_intolerances: 'Otras intolerancias',
+    settings_other_intolerances: 'Otras intolerancias', settings_none: 'Ninguna',
     settings_other_intolerances_sub: 'Marcaremos alimentos que son bajos en FODMAP pero problemáticos para estas intolerancias.',
-    settings_doctor_summary: 'Resumen para el médico',
+    settings_doctor_summary: 'Resumen para el médico', settings_doctor_export_btn: 'Exportar resumen para el médico',
     settings_doctor_sub: 'Exporta tus datos como resumen para compartir con tu médico o dietista.',
     settings_save_phase: 'Guardar cambios de fase',
     settings_custom_foods: 'Tus alimentos personalizados', settings_custom_foods_sub: 'Alimentos que añadiste. Toca un punto para cambiar su nivel FODMAP, o ✕ para eliminar.',
@@ -1404,6 +1484,10 @@ const STRINGS = {
 
     // Meal modal
     meal_modal_title: 'Registrar una comida',
+    meal_discard_title: '¿Descartar esta comida?',
+    meal_discard_body: 'Aún no se ha guardado: perderás los alimentos seleccionados.',
+    meal_discard_keep: 'Seguir editando',
+    meal_discard_confirm: 'Descartar',
     meal_modal_search_ph: 'Buscar cualquier alimento',
     meal_modal_scan_btn: 'Escanear código de barras',
     barcode_intro_title: 'Escanear un código de barras',
@@ -1411,6 +1495,7 @@ const STRINGS = {
     barcode_intro_cta: 'Escanear ahora',
     barcode_intro_later: 'Quizá más tarde',
     meal_modal_your_meal: 'Tu comida',
+    meal_edit_portion_of: 'Editar porción: {food}', meal_remove_item: 'Quitar de la comida', meal_dish_remove_hint: 'Toca un ingrediente para quitarlo', meal_dish_add_hint: '¿Lo comiste con extras (salsa, dip o guarnición)? Añádelos desde la búsqueda en la pantalla de comida.', meal_ingredient_removed: 'quitado',
     meal_base_hint: 'Esto es una base — añade los demás ingredientes que usaste (queso, verduras, coberturas…) para que la puntuación coincida con tu plato.',
     meal_modal_hist_alert: 'Alerta de histamina',
     meal_modal_high_hist: 'Alta histamina: {foods}.',
@@ -1420,7 +1505,8 @@ const STRINGS = {
     meal_modal_recent: 'Alimentos recientes',
     meal_modal_recent_meals: 'Comidas recientes',
     meal_type_label: 'Tipo', meal_type_breakfast: 'Desayuno', meal_type_lunch: 'Almuerzo', meal_type_dinner: 'Cena', meal_type_snack: 'Tentempié',
-    edit_dish: 'Plato', meal_edit_foods: 'Alimentos', meal_edit_add: 'Añadir alimento', meal_edit_none: 'Sin alimentos — añade al menos uno.',
+    meal_my_breakfast: 'Mi desayuno', meal_my_lunch: 'Mi almuerzo', meal_my_dinner: 'Mi cena', meal_my_snack: 'Mi tentempié',
+    edit_dish: 'Plato', meal_edit_extras: 'Ingredientes añadidos', meal_edit_foods: 'Alimentos', meal_edit_add: 'Añadir alimento', meal_edit_none: 'Sin alimentos — añade al menos uno.', edit_now_custom: 'Cambiaste los ingredientes: ahora es una comida personalizada.',
     meal_custom_q: '¿No encuentras "{name}"?',
     meal_custom_tip: 'Consejo: si es una mezcla (como una paella), añade los ingredientes individuales en su lugar — obtendrás veredictos más precisos.',
     meal_custom_add: 'Elige su nivel FODMAP:',
@@ -1451,6 +1537,20 @@ const STRINGS = {
     auth_err_empty: 'Saisis ton e-mail et ton mot de passe.',
     auth_err_email: 'Saisis une adresse e-mail valide.',
     auth_err_password_short: 'Le mot de passe doit comporter au moins 6 caractères.',
+    auth_err_generic: 'Une erreur est survenue. Réessaie.',
+    auth_err_credentials: 'E-mail ou mot de passe incorrect.',
+    auth_err_exists: 'Cet e-mail est déjà enregistré — connecte-toi.',
+    auth_err_send: "Impossible d'envoyer l'e-mail de confirmation. Vérifie l'adresse ou réessaie bientôt.",
+    auth_err_unconfirmed: "Confirme d'abord ton e-mail — vérifie ta boîte de réception.",
+    auth_err_mismatch: 'Les mots de passe ne correspondent pas.',
+    auth_confirm_password: 'Confirmer le mot de passe', auth_confirm_password_ph: 'Ressaisis ton mot de passe',
+    auth_show_password: 'Afficher le mot de passe', auth_hide_password: 'Masquer le mot de passe',
+    auth_sent_title: 'Vérifie tes e-mails', auth_sent_body: 'Nous avons envoyé un lien de confirmation à {email}. Ouvre-le pour activer ton compte, puis connecte-toi.',
+    auth_reset_sent_body: 'Si {email} a un compte, un lien de réinitialisation est en route. Ouvre-le pour choisir un nouveau mot de passe.',
+    account_nudge_title: 'Sauvegarde ta progression', account_nudge_sub: 'Crée un compte gratuit pour sauvegarder ton journal et ta colonie.', account_nudge_cta: 'Créer un compte gratuit', account_nudge_row_sub: 'Sauvegarde journal & colonie',
+    levelup_save_cta: 'Sauvegarde ta colonie — crée un compte gratuit',
+    sync_now: 'Synchroniser', sync_syncing: 'Synchronisation…', sync_last: 'Dernière synchro {time}', sync_never: 'Pas encore synchronisé', sync_failed: 'Échec de la synchro — nouvelle tentative à venir.',
+    account_sync_sub: 'Tes entrées et aliments personnalisés sont sauvegardés et synchronisés automatiquement.',
     auth_check_email: 'Presque fini ! Vérifie tes e-mails pour confirmer ton compte, puis connecte-toi.',
     auth_reset_sent: 'Si cet e-mail est enregistré, un lien est en route.',
     auth_signed_out: 'Déconnecté.', auth_welcome_toast: 'Connecté. Bon retour ! 🌱',
@@ -1464,7 +1564,7 @@ const STRINGS = {
     onb_safety_q: 'Avant de commencer', onb_safety_sub: 'Une rapide vérification de santé — c\'est important.',
     onb_start: 'Démarrer GutBloom',
     home_greeting: 'Bonjour',
-    home_patterns: 'Tes tendances', home_todays_meals: 'Repas du jour',
+    home_patterns: 'Mes tendances', home_todays_meals: 'Repas du jour',
     foods_title: 'Explorateur d\'aliments', foods_sub: 'Cherche un aliment, vois les déclencheurs et portions sûres',
     foods_search: 'Chercher un aliment', foods_count: '{n} aliments',
     foods_no_results: 'Aucun aliment ne correspond à ces filtres.', foods_clear_filters: 'Effacer les filtres',
@@ -1475,6 +1575,7 @@ const STRINGS = {
     guide_title: 'GutGuide', guide_sub: '50 réponses honnêtes aux questions courantes sur les FODMAP',
     guide_search: 'Chercher une question',
     log_meal: 'Noter un repas', log_symptom: 'Noter un symptôme', log_sleep: 'Noter le sommeil', log_stress: 'Noter le stress',
+    log_water: 'Noter l’eau', log_water_sub: 'Suis ton hydratation', water_title: 'Eau', water_amount_label: 'Combien de verres as-tu bus ?', water_glasses_one: '{n} verre', water_glasses: '{n} verres', water_unit_hint: '1 verre ≈ 200 ml', water_why_title: 'Pourquoi l’hydratation compte', water_why: 'Bien s’hydrater aide la digestion à avancer et garde les selles souples — cela prévient la constipation et les ballonnements fréquents avec le SII, surtout quand tu augmentes les fibres.', lf_water_title: 'Bien joué', lf_water_msg: 'Chaque verre aide ton intestin à rester en mouvement.', lf_water_goal_title: 'Objectif d’hydratation atteint !', lf_water_goal_msg: 'Les {goal} verres bus — environ {liters} L aujourd’hui. Ton intestin adore.', edit_water_label: 'Verres', water_progress: '{n} / {goal} verres · ≈ {liters} L', water_goal_reached: 'Objectif atteint — bien hydraté !',
     settings: 'Réglages', upgrade: 'Passer à Premium', premium_active: 'GutBloom Premium',
     paywall_cta: 'Obtenir Premium', plan_annual: 'Annuel', plan_monthly: 'Mensuel',
     save_meal: 'Enregistrer le repas', doctor_summary: 'Résumé pour le médecin',
@@ -1607,8 +1708,8 @@ const STRINGS = {
     home_how_more: 'En savoir plus', home_how_less: 'Voir moins',
     home_start_elim: 'Démarrer la phase d\'élimination',
     home_lets_start: 'C\'est parti',
-    home_today: "Aujourd'hui", home_yesterday: 'Hier', home_journal: 'Journal', history_title: 'Historique', see_history: 'Voir toutes les entrées', home_see_progress: 'Voir mes progrès',
-    home_hi_name: 'Salut {name}', home_hi: 'Salut', home_journey_day: 'Jour {n} de ton parcours intestinal', home_eat_well: 'Bien manger aujourd\'hui', picker_select_day: 'Choisis un jour', meal_select_type: 'Choisis un type', progress_level_points: 'Niveau {level} · {points} points', a11y_take_photo: 'Prendre une photo', a11y_week_number: 'Numéro de semaine', week_number_ph: 'p. ex. 2',
+    home_today: "Aujourd'hui", home_yesterday: 'Hier', home_journal: 'Journal', history_title: 'Historique', see_history: 'Voir toutes les entrées', home_see_progress: 'Voir mes progrès', patterns_see_all: 'Voir toutes les tendances',
+    home_hi_name: 'Salut {name}', home_hi: 'Salut', home_journey_day: 'Jour {n} de ton parcours intestinal', home_eat_well: 'Bien manger aujourd\'hui', picker_select_day: 'Choisis un jour', meal_select_type: 'Choisis un type', progress_level_points: 'Niveau {level} · {points} points', a11y_take_photo: 'Prendre une photo', a11y_week_number: 'Numéro de semaine', a11y_week_decrease: 'Diminuer la semaine', a11y_week_increase: 'Augmenter la semaine', week_number_ph: 'p. ex. 2',
     recipes_all: 'Toutes les recettes', home_meals_sub: '4 repas compatibles élimination choisis pour toi. Touche-en un pour le voir.', patterns_empty_early: 'Continue à noter tes repas et ton ressenti. Les tendances apparaissent généralement après une semaine de données.', patterns_empty_none: 'Pas encore de tendance claire. Continue à noter — plus tes entrées sont régulières, plus les analyses sont précises.', patterns_sub: "Corrélations tirées de ton journal — pas des diagnostics. Sers-t'en pour décider quoi tester.", patterns_window: '{n} derniers jours', sev_watch: 'À SURVEILLER', sev_maybe: 'SIGNE PRÉCOCE', sev_info: 'REMARQUÉ', sev_good: 'BON SIGNE', show_less: 'Voir moins', show_more: 'Voir {n} de plus',
     colony_lv: 'Niv. {n} · {form}', colony_pts: '{n} points', colony_form_spore: 'Spore', colony_form_sprout: 'Pousse', colony_form_grown: 'Développée', colony_form_thriving: 'Florissante', colony_level_form: 'Niveau {n} · {form}',
     home_low_fodmap: 'Pauvre en FODMAP', home_symptoms: 'Symptômes', home_sleep: 'Sommeil',
@@ -1626,6 +1727,7 @@ const STRINGS = {
     timeline_intensity: 'Intensité {n}/5',
     timeline_stress: 'Niveau de stress {n}/5',
     timeline_meal_fallback: 'Repas',
+    timeline_extra_one: '+ {n} ingrédient', timeline_extra: '+ {n} ingrédients',
     phase_ready_title: 'Prêt(e) à commencer ?',
     phase_ready_body: 'Lance la phase d\'élimination pour identifier tes déclencheurs. Dure 4–6 semaines.',
     phase_plan_link: 'Voir mon plan',
@@ -1691,6 +1793,10 @@ const STRINGS = {
     progress_sleep_title: 'Sommeil',
     progress_sleep_sub: 'Heures par nuit',
     progress_sleep_avg: 'moy. {n}h',
+    progress_avg_water: 'Eau moy.',
+    progress_water_title: 'Eau',
+    progress_water_sub: 'Verres par jour',
+    progress_water_avg: 'moy. {n}',
     progress_score_null: 'Continue à noter pour voir ton score hebdomadaire',
     progress_score_good: 'Ton intestin a eu une semaine calme et stable',
     progress_score_mid: 'Une semaine mitigée — quelques choses à observer',
@@ -1701,7 +1807,7 @@ const STRINGS = {
     log_symptom_sub: 'Comment tu te sens',
     log_sleep_sub: 'Enregistrer les heures',
     log_stress_sub: 'Capturer le niveau de stress',
-    nudge_lifestyle: 'Ajoute aussi sommeil et stress — ça affine tes tendances.',
+    nudge_lifestyle: 'Ajoute aussi sommeil, stress et eau — ça affine tes tendances.',
     sleep_title: 'Noter le sommeil',
     sleep_hours_label: 'Heures dormies : {n}h',
     stress_title: 'Noter le stress',
@@ -1749,9 +1855,9 @@ const STRINGS = {
     settings_week_sub: 'On ajustera ta date de départ en conséquence.',
     settings_menstruate_q: 'As-tu des règles ?',
     settings_menstruate_sub: 'Si oui, on affiche un suivi des règles sur l\'accueil pour repérer les tendances hormonales.',
-    settings_other_intolerances: 'Autres intolérances',
+    settings_other_intolerances: 'Autres intolérances', settings_none: 'Aucune',
     settings_other_intolerances_sub: 'On signalera les aliments pauvres en FODMAP mais problématiques pour ces intolérances.',
-    settings_doctor_summary: 'Résumé pour le médecin',
+    settings_doctor_summary: 'Résumé pour le médecin', settings_doctor_export_btn: 'Exporter le résumé pour le médecin',
     settings_doctor_sub: 'Exporte tes données en résumé à partager avec ton médecin ou diététicien(ne).',
     settings_save_phase: 'Enregistrer les changements de phase',
     settings_custom_foods: 'Tes aliments personnalisés', settings_custom_foods_sub: 'Aliments que tu as ajoutés. Touche un point pour changer le niveau FODMAP, ou ✕ pour supprimer.',
@@ -1850,6 +1956,10 @@ const STRINGS = {
 
     // Meal modal
     meal_modal_title: 'Consigner un repas',
+    meal_discard_title: 'Supprimer ce repas ?',
+    meal_discard_body: 'Il n’a pas encore été enregistré — tes aliments sélectionnés seront perdus.',
+    meal_discard_keep: 'Continuer',
+    meal_discard_confirm: 'Supprimer',
     meal_modal_search_ph: 'Rechercher un aliment',
     meal_modal_scan_btn: 'Scanner un code-barres',
     barcode_intro_title: 'Scanner un code-barres',
@@ -1857,6 +1967,7 @@ const STRINGS = {
     barcode_intro_cta: 'Scanner maintenant',
     barcode_intro_later: 'Plus tard',
     meal_modal_your_meal: 'Votre repas',
+    meal_edit_portion_of: 'Modifier la portion : {food}', meal_remove_item: 'Retirer du repas', meal_dish_remove_hint: 'Touche un ingrédient pour le retirer', meal_dish_add_hint: 'Mangé avec des extras (sauce, dip ou accompagnement) ? Ajoute-les via la recherche sur l’écran du repas.', meal_ingredient_removed: 'retiré',
     meal_base_hint: "C'est une base — ajoute les autres ingrédients que tu as utilisés (fromage, légumes, garnitures…) pour que le score corresponde à ton assiette.",
     meal_modal_hist_alert: 'Alerte histamine',
     meal_modal_high_hist: 'Histamine élevée : {foods}.',
@@ -1866,7 +1977,8 @@ const STRINGS = {
     meal_modal_recent: 'Aliments récents',
     meal_modal_recent_meals: 'Repas récents',
     meal_type_label: 'Type', meal_type_breakfast: 'Petit-déj', meal_type_lunch: 'Déjeuner', meal_type_dinner: 'Dîner', meal_type_snack: 'Encas',
-    edit_dish: 'Plat', meal_edit_foods: 'Aliments', meal_edit_add: 'Ajouter un aliment', meal_edit_none: 'Aucun aliment — ajoutes-en au moins un.',
+    meal_my_breakfast: 'Mon petit-déj', meal_my_lunch: 'Mon déjeuner', meal_my_dinner: 'Mon dîner', meal_my_snack: 'Mon encas',
+    edit_dish: 'Plat', meal_edit_extras: 'Ingrédients ajoutés', meal_edit_foods: 'Aliments', meal_edit_add: 'Ajouter un aliment', meal_edit_none: 'Aucun aliment — ajoutes-en au moins un.', edit_now_custom: 'Tu as modifié les ingrédients — c’est maintenant un repas personnalisé.',
     meal_custom_q: '"{name}" introuvable ?',
     meal_custom_tip: 'Conseil : si c\'est un mélange (comme une ratatouille), ajoute plutôt les ingrédients individuels — tu obtiendras des verdicts plus précis.',
     meal_custom_add: 'Choisis son niveau FODMAP :',
@@ -1897,6 +2009,20 @@ const STRINGS = {
     auth_err_empty: 'Inserisci email e password.',
     auth_err_email: 'Inserisci un indirizzo email valido.',
     auth_err_password_short: 'La password deve avere almeno 6 caratteri.',
+    auth_err_generic: 'Qualcosa è andato storto. Riprova.',
+    auth_err_credentials: 'Email o password errati.',
+    auth_err_exists: 'Questa email è già registrata: accedi.',
+    auth_err_send: "Non siamo riusciti a inviare l'email di conferma. Controlla l'indirizzo o riprova tra poco.",
+    auth_err_unconfirmed: 'Conferma prima la tua email — controlla la posta in arrivo.',
+    auth_err_mismatch: 'Le password non coincidono.',
+    auth_confirm_password: 'Conferma password', auth_confirm_password_ph: 'Reinserisci la password',
+    auth_show_password: 'Mostra password', auth_hide_password: 'Nascondi password',
+    auth_sent_title: 'Controlla la tua email', auth_sent_body: 'Abbiamo inviato un link di conferma a {email}. Aprilo per attivare il tuo account, poi accedi.',
+    auth_reset_sent_body: 'Se {email} ha un account, il link per reimpostare la password è in arrivo. Aprilo per scegliere una nuova password.',
+    account_nudge_title: 'Salva i tuoi progressi', account_nudge_sub: 'Crea un account gratuito per salvare il tuo diario e la tua colonia.', account_nudge_cta: 'Crea account gratuito', account_nudge_row_sub: 'Salva diario e colonia',
+    levelup_save_cta: 'Salva la tua colonia — crea un account gratuito',
+    sync_now: 'Sincronizza ora', sync_syncing: 'Sincronizzazione…', sync_last: 'Ultima sincronizzazione {time}', sync_never: 'Non ancora sincronizzato', sync_failed: 'Sincronizzazione non riuscita — riproveremo.',
+    account_sync_sub: 'I tuoi diari e alimenti personalizzati vengono salvati e sincronizzati automaticamente.',
     auth_check_email: 'Ci siamo quasi! Controlla la tua email per confermare l\'account, poi accedi.',
     auth_reset_sent: 'Se questa email è registrata, il link è in arrivo.',
     auth_signed_out: 'Disconnesso.', auth_welcome_toast: 'Accesso eseguito. Bentornato! 🌱',
@@ -1910,7 +2036,7 @@ const STRINGS = {
     onb_safety_q: 'Prima di iniziare', onb_safety_sub: 'Un rapido controllo di salute — è importante.',
     onb_start: 'Inizia GutBloom',
     home_greeting: 'Ciao',
-    home_patterns: 'I tuoi schemi', home_todays_meals: 'Pasti di oggi',
+    home_patterns: 'I miei schemi', home_todays_meals: 'Pasti di oggi',
     foods_title: 'Esplora alimenti', foods_sub: 'Cerca un alimento, vedi i fattori scatenanti e le porzioni sicure',
     foods_search: 'Cerca un alimento', foods_count: '{n} alimenti',
     foods_no_results: 'Nessun alimento corrisponde a questi filtri.', foods_clear_filters: 'Azzera filtri',
@@ -1921,6 +2047,7 @@ const STRINGS = {
     guide_title: 'GutGuide', guide_sub: '50 risposte oneste alle domande comuni sui FODMAP',
     guide_search: 'Cerca una domanda',
     log_meal: 'Registra pasto', log_symptom: 'Registra sintomo', log_sleep: 'Registra sonno', log_stress: 'Registra stress',
+    log_water: 'Registra acqua', log_water_sub: 'Monitora l’idratazione', water_title: 'Acqua', water_amount_label: 'Quanti bicchieri hai bevuto?', water_glasses_one: '{n} bicchiere', water_glasses: '{n} bicchieri', water_unit_hint: '1 bicchiere ≈ 200 ml', water_why_title: 'Perché l’idratazione è importante', water_why: 'Bere a sufficienza aiuta la digestione e mantiene le feci morbide — previene stitichezza e gonfiore, comuni nell’IBS, soprattutto quando aumenti le fibre.', lf_water_title: 'Ottimo', lf_water_msg: 'Ogni bicchiere aiuta il tuo intestino a restare in movimento.', lf_water_goal_title: 'Obiettivo idratazione raggiunto!', lf_water_goal_msg: 'Tutti i {goal} bicchieri — circa {liters} L oggi. Il tuo intestino ringrazia.', edit_water_label: 'Bicchieri', water_progress: '{n} / {goal} bicchieri · ≈ {liters} L', water_goal_reached: 'Obiettivo raggiunto, ottima idratazione!',
     settings: 'Impostazioni', upgrade: 'Passa a Premium', premium_active: 'GutBloom Premium',
     paywall_cta: 'Ottieni Premium', plan_annual: 'Annuale', plan_monthly: 'Mensile',
     save_meal: 'Salva pasto', doctor_summary: 'Riepilogo per il medico',
@@ -2053,8 +2180,8 @@ const STRINGS = {
     home_how_more: 'Leggi di più', home_how_less: 'Mostra meno',
     home_start_elim: 'Inizia la fase di eliminazione',
     home_lets_start: 'Iniziamo',
-    home_today: 'Oggi', home_yesterday: 'Ieri', home_journal: 'Diario', history_title: 'Cronologia', see_history: 'Vedi tutte le voci', home_see_progress: 'Vedi i miei progressi',
-    home_hi_name: 'Ciao {name}', home_hi: 'Ciao', home_journey_day: 'Giorno {n} del tuo percorso intestinale', home_eat_well: 'Mangia bene oggi', picker_select_day: 'Scegli un giorno', meal_select_type: 'Scegli un tipo', progress_level_points: 'Livello {level} · {points} punti', a11y_take_photo: 'Scatta una foto', a11y_week_number: 'Numero della settimana', week_number_ph: 'es. 2',
+    home_today: 'Oggi', home_yesterday: 'Ieri', home_journal: 'Diario', history_title: 'Cronologia', see_history: 'Vedi tutte le voci', home_see_progress: 'Vedi i miei progressi', patterns_see_all: 'Vedi tutti gli schemi',
+    home_hi_name: 'Ciao {name}', home_hi: 'Ciao', home_journey_day: 'Giorno {n} del tuo percorso intestinale', home_eat_well: 'Mangia bene oggi', picker_select_day: 'Scegli un giorno', meal_select_type: 'Scegli un tipo', progress_level_points: 'Livello {level} · {points} punti', a11y_take_photo: 'Scatta una foto', a11y_week_number: 'Numero della settimana', a11y_week_decrease: 'Diminuisci settimana', a11y_week_increase: 'Aumenta settimana', week_number_ph: 'es. 2',
     recipes_all: 'Tutte le ricette', home_meals_sub: '4 pasti sicuri in eliminazione scelti per te. Toccane uno per vederlo.', patterns_empty_early: 'Continua a registrare i pasti e come ti senti. Gli schemi di solito emergono dopo circa una settimana di dati.', patterns_empty_none: 'Ancora nessuno schema chiaro. Continua a registrare: più le voci sono costanti, più le analisi sono precise.', patterns_sub: 'Correlazioni dal tuo diario, non diagnosi. Usale per decidere cosa testare.', patterns_window: 'Ultimi {n} giorni', sev_watch: "DA TENERE D'OCCHIO", sev_maybe: 'SEGNALE INIZIALE', sev_info: 'NOTATO', sev_good: 'BUON SEGNO', show_less: 'Mostra meno', show_more: 'Mostra altri {n}',
     colony_lv: 'Liv. {n} · {form}', colony_pts: '{n} punti', colony_form_spore: 'Spora', colony_form_sprout: 'Germoglio', colony_form_grown: 'Cresciuta', colony_form_thriving: 'Fiorente', colony_level_form: 'Livello {n} · {form}',
     home_low_fodmap: 'Basso in FODMAP', home_symptoms: 'Sintomi', home_sleep: 'Sonno',
@@ -2072,6 +2199,7 @@ const STRINGS = {
     timeline_intensity: 'Intensità {n}/5',
     timeline_stress: 'Livello stress {n}/5',
     timeline_meal_fallback: 'Pasto',
+    timeline_extra_one: '+ {n} ingrediente', timeline_extra: '+ {n} ingredienti',
     phase_ready_title: 'Pronto/a per iniziare?',
     phase_ready_body: 'Avvia la fase di eliminazione per identificare i tuoi fattori scatenanti. Dura 4–6 settimane.',
     phase_plan_link: 'Vedi il mio piano',
@@ -2137,6 +2265,10 @@ const STRINGS = {
     progress_sleep_title: 'Sonno',
     progress_sleep_sub: 'Ore per notte',
     progress_sleep_avg: 'media {n}h',
+    progress_avg_water: 'Acqua media',
+    progress_water_title: 'Acqua',
+    progress_water_sub: 'Bicchieri al giorno',
+    progress_water_avg: 'media {n}',
     progress_score_null: 'Continua a registrare per vedere il tuo punteggio settimanale',
     progress_score_good: 'Il tuo intestino ha avuto una settimana tranquilla e stabile',
     progress_score_mid: 'Una settimana mista — alcune cose da osservare',
@@ -2147,7 +2279,7 @@ const STRINGS = {
     log_symptom_sub: 'Come ti senti',
     log_sleep_sub: 'Registra le ore',
     log_stress_sub: 'Cattura il livello di stress',
-    nudge_lifestyle: 'Aggiungi anche sonno e stress: rende i tuoi schemi più precisi.',
+    nudge_lifestyle: 'Aggiungi anche sonno, stress e acqua: rende i tuoi schemi più precisi.',
     sleep_title: 'Registra sonno',
     sleep_hours_label: 'Ore di sonno: {n}h',
     stress_title: 'Registra stress',
@@ -2195,9 +2327,9 @@ const STRINGS = {
     settings_week_sub: 'Adatteremo la tua data di inizio di conseguenza.',
     settings_menstruate_q: 'Hai le mestruazioni?',
     settings_menstruate_sub: 'Se sì, mostriamo un tracker del ciclo nella schermata principale per individuare i pattern ormonali.',
-    settings_other_intolerances: 'Altre intolleranze',
+    settings_other_intolerances: 'Altre intolleranze', settings_none: 'Nessuna',
     settings_other_intolerances_sub: 'Segnaleremo gli alimenti che sono low-FODMAP ma problematici per queste intolleranze.',
-    settings_doctor_summary: 'Riepilogo per il medico',
+    settings_doctor_summary: 'Riepilogo per il medico', settings_doctor_export_btn: 'Esporta riepilogo per il medico',
     settings_doctor_sub: 'Esporta i tuoi dati come riepilogo da condividere con il tuo medico o dietista.',
     settings_save_phase: 'Salva modifiche alla fase',
     settings_custom_foods: 'I tuoi alimenti personalizzati', settings_custom_foods_sub: 'Alimenti che hai aggiunto. Tocca un punto per cambiare il livello FODMAP, o ✕ per rimuovere.',
@@ -2296,6 +2428,10 @@ const STRINGS = {
 
     // Meal modal
     meal_modal_title: 'Registra un pasto',
+    meal_discard_title: 'Eliminare questo pasto?',
+    meal_discard_body: 'Non è ancora stato salvato: gli alimenti selezionati andranno persi.',
+    meal_discard_keep: 'Continua a modificare',
+    meal_discard_confirm: 'Elimina',
     meal_modal_search_ph: 'Cerca qualsiasi alimento',
     meal_modal_scan_btn: 'Scansiona codice a barre',
     barcode_intro_title: 'Scansiona un codice a barre',
@@ -2303,6 +2439,7 @@ const STRINGS = {
     barcode_intro_cta: 'Scansiona ora',
     barcode_intro_later: 'Forse più tardi',
     meal_modal_your_meal: 'Il tuo pasto',
+    meal_edit_portion_of: 'Modifica porzione: {food}', meal_remove_item: 'Rimuovi dal pasto', meal_dish_remove_hint: 'Tocca un ingrediente per toglierlo', meal_dish_add_hint: 'Mangiato con extra (salsa, dip o contorno)? Aggiungili dalla ricerca nella schermata del pasto.', meal_ingredient_removed: 'tolto',
     meal_base_hint: 'Questa è una base — aggiungi gli altri ingredienti che hai usato (formaggio, verdure, condimenti…) così il punteggio corrisponde al tuo piatto.',
     meal_modal_hist_alert: 'Avviso istamina',
     meal_modal_high_hist: 'Alta istamina: {foods}.',
@@ -2312,7 +2449,8 @@ const STRINGS = {
     meal_modal_recent: 'Alimenti recenti',
     meal_modal_recent_meals: 'Pasti recenti',
     meal_type_label: 'Tipo', meal_type_breakfast: 'Colazione', meal_type_lunch: 'Pranzo', meal_type_dinner: 'Cena', meal_type_snack: 'Spuntino',
-    edit_dish: 'Piatto', meal_edit_foods: 'Alimenti', meal_edit_add: 'Aggiungi alimento', meal_edit_none: 'Nessun alimento — aggiungine almeno uno.',
+    meal_my_breakfast: 'La mia colazione', meal_my_lunch: 'Il mio pranzo', meal_my_dinner: 'La mia cena', meal_my_snack: 'Il mio spuntino',
+    edit_dish: 'Piatto', meal_edit_extras: 'Ingredienti aggiunti', meal_edit_foods: 'Alimenti', meal_edit_add: 'Aggiungi alimento', meal_edit_none: 'Nessun alimento — aggiungine almeno uno.', edit_now_custom: 'Hai modificato gli ingredienti: ora è un pasto personalizzato.',
     meal_custom_q: 'Non trovi "{name}"?',
     meal_custom_tip: 'Suggerimento: se è un mix (come la pasta all\'amatriciana), aggiungi invece i singoli ingredienti — otterrai verdetti più precisi.',
     meal_custom_add: 'Scegli il suo livello FODMAP:',
@@ -2391,6 +2529,8 @@ const FOOD_NAMES = {
   leek:          { de: 'Lauch', es: 'Puerro', fr: 'Poireau', it: 'Porro' },
   spring_onion:  { de: 'Frühlingszwiebel (grüner Teil)', es: 'Cebolleta (parte verde)', fr: 'Oignon nouveau (partie verte)', it: 'Cipollotto (parte verde)' },
   mushroom:      { de: 'Champignon', es: 'Champiñón', fr: 'Champignon', it: 'Fungo champignon' },
+  oyster_mushroom:{ de: 'Austernpilz', es: 'Seta de ostra', fr: 'Pleurote', it: 'Fungo ostrica' },
+  truffle:       { de: 'Trüffel', es: 'Trufa', fr: 'Truffe', it: 'Tartufo' },
   cauliflower:   { de: 'Blumenkohl', es: 'Coliflor', fr: 'Chou-fleur', it: 'Cavolfiore' },
   asparagus_green:{ de: 'Grüner Spargel', es: 'Espárrago verde', fr: 'Asperge verte', it: 'Asparago verde' },
   celery:        { de: 'Sellerie', es: 'Apio', fr: 'Céleri', it: 'Sedano' },
@@ -2443,6 +2583,10 @@ const FOOD_NAMES = {
   pasta:         { de: 'Weizenpasta', es: 'Pasta de trigo', fr: 'Pâtes de blé', it: 'Pasta di grano' },
   sourdough_spelt:{ de: 'Dinkel-Sauerteigbrot', es: 'Masa madre de espelta', fr: 'Levain d\'épeautre', it: 'Pasta madre di farro' },
   bread:         { de: 'Weizenbrot', es: 'Pan de trigo', fr: 'Pain de blé', it: 'Pane di grano' },
+  pizza_dough:   { de: 'Pizzateig', es: 'Masa de pizza', fr: 'Pâte à pizza', it: 'Impasto per pizza' },
+  pinsa_dough:   { de: 'Pinsa-Teig', es: 'Masa de pinsa', fr: 'Pâte à pinsa', it: 'Impasto per pinsa' },
+  flatbread:     { de: 'Fladenbrot', es: 'Pan plano', fr: 'Pain plat', it: 'Pane piatto' },
+  corn_tortilla: { de: 'Maistortilla', es: 'Tortilla de maíz', fr: 'Tortilla de maïs', it: 'Tortilla di mais' },
   rye_bread:     { de: 'Roggenbrot', es: 'Pan de centeno', fr: 'Pain de seigle', it: 'Pane di segale' },
   brotchen:      { de: 'Brötchen', es: 'Panecillo', fr: 'Petit pain', it: 'Panino' },
   whole_wheat_bread:{ de: 'Vollkornbrot', es: 'Pan integral', fr: 'Pain complet', it: 'Pane integrale' },
@@ -2470,6 +2614,10 @@ const FOOD_NAMES = {
   lactose_free_yogurt:{ de: 'Laktosefreier Joghurt', es: 'Yogur sin lactosa', fr: 'Yaourt sans lactose', it: 'Yogurt senza lattosio' },
   cream_cheese:  { de: 'Frischkäse', es: 'Queso crema', fr: 'Fromage frais', it: 'Formaggio spalmabile' },
   quark:         { de: 'Quark', es: 'Quark', fr: 'Fromage blanc', it: 'Quark' },
+  cream:         { de: 'Sahne', es: 'Nata', fr: 'Crème', it: 'Panna' },
+  creme_fraiche: { de: 'Crème fraîche', es: 'Crème fraîche', fr: 'Crème fraîche', it: 'Crème fraîche' },
+  sour_cream:    { de: 'Schmand', es: 'Crema agria', fr: 'Crème aigre', it: 'Panna acida' },
+  mascarpone:    { de: 'Mascarpone', es: 'Mascarpone', fr: 'Mascarpone', it: 'Mascarpone' },
   oat_milk:      { de: 'Hafermilch', es: 'Leche de avena', fr: "Lait d'avoine", it: "Latte d'avena" },
   yogurt:        { de: 'Joghurt', es: 'Yogur', fr: 'Yaourt', it: 'Yogurt' },
   greek_yogurt:  { de: 'Griechischer Joghurt', es: 'Yogur griego', fr: 'Yaourt grec', it: 'Yogurt greco' },
@@ -2483,6 +2631,11 @@ const FOOD_NAMES = {
   salmon:        { de: 'Lachs', es: 'Salmón', fr: 'Saumon', it: 'Salmone' },
   lamb:          { de: 'Lamm', es: 'Cordero', fr: 'Agneau', it: 'Agnello' },
   veal:          { de: 'Kalb', es: 'Ternera', fr: 'Veau', it: 'Vitello' },
+  meat_lamb_chicken: { de: 'Lamm oder Hähnchen', es: 'Cordero o pollo', fr: 'Agneau ou poulet', it: 'Agnello o pollo' },
+  meat_beef_pork:    { de: 'Rind oder Schwein', es: 'Res o cerdo', fr: 'Bœuf ou porc', it: 'Manzo o maiale' },
+  meat_veal_pork:    { de: 'Kalb oder Schwein', es: 'Ternera o cerdo', fr: 'Veau ou porc', it: 'Vitello o maiale' },
+  meat_beef_chicken: { de: 'Rind oder Hähnchen', es: 'Res o pollo', fr: 'Bœuf ou poulet', it: 'Manzo o pollo' },
+  meat_pork_chicken: { de: 'Schwein oder Hähnchen', es: 'Cerdo o pollo', fr: 'Porc ou poulet', it: 'Maiale o pollo' },
   duck:          { de: 'Ente', es: 'Pato', fr: 'Canard', it: 'Anatra' },
   ground_beef:   { de: 'Hackfleisch', es: 'Carne picada', fr: 'Bœuf haché', it: 'Carne macinata' },
   bacon:         { de: 'Speck', es: 'Bacon', fr: 'Bacon', it: 'Pancetta' },
@@ -2512,6 +2665,9 @@ const FOOD_NAMES = {
   shrimp:        { de: 'Garnelen', es: 'Gambas', fr: 'Crevettes', it: 'Gamberi' },
   egg:           { de: 'Ei', es: 'Huevo', fr: 'Œuf', it: 'Uovo' },
   tofu:          { de: 'Tofu (fest)', es: 'Tofu (firme)', fr: 'Tofu (ferme)', it: 'Tofu (compatto)' },
+  tofu_silken:   { de: 'Tofu (seiden)', es: 'Tofu (sedoso)', fr: 'Tofu (soyeux)', it: 'Tofu (vellutato)' },
+  tempeh:        { de: 'Tempeh', es: 'Tempeh', fr: 'Tempeh', it: 'Tempeh' },
+  seitan:        { de: 'Seitan', es: 'Seitán', fr: 'Seitan', it: 'Seitan' },
   bratwurst:     { de: 'Bratwurst', es: 'Salchicha bratwurst', fr: 'Bratwurst', it: 'Bratwurst' },
   currywurst:    { de: 'Currywurst', es: 'Currywurst', fr: 'Currywurst', it: 'Currywurst' },
   lentils:       { de: 'Linsen', es: 'Lentejas', fr: 'Lentilles', it: 'Lenticchie' },
@@ -2541,6 +2697,16 @@ const FOOD_NAMES = {
   pasta_sauce:   { de: 'Tomaten-Pastasoße (mit Zwiebel/Knoblauch)', es: 'Salsa de tomate para pasta (con cebolla/ajo)', fr: 'Sauce tomate pour pâtes (oignon/ail)', it: 'Sugo di pomodoro (con cipolla/aglio)' },
   pasta_sauce_plain: { de: 'Tomaten-Pastasoße (ohne Zwiebel/Knoblauch)', es: 'Salsa de tomate para pasta (sin cebolla/ajo)', fr: 'Sauce tomate pour pâtes (sans oignon/ail)', it: 'Sugo di pomodoro (senza cipolla/aglio)' },
   hummus:        { de: 'Hummus', es: 'Hummus', fr: 'Houmous', it: 'Hummus' },
+  ketchup:       { de: 'Ketchup', es: 'Kétchup', fr: 'Ketchup', it: 'Ketchup' },
+  garlic_sauce:  { de: 'Knoblauchsoße', es: 'Salsa de ajo', fr: 'Sauce à l’ail', it: 'Salsa all’aglio' },
+  yogurt_sauce:  { de: 'Joghurtsoße', es: 'Salsa de yogur', fr: 'Sauce au yaourt', it: 'Salsa allo yogurt' },
+  tzatziki:      { de: 'Tzatziki', es: 'Tzatziki', fr: 'Tzatzíki', it: 'Tzatziki' },
+  hot_sauce:     { de: 'Scharfe Soße (Chili)', es: 'Salsa picante (chile)', fr: 'Sauce piquante (piment)', it: 'Salsa piccante (peperoncino)' },
+  sriracha:      { de: 'Sriracha', es: 'Sriracha', fr: 'Sriracha', it: 'Sriracha' },
+  bbq_sauce:     { de: 'BBQ-Soße', es: 'Salsa barbacoa', fr: 'Sauce barbecue', it: 'Salsa barbecue' },
+  sweet_chili:   { de: 'Süße Chilisoße', es: 'Salsa de chile dulce', fr: 'Sauce chili sucrée', it: 'Salsa chili dolce' },
+  tahini:        { de: 'Tahini', es: 'Tahini', fr: 'Tahini', it: 'Tahina' },
+  salsa:         { de: 'Salsa', es: 'Salsa', fr: 'Salsa', it: 'Salsa' },
   water:         { de: 'Wasser', es: 'Agua', fr: 'Eau', it: 'Acqua' },
   coffee:        { de: 'Kaffee', es: 'Café', fr: 'Café', it: 'Caffè' },
   tea_green:     { de: 'Grüner Tee', es: 'Té verde', fr: 'Thé vert', it: 'Tè verde' },
@@ -2548,11 +2714,12 @@ const FOOD_NAMES = {
   beer:          { de: 'Bier', es: 'Cerveza', fr: 'Bière', it: 'Birra' },
   wine_white:    { de: 'Weißwein', es: 'Vino blanco', fr: 'Vin blanc', it: 'Vino bianco' },
   wine_red:      { de: 'Rotwein', es: 'Vino tinto', fr: 'Vin rouge', it: 'Vino rosso' },
-  pizza:{ de: 'Pizza Margherita (Basis)', es: 'Pizza Margarita (base)', fr: 'Pizza Margherita (base)', it: 'Pizza Margherita (base)' },
+  pizza:{ de: 'Pizza Margherita (einfach)', es: 'Pizza Margarita (simple)', fr: 'Pizza Margherita (simple)', it: 'Pizza Margherita (semplice)' },
+  pinsa:         { de: 'Pinsa (einfach)', es: 'Pinsa (simple)', fr: 'Pinsa (simple)', it: 'Pinsa (semplice)' },
   lasagna:       { de: 'Lasagne', es: 'Lasaña', fr: 'Lasagnes', it: 'Lasagne' },
   spaghetti_bolognese:{ de: 'Spaghetti Bolognese', es: 'Espaguetis a la boloñesa', fr: 'Spaghettis bolognaise', it: 'Spaghetti alla bolognese' },
   spaghetti_carbonara:{ de: 'Spaghetti Carbonara', es: 'Espaguetis carbonara', fr: 'Spaghettis carbonara', it: 'Spaghetti alla carbonara' },
-  risotto:       { de: 'Risotto (Basis)', es: 'Risotto (base)', fr: 'Risotto (base)', it: 'Risotto (base)' },
+  risotto:       { de: 'Risotto (einfach)', es: 'Risotto (simple)', fr: 'Risotto (simple)', it: 'Risotto (semplice)' },
   caprese_salad: { de: 'Caprese-Salat', es: 'Ensalada caprese', fr: 'Salade caprese', it: 'Insalata caprese' },
   minestrone:    { de: 'Minestrone-Suppe', es: 'Sopa minestrone', fr: 'Soupe minestrone', it: 'Minestrone' },
   tiramisu:      { de: 'Tiramisu', es: 'Tiramisú', fr: 'Tiramisu', it: 'Tiramisù' },
@@ -2605,6 +2772,18 @@ const FOOD_NAMES = {
   fried_chicken: { de: 'Frittiertes Hähnchen', es: 'Pollo frito', fr: 'Poulet frit', it: 'Pollo fritto' },
   burrito:       { de: 'Burrito', es: 'Burrito', fr: 'Burrito', it: 'Burrito' },
   taco:          { de: 'Rindfleisch-Taco', es: 'Taco de ternera', fr: 'Taco au bœuf', it: 'Taco di manzo' },
+  taco_chicken:  { de: 'Hähnchen-Taco', es: 'Taco de pollo', fr: 'Taco au poulet', it: 'Taco di pollo' },
+  taco_fish:     { de: 'Fisch-Taco', es: 'Taco de pescado', fr: 'Taco au poisson', it: 'Taco di pesce' },
+  taco_pork:     { de: 'Schweine-Taco (al pastor)', es: 'Taco al pastor', fr: 'Taco al pastor', it: 'Taco al pastor' },
+  burger:        { de: 'Burger (einfach)', es: 'Hamburguesa (simple)', fr: 'Burger (simple)', it: 'Hamburger (semplice)' },
+  burger_vegan:  { de: 'Veganer Burger (einfach)', es: 'Hamburguesa vegana (simple)', fr: 'Burger vegan (simple)', it: 'Hamburger vegano (semplice)' },
+  plant_patty:   { de: 'Pflanzliches Patty', es: 'Hamburguesa vegetal (solo medallón)', fr: 'Steak végétal', it: 'Burger vegetale (solo polpetta)' },
+  gyros:         { de: 'Gyros', es: 'Gyros', fr: 'Gyros', it: 'Gyros' },
+  souvlaki:      { de: 'Souvlaki', es: 'Souvlaki', fr: 'Souvlaki', it: 'Souvlaki' },
+  falafel_wrap:  { de: 'Falafel-Wrap', es: 'Wrap de falafel', fr: 'Wrap falafel', it: 'Falafel wrap' },
+  churros:       { de: 'Churros', es: 'Churros', fr: 'Churros', it: 'Churros' },
+  langos:        { de: 'Langos', es: 'Langos', fr: 'Langos', it: 'Langos' },
+  pierogi:       { de: 'Piroggen', es: 'Pierogi', fr: 'Pierogi', it: 'Pierogi' },
   nachos:        { de: 'Nachos', es: 'Nachos', fr: 'Nachos', it: 'Nachos' },
   donut:         { de: 'Donut', es: 'Dónut', fr: 'Donut', it: 'Ciambella' },
   apple_pie:     { de: 'Apfelkuchen', es: 'Tarta de manzana', fr: 'Tarte aux pommes', it: 'Torta di mele' },
@@ -2650,7 +2829,7 @@ function foodName(food, lang) {
 // Wheat-based dishes: their fructans come (partly) from a wheat base, so a gluten-free
 // swap helps. Rice/noodle-rice dishes are deliberately excluded.
 const WHEAT_LIGHTEN = new Set([
-  'pizza', 'lasagna', 'spaghetti_bolognese', 'spaghetti_carbonara',
+  'pizza', 'pinsa', 'lasagna', 'spaghetti_bolognese', 'spaghetti_carbonara',
   'tiramisu', 'cheeseburger', 'mac_cheese', 'pancakes', 'club_sandwich', 'bagel_cream_cheese',
   'hot_dog', 'dumplings', 'spring_rolls', 'wonton_soup', 'naan', 'samosa', 'croissant', 'baguette',
   'quiche', 'fish_and_chips', 'pretzel', 'crepe', 'fried_chicken', 'donut', 'apple_pie', 'cheesecake',
@@ -2795,7 +2974,9 @@ const FOODS = [
   { id: 'garlic', category: 'vegetables', name: 'Garlic', emoji: '🧄', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 75, group: 'veg' },
   { id: 'leek', category: 'vegetables', name: 'Leek', emoji: '🧅', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 78, group: 'veg' },
   { id: 'spring_onion', category: 'vegetables', name: 'Spring onion (green tops)', emoji: '🧅', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 12, group: 'veg', alias: 'scallion, green onion, spring onion greens, cipollotto' },
-  { id: 'mushroom', category: 'vegetables', name: 'Mushroom', emoji: '🍄', cat: 'high', groups: ['mannitol'], lowT: null, modT: null, popTrigger: 60, group: 'veg' },
+  { id: 'mushroom', category: 'vegetables', name: 'Mushroom', emoji: '🍄', cat: 'high', groups: ['mannitol'], lowT: null, modT: null, popTrigger: 60, group: 'veg', alias: 'champignon, button mushroom, portobello, cremini, chestnut mushroom, shiitake, porcini, funghi, fungo, champignons, steinpilz' },
+  { id: 'oyster_mushroom', category: 'vegetables', name: 'Oyster mushroom', emoji: '🍄', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 10, group: 'veg', alias: 'pleurotus, oyster mushroom, funghi ostrica, pleurote, austernpilz, seta de ostra' },
+  { id: 'truffle', category: 'vegetables', name: 'Truffle', emoji: '🍄', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 5, group: 'veg', alias: 'tartufo, truffle oil, olio al tartufo, truffe, trueffel, trufa' },
   { id: 'cauliflower', category: 'vegetables', name: 'Cauliflower', emoji: '🥦', cat: 'high', groups: ['mannitol'], lowT: null, modT: null, popTrigger: 65, group: 'veg' },
   { id: 'asparagus_green', category: 'vegetables', name: 'Green asparagus', emoji: '🌿', cat: 'high', groups: ['fructans', 'fructose'], lowT: null, modT: null, popTrigger: 70, group: 'veg' },
   { id: 'celery', category: 'vegetables', name: 'Celery', emoji: '🥬', cat: 'high', groups: ['mannitol'], lowT: null, modT: null, popTrigger: 50, group: 'veg' },
@@ -2841,13 +3022,26 @@ const FOODS = [
   { id: 'rice_brown', category: 'grains', name: 'Brown rice', emoji: '🍚', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 8, group: 'grain' },
   { id: 'quinoa', category: 'grains', name: 'Quinoa', emoji: '🌾', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 5, group: 'grain' },
   { id: 'buckwheat', category: 'grains', name: 'Buckwheat', emoji: '🌾', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 5, group: 'grain' },
-  { id: 'rice_noodle', category: 'grains', name: 'Rice noodles', emoji: '🍜', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 5, group: 'grain' },
+  { id: 'rice_noodle', category: 'grains', name: 'Rice noodles', emoji: '🍜', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 5, group: 'grain', portions: { S: 50, M: 100, L: 150, unit: 'g' } },
   { id: 'gluten_free_bread', category: 'bread', name: 'Gluten-free bread', emoji: '🍞', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 10, group: 'grain' },
-  { id: 'gluten_free_pasta', category: 'grains', name: 'Gluten-free pasta', emoji: '🍝', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 10, group: 'grain' },
+  { id: 'gluten_free_pasta', category: 'grains', name: 'Gluten-free pasta', emoji: '🍝', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 10, group: 'grain', portions: { S: 50, M: 100, L: 150, unit: 'g' } },
   { id: 'oats', category: 'cereal', name: 'Rolled oats', emoji: '🥣', cat: 'mod', groups: ['fructans', 'gos'], lowT: 60, modT: 100, popTrigger: 35, group: 'grain' },
-  { id: 'pasta', category: 'grains', name: 'Wheat pasta', emoji: '🍝', cat: 'mod', groups: ['fructans'], lowT: 74, modT: 150, popTrigger: 55, group: 'grain' },
+  { id: 'pasta', category: 'grains', name: 'Wheat pasta', emoji: '🍝', cat: 'mod', groups: ['fructans'], lowT: 74, modT: 150, popTrigger: 55, group: 'grain', portions: { S: 50, M: 100, L: 150, unit: 'g' } },
   { id: 'sourdough_spelt', category: 'bread', name: 'Spelt sourdough', emoji: '🍞', cat: 'mod', groups: ['fructans'], lowT: 26, modT: 80, popTrigger: 35, group: 'grain' },
   { id: 'bread', category: 'bread', name: 'Wheat bread', emoji: '🍞', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 70, group: 'grain' },
+  { id: 'pizza_dough', category: 'bread', name: 'Pizza dough', emoji: '🫓', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 70, group: 'grain' },
+  // Generic wheat flatbread — the shared base for wraps/flatbread dishes (kebab, gyros, souvlaki,
+  // falafel wrap, langos, burrito, quesadilla). Same flat-high fructan profile as wheat bread.
+  { id: 'flatbread', category: 'bread', name: 'Flatbread', emoji: '🫓', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 70, group: 'grain', alias: 'pita wrap naan lavash doner kebab bread wheat tortilla' },
+  // Corn (maize/masa) tortilla — nixtamalised corn is LOW FODMAP, unlike sweet-corn kernels, so
+  // this replaces the sweet_corn proxy in corn-tortilla dishes (tacos, nachos, arepa).
+  { id: 'corn_tortilla', category: 'bread', name: 'Corn tortilla', emoji: '🫓', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 8, group: 'grain', alias: 'maize tortilla taco masa mais nachos' },
+  // Pinsa dough is a wheat/rice/soy blend with high hydration and long (24-72h) cold
+  // fermentation, which breaks down much of the fructans — like sourdough. Thresholds are
+  // sized to a MEAL portion (a whole pinsa ≈ 180g dough, see DISH_INGREDIENTS), not a bread
+  // slice: ≤90g (½ pinsa) low, ≤200g (a normal pinsa) moderate, larger high. This makes a
+  // logged pinsa read gentler than pizza (whose dough is flat 'high') at normal servings.
+  { id: 'pinsa_dough', category: 'bread', name: 'Pinsa dough', emoji: '🫓', cat: 'mod', groups: ['fructans'], lowT: 90, modT: 200, popTrigger: 35, group: 'grain', alias: 'pinsa romana dough' },
   { id: 'rye_bread', category: 'bread', name: 'Rye bread', emoji: '🍞', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 70, group: 'grain' },
   { id: 'brotchen', category: 'bread', name: 'Bread roll', emoji: '🥖', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 70, group: 'grain' },
   { id: 'whole_wheat_bread', category: 'bread', name: 'Whole wheat bread', emoji: '🍞', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 75, group: 'grain' },
@@ -2886,6 +3080,10 @@ const FOODS = [
   { id: 'ricotta', category: 'dairy_solid', name: 'Ricotta', emoji: '🧀', cat: 'mod', groups: ['lactose'], lowT: 40, modT: 80, popTrigger: 30, group: 'dairy' },
   { id: 'burrata', category: 'dairy_solid', name: 'Burrata', emoji: '🧀', cat: 'mod', groups: ['lactose'], lowT: 30, modT: 60, popTrigger: 30, group: 'dairy' },
   { id: 'cottage_cheese', category: 'dairy_solid', name: 'Cottage cheese', emoji: '🧀', cat: 'high', groups: ['lactose'], lowT: null, modT: null, popTrigger: 55, group: 'dairy' },
+  { id: 'cream', category: 'dairy_liquid', name: 'Cream', emoji: '🥛', cat: 'mod', groups: ['lactose'], lowT: 40, modT: 90, popTrigger: 30, group: 'dairy', alias: 'panna sahne obers heavy whipping cooking cream' },
+  { id: 'creme_fraiche', category: 'dairy_solid', name: 'Crème fraîche', emoji: '🥛', cat: 'mod', groups: ['lactose'], lowT: 40, modT: 90, popTrigger: 30, group: 'dairy', fermented: true, alias: 'creme fraiche' },
+  { id: 'sour_cream', category: 'dairy_solid', name: 'Sour cream', emoji: '🥛', cat: 'mod', groups: ['lactose'], lowT: 40, modT: 90, popTrigger: 30, group: 'dairy', fermented: true, alias: 'schmand sauerrahm saure sahne smetana panna acida crema agria' },
+  { id: 'mascarpone', category: 'dairy_solid', name: 'Mascarpone', emoji: '🧀', cat: 'mod', groups: ['lactose'], lowT: 40, modT: 80, popTrigger: 30, group: 'dairy', alias: 'mascarpone' },
   { id: 'chicken', category: 'protein', name: 'Chicken', emoji: '🍗', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 2, group: 'protein' },
   { id: 'turkey', category: 'protein', name: 'Turkey', emoji: '🦃', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 3, group: 'protein' },
   { id: 'beef', category: 'protein', name: 'Beef', emoji: '🥩', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 3, group: 'protein' },
@@ -2895,6 +3093,10 @@ const FOODS = [
   { id: 'shrimp', category: 'protein', name: 'Shrimp', emoji: '🦐', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 5, group: 'protein' },
   { id: 'egg', category: 'eggs', name: 'Egg', emoji: '🥚', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 4, group: 'protein' },
   { id: 'tofu', category: 'protein', name: 'Tofu (firm)', emoji: '🍱', cat: 'low', groups: [], lowT: 170, modT: null, popTrigger: 10, group: 'protein' },
+  { id: 'tofu_silken', category: 'protein', name: 'Tofu (silken)', emoji: '🍱', cat: 'high', groups: ['gos'], lowT: null, modT: null, popTrigger: 20, group: 'protein', alias: 'soft tofu silk' },
+  { id: 'tempeh', category: 'protein', name: 'Tempeh', emoji: '🍱', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 15, group: 'protein', alias: 'fermented soybean' },
+  { id: 'seitan', category: 'protein', name: 'Seitan', emoji: '🍱', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 18, group: 'protein', alias: 'wheat gluten wheat meat' },
+  { id: 'plant_patty', category: 'protein', name: 'Plant-based patty', emoji: '🌱', cat: 'mod', groups: ['gos'], lowT: 60, modT: 130, popTrigger: 20, group: 'protein', alias: 'veggie burger patty beyond impossible soy pea' },
   { id: 'bratwurst', category: 'processed_meat', name: 'Bratwurst', emoji: '🌭', cat: 'mod', groups: ['fructans'], lowT: 100, modT: 200, popTrigger: 35, group: 'protein' },
   { id: 'currywurst', category: 'processed_meat', name: 'Currywurst', emoji: '🌭', cat: 'mod', groups: ['fructans'], lowT: 50, modT: 100, popTrigger: 50, group: 'protein' },
   { id: 'lamb', category: 'protein', name: 'Lamb', emoji: '🥩', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 3, group: 'protein' },
@@ -2908,6 +3110,14 @@ const FOODS = [
   { id: 'white_fish', category: 'protein', name: 'White fish', emoji: '🐟', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 2, group: 'protein', alias: 'cod sea bass sole haddock plaice trout hake pollock whitefish' },
   { id: 'oily_fish', category: 'protein', name: 'Oily fish', emoji: '🐟', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 4, group: 'protein', alias: 'mackerel sardines anchovies herring tinned fish canned fish' },
   { id: 'shellfish', category: 'protein', name: 'Shellfish', emoji: '🦐', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 5, group: 'protein', alias: 'prawns crab lobster mussels scallops clams oysters seafood' },
+  // Combined low-FODMAP meats for dishes that are commonly made with either meat (kebab =
+  // lamb or chicken, etc.). Both options are low-FODMAP so the verdict is identical; the
+  // label just avoids pinning the dish to one meat. dishOnly → hidden from the food search.
+  { id: 'meat_lamb_chicken', category: 'protein', name: 'Lamb or chicken', emoji: '🥩', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 99, group: 'protein', dishOnly: true },
+  { id: 'meat_beef_pork', category: 'protein', name: 'Beef or pork', emoji: '🥩', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 99, group: 'protein', dishOnly: true },
+  { id: 'meat_veal_pork', category: 'protein', name: 'Veal or pork', emoji: '🥩', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 99, group: 'protein', dishOnly: true },
+  { id: 'meat_beef_chicken', category: 'protein', name: 'Beef or chicken', emoji: '🥩', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 99, group: 'protein', dishOnly: true },
+  { id: 'meat_pork_chicken', category: 'protein', name: 'Pork or chicken', emoji: '🥩', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 99, group: 'protein', dishOnly: true },
   { id: 'lentils', category: 'legumes', name: 'Lentils', emoji: '🫘', cat: 'mod', groups: ['gos'], lowT: 46, modT: 100, popTrigger: 50, group: 'legume' },
   { id: 'chickpeas', category: 'legumes', name: 'Chickpeas', emoji: '🫘', cat: 'mod', groups: ['gos'], lowT: 42, modT: 95, popTrigger: 55, group: 'legume' },
   { id: 'kidney_beans', category: 'legumes', name: 'Kidney beans', emoji: '🫘', cat: 'high', groups: ['gos', 'fructans'], lowT: null, modT: null, popTrigger: 70, group: 'legume' },
@@ -2939,6 +3149,18 @@ const FOODS = [
   { id: 'pasta_sauce', category: 'sauces', name: 'Tomato pasta sauce (with onion/garlic)', emoji: '🍅', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 80, group: 'sauce' },
   { id: 'pasta_sauce_plain', category: 'sauces', name: 'Tomato pasta sauce (no onion/garlic)', emoji: '🍅', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 15, group: 'sauce' },
   { id: 'hummus', category: 'spreads', name: 'Hummus', emoji: '🥣', cat: 'high', groups: ['gos', 'fructans'], lowT: null, modT: null, popTrigger: 65, group: 'sauce' },
+  // Common table / kebab / dip sauces. Garlic- and onion-based ones are high (fructans);
+  // yogurt-based carry lactose; the rest are low in normal amounts with a portion threshold.
+  { id: 'ketchup', category: 'sauces', name: 'Ketchup', emoji: '🍅', cat: 'low', groups: [], lowT: 40, modT: 100, popTrigger: 20, group: 'sauce', alias: 'tomato ketchup catsup' },
+  { id: 'garlic_sauce', category: 'sauces', name: 'Garlic sauce', emoji: '🧄', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 40, group: 'sauce', alias: 'toum aioli garlic mayo garlic dip kebab sauce' },
+  { id: 'yogurt_sauce', category: 'sauces', name: 'Yogurt sauce', emoji: '🥛', cat: 'mod', groups: ['lactose'], lowT: 40, modT: 100, popTrigger: 35, group: 'sauce', alias: 'mint yogurt herb yogurt raita labneh sauce' },
+  { id: 'tzatziki', category: 'sauces', name: 'Tzatziki', emoji: '🥒', cat: 'high', groups: ['fructans', 'lactose'], lowT: null, modT: null, popTrigger: 40, group: 'sauce', alias: 'cacik cucumber yogurt garlic sauce' },
+  { id: 'hot_sauce', category: 'sauces', name: 'Hot sauce (chilli)', emoji: '🌶️', cat: 'low', groups: [], lowT: 40, modT: null, popTrigger: 20, group: 'sauce', alias: 'tabasco chilli sauce harissa pepper sauce spicy sauce' },
+  { id: 'sriracha', category: 'sauces', name: 'Sriracha', emoji: '🌶️', cat: 'mod', groups: ['fructans'], lowT: 20, modT: 45, popTrigger: 30, group: 'sauce', alias: 'chilli garlic sauce' },
+  { id: 'bbq_sauce', category: 'sauces', name: 'BBQ sauce', emoji: '🍖', cat: 'low', groups: [], lowT: 40, modT: 100, popTrigger: 30, group: 'sauce', alias: 'barbecue sauce' },
+  { id: 'sweet_chili', category: 'sauces', name: 'Sweet chilli sauce', emoji: '🌶️', cat: 'low', groups: [], lowT: 40, modT: 100, popTrigger: 25, group: 'sauce', alias: 'sweet chili thai dipping sauce' },
+  { id: 'tahini', category: 'spreads', name: 'Tahini', emoji: '🥣', cat: 'low', groups: [], lowT: 40, modT: null, popTrigger: 25, group: 'sauce', alias: 'sesame paste' },
+  { id: 'salsa', category: 'sauces', name: 'Salsa', emoji: '🍅', cat: 'mod', groups: ['fructans'], lowT: 20, modT: 50, popTrigger: 30, group: 'sauce', alias: 'pico de gallo tomato salsa dip' },
   { id: 'water', category: 'cold_drinks', name: 'Water', emoji: '💧', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 0, group: 'drink' },
   { id: 'coffee', category: 'hot_drinks', name: 'Coffee', emoji: '☕', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 25, group: 'drink' },
   { id: 'tea_green', category: 'hot_drinks', name: 'Green tea', emoji: '🍵', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 8, group: 'drink' },
@@ -2956,11 +3178,12 @@ const FOODS = [
   // ──── PREPARED DISHES ────
   // Most contain wheat, onion, garlic, or dairy and are HIGH FODMAP unless made carefully.
   // Italian
-  { id: 'pizza', category: 'prepared_dish', name: 'Pizza Margherita (base)', emoji: '🍕', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 78, group: 'dish', base: true },
+  { id: 'pizza', category: 'prepared_dish', name: 'Pizza Margherita (plain)', emoji: '🍕', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 78, group: 'dish', base: true },
+  { id: 'pinsa', category: 'prepared_dish', name: 'Pinsa (plain)', emoji: '🍕', cat: 'mod', groups: ['fructans'], lowT: null, modT: null, popTrigger: 50, group: 'dish', base: true, alias: 'pinsa romana' },
   { id: 'lasagna', category: 'prepared_dish', name: 'Lasagna', emoji: '🍝', cat: 'high', groups: ['fructans', 'lactose'], lowT: null, modT: null, popTrigger: 80, group: 'dish' },
   { id: 'spaghetti_bolognese', category: 'prepared_dish', name: 'Spaghetti bolognese', emoji: '🍝', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 78, group: 'dish' },
   { id: 'spaghetti_carbonara', category: 'prepared_dish', name: 'Spaghetti carbonara', emoji: '🍝', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 75, group: 'dish' },
-  { id: 'risotto', category: 'prepared_dish', name: 'Risotto (base)', emoji: '🍚', cat: 'high', groups: ['fructans', 'lactose'], lowT: null, modT: null, popTrigger: 60, group: 'dish', base: true },
+  { id: 'risotto', category: 'prepared_dish', name: 'Risotto (plain)', emoji: '🍚', cat: 'high', groups: ['fructans', 'lactose'], lowT: null, modT: null, popTrigger: 60, group: 'dish', base: true },
   { id: 'caprese_salad', category: 'vegetables', name: 'Caprese salad', emoji: '🥗', cat: 'low', groups: [], lowT: null, modT: null, popTrigger: 15, group: 'dish' },
   { id: 'minestrone', category: 'soups', name: 'Minestrone soup', emoji: '🍲', cat: 'high', groups: ['fructans', 'gos'], lowT: null, modT: null, popTrigger: 75, group: 'dish' },
   { id: 'tiramisu', category: 'desserts', name: 'Tiramisu', emoji: '🍰', cat: 'high', groups: ['fructans', 'lactose'], lowT: null, modT: null, popTrigger: 70, group: 'dish' },
@@ -3018,6 +3241,17 @@ const FOODS = [
   { id: 'fried_chicken', category: 'prepared_dish', name: 'Fried chicken', emoji: '🍗', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 55, group: 'dish' },
   { id: 'burrito', category: 'prepared_dish', name: 'Burrito', emoji: '🌯', cat: 'high', groups: ['fructans', 'gos'], lowT: null, modT: null, popTrigger: 75, group: 'dish' },
   { id: 'taco', category: 'prepared_dish', name: 'Beef taco', emoji: '🌮', cat: 'mod', groups: ['fructans'], lowT: null, modT: null, popTrigger: 45, group: 'dish' },
+  { id: 'taco_chicken', category: 'prepared_dish', name: 'Chicken taco', emoji: '🌮', cat: 'mod', groups: ['fructans'], lowT: null, modT: null, popTrigger: 42, group: 'dish' },
+  { id: 'taco_fish', category: 'prepared_dish', name: 'Fish taco', emoji: '🌮', cat: 'mod', groups: ['fructans'], lowT: null, modT: null, popTrigger: 40, group: 'dish' },
+  { id: 'taco_pork', category: 'prepared_dish', name: 'Pork taco (al pastor)', emoji: '🌮', cat: 'mod', groups: ['fructans'], lowT: null, modT: null, popTrigger: 42, group: 'dish' },
+  { id: 'burger', category: 'prepared_dish', name: 'Burger (plain)', emoji: '🍔', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 70, group: 'dish', base: true },
+  { id: 'burger_vegan', category: 'prepared_dish', name: 'Vegan burger (plain)', emoji: '🍔', cat: 'high', groups: ['fructans', 'gos'], lowT: null, modT: null, popTrigger: 55, group: 'dish', base: true, alias: 'plant based veggie burger vegetarian' },
+  { id: 'gyros', category: 'prepared_dish', name: 'Gyros', emoji: '🥙', cat: 'high', groups: ['fructans', 'lactose'], lowT: null, modT: null, popTrigger: 60, group: 'dish', alias: 'greek pita doner' },
+  { id: 'souvlaki', category: 'prepared_dish', name: 'Souvlaki', emoji: '🍢', cat: 'high', groups: ['fructans', 'lactose'], lowT: null, modT: null, popTrigger: 55, group: 'dish', alias: 'greek skewer pita' },
+  { id: 'falafel_wrap', category: 'prepared_dish', name: 'Falafel wrap', emoji: '🧆', cat: 'high', groups: ['gos', 'fructans'], lowT: null, modT: null, popTrigger: 55, group: 'dish', alias: 'chickpea pita wrap street' },
+  { id: 'churros', category: 'prepared_dish', name: 'Churros', emoji: '🥖', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 50, group: 'dish', alias: 'fried dough spanish' },
+  { id: 'langos', category: 'prepared_dish', name: 'Langos', emoji: '🫓', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 50, group: 'dish', alias: 'hungarian fried flatbread langosh' },
+  { id: 'pierogi', category: 'prepared_dish', name: 'Pierogi', emoji: '🥟', cat: 'high', groups: ['fructans', 'lactose'], lowT: null, modT: null, popTrigger: 50, group: 'dish', alias: 'polish dumplings perogi' },
   { id: 'arepa_de_queso', category: 'prepared_dish', name: 'Arepa de queso', emoji: '🫓', cat: 'mod', groups: ['fructans'], lowT: null, modT: null, popTrigger: 35, group: 'dish' },
   { id: 'empanada', category: 'prepared_dish', name: 'Empanada', emoji: '🥟', cat: 'high', groups: ['fructans'], lowT: null, modT: null, popTrigger: 60, group: 'dish' },
   { id: 'nachos', category: 'prepared_dish', name: 'Nachos', emoji: '🧀', cat: 'high', groups: ['fructans', 'gos', 'lactose'], lowT: null, modT: null, popTrigger: 60, group: 'dish' },
@@ -3085,9 +3319,10 @@ const HISTAMINE_FOODS = {
   raspberry: 'mod', salmon: 'mod', pork: 'mod', swiss_cheese: 'mod', ham: 'mod',
   raisins: 'mod', dried_apricot: 'mod', prunes: 'mod', dried_fig: 'mod', dates: 'mod',
   // Prepared dishes that are basically histamine bombs
-  pizza: 'high', lasagna: 'high', spaghetti_bolognese: 'high',
+  pizza: 'high', pinsa: 'high', lasagna: 'high', spaghetti_bolognese: 'high',
   spaghetti_carbonara: 'high', tiramisu: 'high', caprese_salad: 'high',
   cheeseburger: 'high', mac_cheese: 'high', bagel_cream_cheese: 'high', cobb_salad: 'high',
+  gyros: 'high', souvlaki: 'high', burger: 'mod', burger_vegan: 'mod',
   kung_pao_chicken: 'high', sweet_sour_pork: 'high', mapo_tofu: 'high',
   butter_chicken: 'high', chicken_tikka_masala: 'high', palak_paneer: 'high',
 };
@@ -3250,6 +3485,7 @@ const PIECE_COUNTS = { S: 1, M: 2, L: 3 };
 // verdict, which is gram-based, stays accurate. Everything else uses its category value.
 function portionForItem(food, size) {
   if (food && food.pieceG) return countForSize(food.id, size) * food.pieceG;
+  if (food && food.portions) return food.portions[size] != null ? food.portions[size] : food.portions.M;  // per-food S/M/L override
   return portionForSize(foodCategory(food), size);
 }
 // Unit count for a food/dish at a given size — uses its DISH_PIECE count table if it has
@@ -3280,7 +3516,7 @@ function itemSizeLabel(food, sizeId, t, lang) {
   } else if (food && food.pieceG) {
     base = countLabel(PIECE_COUNTS[sizeId], 'units', t);
   } else {
-    const cp = CATEGORY_PORTIONS[foodCategory(food)];
+    const cp = (food && food.portions) || CATEGORY_PORTIONS[foodCategory(food)];
     base = (cp.unit === 'g' || cp.unit === 'ml') ? cp[sizeId] + ' ' + cp.unit : countLabel(cp[sizeId], cp.unit, t);
   }
   if (sizeId === 'S') return base + ' ' + t('portion_or_less');
@@ -3294,7 +3530,8 @@ function itemSizeLabel(food, sizeId, t, lang) {
 // surfacing hidden triggers like onion, garlic, wheat and dairy. Dishes not listed here
 // (single-ingredient ones) log as themselves.
 const DISH_INGREDIENTS = {
-  pizza: [['bread', 180], ['mozzarella', 70], ['tomato', 50]],
+  pizza: [['pizza_dough', 180], ['mozzarella', 70], ['tomato', 50]],
+  pinsa: [['pinsa_dough', 180], ['mozzarella', 70], ['tomato', 50]],
   lasagna: [['pasta', 150], ['ground_beef', 80], ['tomato', 50], ['onion', 30], ['milk', 60], ['parmesan', 15]],
   spaghetti_bolognese: [['pasta', 180], ['ground_beef', 80], ['tomato', 60], ['onion', 30], ['garlic', 4]],
   spaghetti_carbonara: [['pasta', 180], ['egg', 50], ['bacon', 40], ['parmesan', 20]],
@@ -3330,28 +3567,39 @@ const DISH_INGREDIENTS = {
   chana_masala: [['chickpeas', 130], ['onion', 30], ['garlic', 5], ['tomato', 40]],
   naan: [['bread', 90], ['yogurt', 15]],
   samosa: [['bread', 45], ['potato', 40], ['onion', 12], ['garlic', 2]],  // per single samosa
-  biryani: [['rice', 200], ['chicken', 80], ['onion', 30], ['garlic', 4], ['yogurt', 20]],
+  biryani: [['rice', 200], ['meat_lamb_chicken', 80], ['onion', 30], ['garlic', 4], ['yogurt', 20]],
   tandoori_chicken: [['chicken', 180], ['yogurt', 25], ['garlic', 4]],
   aloo_gobi: [['potato', 100], ['cauliflower', 100], ['onion', 25], ['garlic', 4]],
   raita: [['yogurt', 100], ['cucumber', 30]],
   plain_dosa: [['rice', 100], ['lentils', 25]],  // per single dosa
-  kebab: [['bread', 100], ['lamb', 100], ['onion', 20], ['tomato', 20], ['lettuce', 15], ['garlic', 3]],
-  schnitzel: [['veal', 150], ['bread', 40], ['egg', 20]],
+  kebab: [['flatbread', 100], ['meat_lamb_chicken', 100], ['onion', 20], ['tomato', 20], ['lettuce', 15], ['cabbage_white', 20], ['garlic', 3]],
+  schnitzel: [['meat_veal_pork', 150], ['bread', 40], ['egg', 20]],
   croissant: [['bread', 70], ['butter', 25]],
   quiche: [['bread', 35], ['egg', 35], ['milk', 35], ['cheddar', 18], ['onion', 12], ['bacon', 12]],  // per slice
   paella: [['rice', 200], ['shrimp', 50], ['chicken', 50], ['pepper_red', 30], ['onion', 25], ['garlic', 4]],
   tortilla_espanola: [['potato', 150], ['egg', 80], ['onion', 40], ['olive_oil', 15]],
   fish_and_chips: [['white_fish', 130], ['potato', 200], ['bread', 30], ['olive_oil', 15]],
-  goulash: [['beef', 150], ['onion', 40], ['pepper_red', 40], ['tomato', 30], ['garlic', 4], ['potato', 60]],
+  goulash: [['meat_beef_pork', 150], ['onion', 40], ['pepper_red', 40], ['tomato', 30], ['garlic', 4], ['potato', 60]],
   moussaka: [['eggplant', 120], ['ground_beef', 80], ['tomato', 40], ['onion', 30], ['milk', 60], ['cheddar', 20]],
   greek_salad: [['cucumber', 60], ['tomato', 80], ['feta', 50], ['olives', 20], ['onion', 20], ['olive_oil', 10]],
   crepe: [['bread', 45], ['egg', 20], ['milk', 45], ['butter', 6]],  // per single crêpe
   fried_chicken: [['chicken', 160], ['bread', 30], ['olive_oil', 15]],
-  burrito: [['bread', 120], ['ground_beef', 80], ['kidney_beans', 50], ['cheddar', 30], ['tomato', 20], ['onion', 20]],
-  taco: [['sweet_corn', 30], ['ground_beef', 35], ['cheddar', 10], ['tomato', 10], ['onion', 8], ['lettuce', 8]],  // per single taco (corn tortilla)
-  arepa_de_queso: [['sweet_corn', 75], ['mozzarella', 35]],  // per single arepa (corn dough + cheese)
+  burrito: [['flatbread', 120], ['ground_beef', 80], ['kidney_beans', 50], ['cheddar', 30], ['tomato', 20], ['onion', 20]],  // large wheat flour tortilla
+  taco: [['corn_tortilla', 30], ['ground_beef', 35], ['cheddar', 10], ['tomato', 10], ['onion', 8], ['lettuce', 8]],  // per single taco (corn tortilla)
+  taco_chicken: [['corn_tortilla', 30], ['chicken', 35], ['cheddar', 10], ['tomato', 10], ['onion', 8], ['lettuce', 8]],  // per single taco
+  taco_fish: [['corn_tortilla', 30], ['white_fish', 40], ['cabbage_white', 12], ['tomato', 8], ['onion', 6], ['mayo', 8]],  // per single taco (fish + slaw + crema)
+  taco_pork: [['corn_tortilla', 30], ['pork', 40], ['pineapple', 15], ['onion', 8], ['tomato', 8]],  // per single taco (al pastor)
+  burger: [['bread', 90], ['ground_beef', 100], ['lettuce', 15], ['tomato', 20], ['onion', 15]],  // plain base — add cheese/bacon/sauce
+  burger_vegan: [['bread', 90], ['plant_patty', 100], ['lettuce', 15], ['tomato', 20], ['onion', 15]],  // plain base — add cheese/sauce
+  gyros: [['flatbread', 100], ['meat_pork_chicken', 100], ['tomato', 25], ['onion', 20], ['tzatziki', 30]],
+  souvlaki: [['flatbread', 90], ['meat_pork_chicken', 120], ['tomato', 20], ['onion', 15], ['tzatziki', 25]],
+  falafel_wrap: [['flatbread', 80], ['chickpeas', 90], ['tomato', 20], ['lettuce', 15], ['tahini', 20], ['onion', 10]],
+  churros: [['bread', 80], ['sugar', 18], ['olive_oil', 10]],  // per portion of a few sticks
+  langos: [['flatbread', 130], ['olive_oil', 15], ['cheddar', 25], ['garlic', 4]],  // fried flatbread + sour cream/cheese/garlic
+  pierogi: [['bread', 110], ['potato', 60], ['cream_cheese', 30], ['onion', 15]],  // per plate (ruskie-style)
+  arepa_de_queso: [['sweet_corn', 75], ['mozzarella', 35]],  // per single arepa (corn dough, not a tortilla — shaped as a thick corn cake)
   empanada: [['sweet_corn', 50], ['ground_beef', 30], ['onion', 10]],  // per single empanada (corn masa + filling, Venezuelan/Colombian)
-  nachos: [['sweet_corn', 60], ['cheddar', 40], ['tomato', 20], ['onion', 15], ['kidney_beans', 40]],
+  nachos: [['corn_tortilla', 60], ['cheddar', 40], ['tomato', 20], ['onion', 15], ['kidney_beans', 40]],  // fried corn tortilla chips
   donut: [['bread', 55], ['sugar', 15], ['butter', 8]],  // per single donut
   apple_pie: [['apple', 70], ['bread', 45], ['sugar', 12], ['butter', 8]],  // per slice
   cheesecake: [['cream_cheese', 70], ['bread', 30], ['sugar', 18], ['egg', 12]],  // per slice
@@ -3373,11 +3621,11 @@ const DISH_INGREDIENTS = {
   pad_thai: [['rice_noodle', 180], ['shrimp', 50], ['egg', 40], ['peanuts', 20], ['spring_onion', 15], ['garlic', 4], ['soy_sauce', 10]],
   green_curry: [['chicken', 120], ['coconut_water', 60], ['pepper_red', 30], ['eggplant', 40], ['onion', 20], ['garlic', 4]],
   tom_yum: [['shrimp', 60], ['mushroom', 40], ['tomato', 20], ['garlic', 3], ['spring_onion', 10]],
-  pho: [['rice_noodle', 180], ['beef', 60], ['spring_onion', 15], ['onion', 20], ['ginger', 4]],
+  pho: [['rice_noodle', 180], ['meat_beef_chicken', 60], ['spring_onion', 15], ['onion', 20], ['ginger', 4]],
   bibimbap: [['rice', 180], ['beef', 60], ['egg', 40], ['spinach', 30], ['carrot', 30], ['mushroom', 30], ['garlic', 4]],
   bulgogi: [['beef', 150], ['onion', 25], ['garlic', 5], ['spring_onion', 12], ['soy_sauce', 12], ['sugar', 8]],
   guacamole: [['avocado', 80], ['tomato', 20], ['onion', 15], ['garlic', 3], ['lemon', 5]],
-  quesadilla: [['bread', 100], ['cheddar', 40], ['chicken', 40], ['onion', 15]],
+  quesadilla: [['flatbread', 100], ['cheddar', 40], ['chicken', 40], ['onion', 15]],  // flour-tortilla version
   falafel: [['chickpeas', 120], ['onion', 20], ['garlic', 5], ['olive_oil', 10]],
   shakshuka: [['egg', 100], ['tomato', 80], ['pepper_red', 40], ['onion', 30], ['garlic', 4]],
   poke_bowl: [['rice', 150], ['salmon', 60], ['avocado', 40], ['cucumber', 30], ['soy_sauce', 10]],
@@ -3395,6 +3643,9 @@ const SLICE_UNIT = { one: { en: 'slice', it: 'fetta', es: 'porción', de: 'Stüc
 const DISH_PIECE = {
   // Small items typically eaten in 2s–3s → S/M/L = 1/2/3.
   taco: { one: { en: 'taco', it: 'taco', es: 'taco', de: 'Taco', fr: 'taco' }, other: { en: 'tacos', it: 'tacos', es: 'tacos', de: 'Tacos', fr: 'tacos' } },
+  taco_chicken: { one: { en: 'taco', it: 'taco', es: 'taco', de: 'Taco', fr: 'taco' }, other: { en: 'tacos', it: 'tacos', es: 'tacos', de: 'Tacos', fr: 'tacos' } },
+  taco_fish: { one: { en: 'taco', it: 'taco', es: 'taco', de: 'Taco', fr: 'taco' }, other: { en: 'tacos', it: 'tacos', es: 'tacos', de: 'Tacos', fr: 'tacos' } },
+  taco_pork: { one: { en: 'taco', it: 'taco', es: 'taco', de: 'Taco', fr: 'taco' }, other: { en: 'tacos', it: 'tacos', es: 'tacos', de: 'Tacos', fr: 'tacos' } },
   arepa_de_queso: { one: { en: 'arepa', it: 'arepa', es: 'arepa', de: 'Arepa', fr: 'arepa' }, other: { en: 'arepas', it: 'arepe', es: 'arepas', de: 'Arepas', fr: 'arepas' } },
   empanada: { one: { en: 'empanada', it: 'empanada', es: 'empanada', de: 'Empanada', fr: 'empanada' }, other: { en: 'empanadas', it: 'empanadas', es: 'empanadas', de: 'Empanadas', fr: 'empanadas' } },
   samosa: { one: { en: 'samosa', it: 'samosa', es: 'samosa', de: 'Samosa', fr: 'samosa' }, other: { en: 'samosas', it: 'samosa', es: 'samosas', de: 'Samosas', fr: 'samosas' } },
@@ -3402,10 +3653,17 @@ const DISH_PIECE = {
   pancakes: { one: { en: 'pancake', it: 'pancake', es: 'tortita', de: 'Pfannkuchen', fr: 'pancake' }, other: { en: 'pancakes', it: 'pancake', es: 'tortitas', de: 'Pfannkuchen', fr: 'pancakes' } },
   // Large items where one is a normal serving → S/M/L = ½/1/2.
   pizza: { counts: HALF_COUNTS, one: { en: 'pizza', it: 'pizza', es: 'pizza', de: 'Pizza', fr: 'pizza' }, other: { en: 'pizzas', it: 'pizze', es: 'pizzas', de: 'Pizzen', fr: 'pizzas' } },
+  pinsa: { counts: HALF_COUNTS, one: { en: 'pinsa', it: 'pinsa', es: 'pinsa', de: 'Pinsa', fr: 'pinsa' }, other: { en: 'pinsas', it: 'pinse', es: 'pinsas', de: 'Pinsas', fr: 'pinsas' } },
   burrito: { counts: HALF_COUNTS, one: { en: 'burrito', it: 'burrito', es: 'burrito', de: 'Burrito', fr: 'burrito' }, other: { en: 'burritos', it: 'burritos', es: 'burritos', de: 'Burritos', fr: 'burritos' } },
   cheeseburger: { counts: HALF_COUNTS, one: { en: 'burger', it: 'hamburger', es: 'hamburguesa', de: 'Burger', fr: 'burger' }, other: { en: 'burgers', it: 'hamburger', es: 'hamburguesas', de: 'Burger', fr: 'burgers' } },
   hot_dog: { counts: HALF_COUNTS, one: { en: 'hot dog', it: 'hot dog', es: 'hot dog', de: 'Hotdog', fr: 'hot-dog' }, other: { en: 'hot dogs', it: 'hot dog', es: 'hot dogs', de: 'Hotdogs', fr: 'hot-dogs' } },
   kebab: { counts: HALF_COUNTS, one: { en: 'kebab', it: 'kebab', es: 'kebab', de: 'Kebab', fr: 'kebab' }, other: { en: 'kebabs', it: 'kebab', es: 'kebabs', de: 'Kebabs', fr: 'kebabs' } },
+  burger: { counts: HALF_COUNTS, one: { en: 'burger', it: 'hamburger', es: 'hamburguesa', de: 'Burger', fr: 'burger' }, other: { en: 'burgers', it: 'hamburger', es: 'hamburguesas', de: 'Burger', fr: 'burgers' } },
+  burger_vegan: { counts: HALF_COUNTS, one: { en: 'burger', it: 'hamburger', es: 'hamburguesa', de: 'Burger', fr: 'burger' }, other: { en: 'burgers', it: 'hamburger', es: 'hamburguesas', de: 'Burger', fr: 'burgers' } },
+  gyros: { counts: HALF_COUNTS, one: { en: 'gyros', it: 'gyros', es: 'gyros', de: 'Gyros', fr: 'gyros' }, other: { en: 'gyros', it: 'gyros', es: 'gyros', de: 'Gyros', fr: 'gyros' } },
+  souvlaki: { counts: HALF_COUNTS, one: { en: 'souvlaki', it: 'souvlaki', es: 'souvlaki', de: 'Souvlaki', fr: 'souvlaki' }, other: { en: 'souvlaki', it: 'souvlaki', es: 'souvlakis', de: 'Souvlaki', fr: 'souvlakis' } },
+  falafel_wrap: { counts: HALF_COUNTS, one: { en: 'wrap', it: 'wrap', es: 'wrap', de: 'Wrap', fr: 'wrap' }, other: { en: 'wraps', it: 'wrap', es: 'wraps', de: 'Wraps', fr: 'wraps' } },
+  langos: { counts: HALF_COUNTS, one: { en: 'langos', it: 'langos', es: 'langos', de: 'Langos', fr: 'langos' }, other: { en: 'langos', it: 'langos', es: 'langos', de: 'Langos', fr: 'langos' } },
   quesadilla: { counts: HALF_COUNTS, one: { en: 'quesadilla', it: 'quesadilla', es: 'quesadilla', de: 'Quesadilla', fr: 'quesadilla' }, other: { en: 'quesadillas', it: 'quesadillas', es: 'quesadillas', de: 'Quesadillas', fr: 'quesadillas' } },
   bagel_cream_cheese: { counts: HALF_COUNTS, one: { en: 'bagel', it: 'bagel', es: 'bagel', de: 'Bagel', fr: 'bagel' }, other: { en: 'bagels', it: 'bagel', es: 'bagels', de: 'Bagels', fr: 'bagels' } },
   crepe: { counts: HALF_COUNTS, one: { en: 'crêpe', it: 'crêpe', es: 'crepe', de: 'Crêpe', fr: 'crêpe' }, other: { en: 'crêpes', it: 'crêpe', es: 'crepes', de: 'Crêpes', fr: 'crêpes' } },
@@ -3446,7 +3704,8 @@ function resolveMeal(selected) {
       dishes.push(it.foodId);
       // Counted dishes scale by their unit count (e.g. tacos 1/2/3, burrito ½/1/2); others by S/M/L ratio.
       const scale = DISH_PIECE[it.foodId] ? (countForSize(it.foodId, it.size) || 1) : (DISH_SCALE[it.size] || 1);
-      recipe.forEach(([id, g]) => items.push({ foodId: id, size: it.size, portionG: Math.max(1, Math.round(g * scale)) }));
+      // Skip ingredients the user chose to leave out (e.g. onion out of a kebab).
+      recipe.forEach(([id, g]) => { if ((it.exclude || []).includes(id)) return; items.push({ foodId: id, size: it.size, portionG: Math.max(1, Math.round(g * scale)) }); });
     } else {
       items.push({ foodId: it.foodId, size: it.size, portionG: it.portionG });
     }
@@ -3454,19 +3713,44 @@ function resolveMeal(selected) {
   return { items, dishes };
 }
 
+// Split a flat meal-item list back into per-dish groups for display. Each dish claims one
+// item per recipe ingredient (so a food shared by two dishes — e.g. tomato in both pizza and
+// kebab — is attributed to each once). Items matching no dish recipe are returned as `extras`
+// (foods the user added on top of the dishes).
+function groupMealItemsByDish(items, mealDishes) {
+  const remaining = (items || []).slice();
+  const groups = [];
+  (mealDishes || []).forEach(did => {
+    const recipe = DISH_INGREDIENTS[did] || [];
+    const groupItems = [];
+    recipe.forEach(([fid]) => {
+      const idx = remaining.findIndex(x => x.foodId === fid);
+      if (idx >= 0) { groupItems.push(remaining[idx]); remaining.splice(idx, 1); }
+    });
+    if (groupItems.length) groups.push({ dishId: did, items: groupItems });
+  });
+  return { groups, extras: remaining };
+}
+
 // Food ids the user has actually logged, most-recent first (deduped). Powers the meal
 // builder's "recent" row so it reflects real habits instead of a fixed starter list.
+// A meal logged as a prepared dish surfaces the DISH itself (e.g. "Kebab"), not its
+// internal ingredients — those are represented by the dish. Plain foods and any extras
+// added on top still appear individually.
 function recentFoodIds(log, n) {
   const meals = (log || []).filter(e => e.type === 'meal' && Array.isArray(e.items))
     .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
   const seen = [];
+  const add = (id) => { if (id && !seen.includes(id) && FOODS.some(f => f.id === id)) seen.push(id); };
   for (const m of meals) {
-    for (const it of m.items) {
-      if (it.foodId && !seen.includes(it.foodId) && FOODS.some(f => f.id === it.foodId)) seen.push(it.foodId);
-      if (seen.length >= n) return seen;
-    }
+    const dishes = Array.isArray(m.mealDishes) ? m.mealDishes : [];
+    const dishIngredientIds = new Set();
+    dishes.forEach(did => (DISH_INGREDIENTS[did] || []).forEach(([fid]) => dishIngredientIds.add(fid)));
+    dishes.forEach(add);                                                  // the dishes (e.g. kebab)
+    for (const it of m.items) if (!dishIngredientIds.has(it.foodId)) add(it.foodId);  // plain foods + extras
+    if (seen.length >= n) break;
   }
-  return seen;
+  return seen.slice(0, n);
 }
 
 // Distinct meals the user has logged (by food combination), most-recent first — lets the
@@ -3477,7 +3761,13 @@ function recentMeals(log, n) {
   const seen = new Set();
   const out = [];
   for (const m of meals) {
-    const ids = m.items.map(it => it.foodId).filter(id => FOODS.some(f => f.id === id));
+    // Rebuild the selection the way it was logged — whole dish(es) plus any foods added on
+    // top — instead of the flattened ingredient list. This keeps prepared dishes (kebab,
+    // pizza…) as single items, so the card shows the dish and re-logging preserves its dish
+    // identity rather than splitting it back into raw ingredients.
+    const dishes = (Array.isArray(m.mealDishes) ? m.mealDishes : []).filter(id => FOODS.some(f => f.id === id));
+    const extras = groupMealItemsByDish(m.items, m.mealDishes).extras.map(it => it.foodId);
+    const ids = [...dishes, ...extras].filter(id => FOODS.some(f => f.id === id));
     if (ids.length === 0) continue;
     const sig = ids.slice().sort().join(',');
     if (seen.has(sig)) continue;
@@ -3605,7 +3895,7 @@ const THEME = {
   primaryDark: '#2d6a2d',
   bg: '#f4f7f2',         // page background (soft sage)
   card: '#ffffff',       // card surface
-  cardBorder: '#eef2ee', // hairline border
+  cardBorder: '#e0ece0', // hairline border (outlined cards)
   textMuted: '#647264',  // captions / meta
   textSoft: '#5e7060',   // secondary body
   // Accents
@@ -3618,7 +3908,7 @@ const THEME = {
   streakBg: '#fde8d0',
   streakText: '#a05a10',
   // Radii
-  rCard: 20,
+  rCard: 12,   // M3 card default (medium corner, 12dp)
   rTile: 18,
   rPill: 12,
 };
@@ -3788,6 +4078,10 @@ function SplashScreen({ t }) {
   const enter = useRef(new Animated.Value(0)).current;
   const orbit = useRef(new Animated.Value(0)).current;
   const breathe = useRef(new Animated.Value(0)).current;
+  // Hand off from the native launch splash: now that our (identically-coloured) JS
+  // splash is on screen, hide the native one. The green background matches, so there
+  // is no visible flash between the two.
+  useEffect(() => { NativeSplash.hideAsync().catch(() => {}); }, []);
   useEffect(() => {
     Animated.spring(enter, { toValue: 1, friction: 5, tension: 55, useNativeDriver: true }).start();
     const o = Animated.loop(Animated.timing(orbit, { toValue: 1, duration: 2200, easing: Easing.linear, useNativeDriver: true }));
@@ -3805,6 +4099,7 @@ function SplashScreen({ t }) {
   const dots = ['#5fb06a', '#f0bd4f', '#ec84ac', '#5fa8e0'];
   const R = 84, C = 90;
   return (
+    <SafeAreaProvider>
     <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#e7f3df', alignItems: 'center', justifyContent: 'center' }}>
       <View style={{ width: 180, height: 180, alignItems: 'center', justifyContent: 'center' }}>
         <Animated.View style={{ position: 'absolute', width: 180, height: 180, transform: [{ rotate }] }}>
@@ -3822,6 +4117,7 @@ function SplashScreen({ t }) {
         <Text style={{ fontSize: 13, color: THEME.textMuted, marginTop: 4 }}>{t('app_tagline')}</Text>
       </Animated.View>
     </SafeAreaViewSC>
+    </SafeAreaProvider>
   );
 }
 
@@ -5029,6 +5325,16 @@ const FERMENTATION_NOTES = {
     histamineFlag: false,
     text: 'Traditional sourdough fermentation lets bacteria consume most of the fructans in the flour. This is why spelt sourdough is usually tolerated even when normal bread is not — give it a normal-sized portion and see.',
   },
+  pizza_dough: {
+    tone: 'mixed',
+    histamineFlag: false,
+    text: 'Fermentation time matters here: a long, slow cold-proof (24-72h, as with traditional Neapolitan or artisan sourdough pizza) can break down a good share of the flour\'s fructans, similar to sourdough bread. Most everyday pizza dough only gets a quick 1-2 hour yeast rise and won\'t see that benefit — treat a normal pizza as high-FODMAP unless you know the dough was long-fermented.',
+  },
+  pizza: {
+    tone: 'mixed',
+    histamineFlag: false,
+    text: 'Fermentation time matters here: a long, slow cold-proof (24-72h, as with traditional Neapolitan or artisan sourdough pizza) can break down a good share of the flour\'s fructans, similar to sourdough bread. Most everyday pizza dough only gets a quick 1-2 hour yeast rise and won\'t see that benefit — treat a normal pizza as high-FODMAP unless you know the dough was long-fermented.',
+  },
   sauerkraut: {
     tone: 'mixed',
     histamineFlag: true,
@@ -5321,8 +5627,6 @@ function DateTimeRow({ value, onChange }) {
 const SYMPTOM_WINDOW_HOURS = 6;       // a symptom "follows" a meal if within this window
 const MIN_FOOD_OCCURRENCES = 3;       // a food must appear this many times before we report it
 const MIN_DAYS_FOR_LIFESTYLE = 4;     // sleep/stress rules need at least this many days of data
-const PATTERNS_WINDOW_DAYS = 30;      // home insights analyse a rolling ~1-month window: fresh, but
-                                      // long enough for foods to reach MIN_FOOD_OCCURRENCES
 
 function detectPatterns(log, lang, windowDays) {
   const patterns = [];
@@ -5613,6 +5917,7 @@ const STORAGE_KEYS = {
   celebratedLevel: '@gutly:celebratedLevel',
   barcodeIntroSeen: '@gutly:barcodeIntroSeen',
   customFoods:     '@gutly:customFoods',
+  accountBannerDismissed: '@gutly:accountBannerDismissed',
 };
 
 async function storageGet(key) {
@@ -5641,16 +5946,23 @@ export default function App() {
   // Regular users always follow the phone's language. The manual override is a
   // dev-only testing aid, so in release builds we ignore any stored preference.
   const lang = langPref === 'auto' ? detectLang() : langPref;
-  const t = makeT(lang);
+  const t = useMemo(() => makeT(lang), [lang]);   // stable across renders so memoized screens can skip re-rendering
   _uiLang = lang;
   const [onbStep, setOnbStep] = useState(0);
   const [profile, setProfile] = useState({});
   const [tab, setTab] = useState('home');
+  const foodsMounted = useRef(false), planMounted = useRef(false), chatMounted = useRef(false);   // keep-alive latches
   const [recipesReturn, setRecipesReturn] = useState('home'); // tab to return to from recipes
   const openRecipes = (from) => { setRecipesReturn(from); setTab('recipes'); };
   const [log, setLog] = useState([]);
   const [customFoods, setCustomFoods] = useState([]);
   const [reintroProgress, setReintroProgress] = useState({});
+  // Kept-alive Foods screen, memoized so it doesn't re-render on unrelated App renders (e.g.
+  // tapping another tab). Same element reference → React skips the subtree. Rebuilds only when
+  // its real inputs change. Declared before any early return to satisfy the rules of hooks.
+  const foodsScreenEl = useMemo(() => (
+    <FoodExplorerScreen reintroProgress={reintroProgress} onOpenRecipes={() => { setRecipesReturn('foods'); setTab('recipes'); }} profile={profile} t={t} lang={lang} />
+  ), [reintroProgress, profile, t, lang]);
   const [activeTest, setActiveTest] = useState(null);
   const [testHistory, setTestHistory] = useState([]);
   const [pendingReintroPrompt, setPendingReintroPrompt] = useState(null);
@@ -5666,6 +5978,8 @@ export default function App() {
   // an account just backs up and syncs data). `user` is the logged-in account.
   const [session, setSession] = useState(null);
   const user = session ? session.user : null;
+  // Dismissible "save your progress" home banner (guest-first: nudge, never block).
+  const [accountBannerDismissed, setAccountBannerDismissed] = useState(false);
 
   // Gamification level-up: `celebratedLevel` is the highest level already
   // acknowledged; `levelUp` holds a level number while its celebration shows.
@@ -5699,7 +6013,7 @@ export default function App() {
         // Each piece loads independently. A failure on one key never blocks the rest.
         const [
           sProfile, sLang, sLog, sReintro, sHistory, sActive,
-          sPhase, sPhaseDate, sPremium, sScan, sPeriod, sOnbDone, sCelebrated, sCustomFoods,
+          sPhase, sPhaseDate, sPremium, sScan, sPeriod, sOnbDone, sCelebrated, sCustomFoods, sBannerDismissed,
         ] = await Promise.all([
           storageGet(STORAGE_KEYS.profile),
           storageGet(STORAGE_KEYS.langPref),
@@ -5715,9 +6029,11 @@ export default function App() {
           storageGet(STORAGE_KEYS.onboardingDone),
           storageGet(STORAGE_KEYS.celebratedLevel),
           storageGet(STORAGE_KEYS.customFoods),
+          storageGet(STORAGE_KEYS.accountBannerDismissed),
         ]);
         if (cancelled) return;
         if (typeof sCelebrated === 'number') setCelebratedLevel(sCelebrated);
+        if (sBannerDismissed === true) setAccountBannerDismissed(true);
         // Register saved custom foods into FOODS so meals referencing them resolve everywhere.
         if (Array.isArray(sCustomFoods)) { sCustomFoods.forEach(registerCustomFood); setCustomFoods(sCustomFoods); }
 
@@ -5751,6 +6067,7 @@ export default function App() {
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.langPref, langPref); }, [langPref, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.log, log); }, [log, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.customFoods, customFoods); }, [customFoods, hydrated]);
+  useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.accountBannerDismissed, accountBannerDismissed); }, [accountBannerDismissed, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.reintroProgress, reintroProgress); }, [reintroProgress, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.testHistory, testHistory); }, [testHistory, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.activeTest, activeTest); }, [activeTest, hydrated]);
@@ -6101,6 +6418,19 @@ export default function App() {
     if (!reintroMatched) setFeedback(logFeedback('meal', categorizeMeal(items || [], reintroProgress).overall, t));
   };
 
+  // Keep-alive tab screens: memoize each so tapping between tabs never re-renders the hidden
+  // ones (that was the per-tap lag). Deps list every value the screen actually displays; inline
+  // handlers close over stable state setters and don't need to be deps. nextAction is memoized
+  // too — it's a freshly-built object each render, which would otherwise defeat Plan's memo.
+  const nextAction = useMemo(() => nextReintroAction({ currentPhase, reintroProgress, activeTest, periodActive, lastTestEndDate: testHistory[testHistory.length - 1]?.endDate }, lang), [currentPhase, reintroProgress, activeTest, periodActive, testHistory, lang]);
+  const homeScreenEl = useMemo(() => (
+    <HomeScreen profile={profile} log={log} dayCount={dayCount} reintroProgress={reintroProgress} periodActive={periodActive} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onStartElimination={startElimination} onStartReintroduction={startReintroduction} onOpenSettings={() => setModal('settings')} onLogPeriod={() => { setPeriodActive(!periodActive); showToast(periodActive ? t('toast_period_ended') : t('toast_period_started')); }} onEditEntry={(entry) => setModal({ type: 'edit', entry })} onQuickLog={(type) => setModal(type)} onOpenHistory={() => setModal('history')} onOpenRecipes={() => openRecipes('home')} onOpenRecipe={(recipe) => setModal({ type: 'recipe', recipe })} onOpenColony={() => setModal('colony')} onOpenProgress={() => setModal('progress')} onOpenPatterns={() => setModal('patterns')} onGoToPlan={() => setTab('plan')} onDiagnosed={() => { setProfile(p => Object.assign({}, p, { ibsDiagnosed: 'yes' })); showToast(t('toast_diagnosed')); }} signedIn={!!user} onOpenAccount={() => setModal({ type: 'account', mode: 'signup' })} accountBannerDismissed={accountBannerDismissed} onDismissAccountBanner={() => setAccountBannerDismissed(true)} lang={lang} t={t} />
+  ), [profile, log, dayCount, reintroProgress, periodActive, currentPhase, phaseStartDate, user, accountBannerDismissed, lang, t]);
+  const planScreenEl = useMemo(() => (
+    <PlanScreen profile={profile} reintroProgress={reintroProgress} periodActive={periodActive} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onStartElimination={startElimination} onStartReintroduction={startReintroduction} activeTest={activeTest} onLogReintroDay={logReintroDay} onCancelTest={cancelActiveTest} onPickTestCategory={(catId) => setModal({ type: 'startTest', categoryId: catId })} nextAction={nextAction} isPremium={isPremium} freeReintroLimit={FREE_REINTRO_CATEGORIES} onUpsell={() => setModal({ type: 'paywall', reason: 'reintro' })} t={t} />
+  ), [profile, reintroProgress, periodActive, currentPhase, phaseStartDate, activeTest, nextAction, isPremium, t]);
+  const chatScreenEl = useMemo(() => <GutGuideScreen t={t} lang={lang} />, [t, lang]);
+
   // Block initial render until persisted state has loaded. Without this, a
   // returning user would briefly see onboarding before their saved data hydrates.
   if (!hydrated || !splashDone) {
@@ -6121,17 +6451,24 @@ export default function App() {
     }} />;
   }
 
-  const nextAction = nextReintroAction({ currentPhase, reintroProgress, activeTest, periodActive, lastTestEndDate: testHistory[testHistory.length - 1]?.endDate }, lang);
+  // Latch each heavy tab as "mounted" on first visit, then keep it alive (just hidden) so
+  // re-entering is instant instead of paying a full remount. Latches in-render (no blank frame).
+  if (tab === 'foods') foodsMounted.current = true;
+  if (tab === 'plan') planMounted.current = true;
+  if (tab === 'chat') chatMounted.current = true;
 
   return (
     <SafeAreaProvider>
     <SafeAreaViewSC style={s.root} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor={THEME.bg} />
-      {tab === 'home' && <HomeScreen profile={profile} log={log} dayCount={dayCount} reintroProgress={reintroProgress} periodActive={periodActive} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onStartElimination={startElimination} onStartReintroduction={startReintroduction} onOpenSettings={() => setModal('settings')} onLogPeriod={() => { setPeriodActive(!periodActive); showToast(periodActive ? t('toast_period_ended') : t('toast_period_started')); }} onEditEntry={(entry) => setModal({ type: 'edit', entry })} onQuickLog={(type) => setModal(type)} onOpenHistory={() => setModal('history')} onOpenRecipes={() => openRecipes('home')} onOpenRecipe={(recipe) => setModal({ type: 'recipe', recipe })} onOpenColony={() => setModal('colony')} onOpenProgress={() => setModal('progress')} onGoToPlan={() => setTab('plan')} onDiagnosed={() => { setProfile(p => Object.assign({}, p, { ibsDiagnosed: 'yes' })); showToast(t('toast_diagnosed')); }} lang={lang} t={t} />}
+      {/* Home is the default tab so it's always mounted; the others mount lazily on first visit
+          and then stay alive (hidden) so switching back is instant. Each is a memoized element,
+          so tapping a tab doesn't re-render the hidden screens. */}
+      <View style={{ flex: 1, display: tab === 'home' ? 'flex' : 'none' }}>{homeScreenEl}</View>
       {tab === 'recipes' && <RecipesScreen onOpenRecipe={(recipe) => setModal({ type: 'recipe', recipe })} onBack={() => setTab(recipesReturn)} backLabel={recipesReturn === 'foods' ? 'Foods' : 'Home'} isPremium={isPremium} freeLimit={FREE_RECIPE_LIMIT} onUpsell={() => setModal({ type: 'paywall', reason: 'recipes' })} t={t} lang={lang} />}
-      {tab === 'foods' && <FoodExplorerScreen reintroProgress={reintroProgress} onOpenRecipes={() => openRecipes('foods')} profile={profile} t={t} lang={lang} />}
-      {tab === 'plan' && <PlanScreen profile={profile} reintroProgress={reintroProgress} periodActive={periodActive} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onStartElimination={startElimination} onStartReintroduction={startReintroduction} activeTest={activeTest} onLogReintroDay={logReintroDay} onCancelTest={cancelActiveTest} onPickTestCategory={(catId) => setModal({ type: 'startTest', categoryId: catId })} nextAction={nextAction} isPremium={isPremium} freeReintroLimit={FREE_REINTRO_CATEGORIES} onUpsell={() => setModal({ type: 'paywall', reason: 'reintro' })} t={t} />}
-      {tab === 'chat' && <GutGuideScreen t={t} lang={lang} />}
+      {foodsMounted.current && <View style={{ flex: 1, display: tab === 'foods' ? 'flex' : 'none' }}>{foodsScreenEl}</View>}
+      {planMounted.current && <View style={{ flex: 1, display: tab === 'plan' ? 'flex' : 'none' }}>{planScreenEl}</View>}
+      {chatMounted.current && <View style={{ flex: 1, display: tab === 'chat' ? 'flex' : 'none' }}>{chatScreenEl}</View>}
 
       <TabBar current={tab} setTab={setTab} onPlusPress={() => setModal('logChooser')} t={t} />
 
@@ -6140,14 +6477,22 @@ export default function App() {
       <SymptomModal visible={modal === 'symptom'} onClose={() => setModal(null)} onSave={(symptom, intensity, when) => { const time = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`; setLog(log.concat([{ id: 's' + Date.now(), type: 'symptom', time, symptom, intensity, timestamp: when.toISOString() }])); setModal(null); setFeedback(logFeedback('symptom', intensity, t)); }} t={t} />
       <SleepModal visible={modal === 'sleep'} onClose={() => setModal(null)} onSave={(hours, when) => { const time = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`; setLog(log.concat([{ id: 'sl' + Date.now(), type: 'sleep', time, hours, timestamp: when.toISOString() }])); setModal(null); setFeedback(logFeedback('sleep', hours, t)); }} t={t} />
       <StressModal visible={modal === 'stress'} onClose={() => setModal(null)} onSave={(level, when) => { const time = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`; setLog(log.concat([{ id: 'st' + Date.now(), type: 'stress', time, level, timestamp: when.toISOString() }])); setModal(null); setFeedback(logFeedback('stress', level, t)); }} t={t} />
-      <BarcodeModal visible={modal === 'barcode'} onClose={() => setModal(null)} onComplete={(p, when) => { setModal(null); if (p && when) { const time = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`; setLog(log.concat([{ id: 'b' + Date.now(), type: 'meal', time, items: [], productName: p.name, productRisk: p.risk, timestamp: when.toISOString() }])); showToast(t('toast_product_logged', { name: p.name })); } }} t={t} />
+      <WaterModal visible={modal === 'water'} onClose={() => setModal(null)} onSave={(glasses, when) => { const time = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`; setLog(log.concat([{ id: 'w' + Date.now(), type: 'water', time, glasses, timestamp: when.toISOString() }])); setModal(null);
+        // Celebrate the moment this glass pushes today's total to the daily goal (once per day).
+        const dayKey = when.toISOString().slice(0, 10);
+        const before = log.filter(e => e.type === 'water' && (e.timestamp || '').slice(0, 10) === dayKey).reduce((a, w) => a + (w.glasses || 0), 0);
+        const reachedGoal = before < WATER_GOAL && before + glasses >= WATER_GOAL;
+        setFeedback(reachedGoal ? { mood: 'good', art: 'water', emoji: '🎉', title: t('lf_water_goal_title'), message: t('lf_water_goal_msg', { goal: WATER_GOAL, liters: WATER_GOAL_LITERS }) } : logFeedback('water', glasses, t));
+      }} t={t} />
+      <BarcodeModal visible={modal === 'barcode'} onClose={() => setModal(null)} onComplete={(p, when) => { setModal(null); if (p && when) { const time = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`; setLog(log.concat([{ id: 'b' + Date.now(), type: 'meal', time, items: [], productName: p.name, productRisk: p.risk, timestamp: when.toISOString() }])); showToast(t('toast_product_logged', { name: p.name })); } }} lang={lang} t={t} />
       <AIScanModal visible={modal === 'aiscan'} onClose={() => setModal(null)} scansRemaining={scansRemaining} onComplete={() => { recordScanUsed(); setModal(null); showToast(t('toast_ai_logged')); }} />
       <ScanLimitModal visible={modal === 'scanLimit'} onClose={() => setModal(null)} allowance={PREMIUM_SCANS_PER_MONTH} t={t} />
-      <PaywallModal visible={modal === 'paywall' || modal?.type === 'paywall'} reason={modal?.reason} onClose={() => setModal(null)} t={t} onUpgrade={() => { setIsPremium(true); setModal(null); showToast(t('toast_welcome_premium')); }} />
-      <SettingsModal visible={modal === 'settings'} onClose={() => setModal(null)} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onOverride={overridePhaseWeek} profile={profile} setProfile={setProfile} isPremium={isPremium} onUpgrade={() => setModal({ type: 'paywall', reason: null })} onExport={() => { if (isPremium) setModal('export'); else setModal({ type: 'paywall', reason: 'export' }); }} langPref={langPref} setLangPref={setLangPref} onResetApp={() => { setModal(null); resetApp(); }} onSeedDemo={seedDemo} onTogglePremium={() => setIsPremium(p => !p)} onPreviewLevelUp={(opts) => { setModal(null); setTimeout(() => setLevelUp(opts), 350); }} customFoods={customFoods} onUpdateCustomFood={updateCustomFood} onDeleteCustomFood={deleteCustomFood} user={user} onOpenAccount={() => { setModal(null); setTimeout(() => setModal('account'), 250); }} onSignOut={signOut} syncing={syncing} lastSync={lastSync} onSync={() => user && syncNow(user.id)} t={t} />
-      <AuthModal visible={modal === 'account'} onClose={() => setModal(null)} user={user} onSignOut={signOut} t={t} />
+      <PaywallModal visible={modal === 'paywall' || modal?.type === 'paywall'} reason={modal?.reason} onClose={() => setModal(null)} t={t} onUpgrade={() => { setIsPremium(true); setModal(null); showToast(t('toast_welcome_premium')); if (!user) setTimeout(() => setModal({ type: 'account', mode: 'signup' }), 500); }} />
+      <SettingsModal visible={modal === 'settings'} onClose={() => setModal(null)} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onOverride={overridePhaseWeek} profile={profile} setProfile={setProfile} isPremium={isPremium} onUpgrade={() => setModal({ type: 'paywall', reason: null })} onExport={() => { if (isPremium) setModal('export'); else setModal({ type: 'paywall', reason: 'export' }); }} langPref={langPref} setLangPref={setLangPref} onResetApp={() => { setModal(null); resetApp(); }} onSeedDemo={seedDemo} onTogglePremium={() => setIsPremium(p => !p)} onPreviewLevelUp={(opts) => { setModal(null); setTimeout(() => setLevelUp(opts), 350); }} customFoods={customFoods} onUpdateCustomFood={updateCustomFood} onDeleteCustomFood={deleteCustomFood} user={user} onOpenAccount={(mode) => { setModal(null); setTimeout(() => setModal({ type: 'account', mode }), 250); }} onSignOut={signOut} syncing={syncing} lastSync={lastSync} onSync={() => user && syncNow(user.id)} t={t} />
+      <AuthModal visible={modal === 'account' || modal?.type === 'account'} initialMode={modal && modal.mode} onClose={() => setModal(null)} user={user} onSignOut={signOut} t={t} />
       <EditEntryModal visible={modal?.type === 'edit'} entry={modal?.entry} onClose={() => setModal(null)} onUpdate={updateLogEntry} onDelete={deleteLogEntry} onLogAgain={(e) => onMealSave(e.items, new Date(), e.mealType, e.mealDishes)} lang={lang} t={t} />
       <HistoryModal visible={modal === 'history'} onClose={() => setModal(null)} log={log} reintroProgress={reintroProgress} onEditEntry={(entry) => setModal({ type: 'edit', entry })} lang={lang} t={t} />
+      <PatternsModal visible={modal === 'patterns'} onClose={() => setModal(null)} log={log} lang={lang} t={t} />
       <StartTestModal visible={modal?.type === 'startTest'} categoryId={modal?.categoryId} onClose={() => setModal(null)} onStart={(catId, foodId) => { startReintroTest(catId, foodId); setModal(null); }} t={t} />
       <RecipeDetailModal visible={modal?.type === 'recipe'} recipe={modal?.recipe} onClose={() => setModal(null)} lang={lang} t={t} onLogAsMeal={(recipe) => { onMealSave(recipe.ingredientIds.map(id => makeMealItem(id)), new Date()); }} />
       <ExportModal visible={modal === 'export'} onClose={() => setModal(null)} report={buildDoctorReport({ profile, log, reintroProgress, testHistory, currentPhase, phaseStartDate }, lang)} t={t} />
@@ -6161,7 +6506,7 @@ export default function App() {
       }} t={t} />
       <ColonyModal visible={modal === 'colony'} onClose={() => setModal(null)} log={log} reintroProgress={reintroProgress} t={t} />
       <ProgressModal visible={modal === 'progress'} onClose={() => setModal(null)} log={log} reintroProgress={reintroProgress} symptomFreeCount={Math.max(0, dayCount - new Set(log.filter(e => e.type === 'symptom').map(sx => (sx.timestamp || '').slice(0, 10))).size)} t={t} />
-      <LevelUpCelebration visible={levelUp != null} level={levelUp?.level} complete={levelUp?.complete} onClose={() => setLevelUp(null)} t={t} />
+      <LevelUpCelebration visible={levelUp != null} level={levelUp?.level} complete={levelUp?.complete} onClose={() => setLevelUp(null)} signedIn={!!user} onOpenAccount={() => { setLevelUp(null); setTimeout(() => setModal({ type: 'account', mode: 'signup' }), 300); }} t={t} />
       <LogFeedbackModal feedback={feedback} onClose={() => setFeedback(null)} t={t} />
 
       {toast && <View style={s.toast} accessibilityLiveRegion="assertive"><Text style={s.toastText}>{toast}</Text></View>}
@@ -6346,13 +6691,13 @@ function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, t })
           </View>
           <Text style={{ fontSize: 26, fontWeight: '700', letterSpacing: -0.5, marginBottom: 20 }}>{current.q}</Text>
           {current.cards.map((card, i) => (
-            <View key={i} style={[s.shadow, { backgroundColor: THEME.card, borderRadius: 18, padding: 16, marginBottom: 12 }]}>
+            <Surface key={i} elevation={1} primaryColor={THEME.primary} style={{ backgroundColor: THEME.card, borderRadius: THEME.rCard, padding: 16, marginBottom: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                 <Text style={{ fontSize: 22 }}>{card.icon}</Text>
                 <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.ink, flex: 1 }}>{card.title}</Text>
               </View>
               <Text style={{ fontSize: 14, color: '#5e7060', lineHeight: 21 }}>{card.body}</Text>
-            </View>
+            </Surface>
           ))}
           <View style={{ height: 12 }} />
         </ScrollView>
@@ -6404,15 +6749,32 @@ function RiskPill({ cat, t }) {
 }
 
 // Single small metric tile (sleep / stress / meals) used in the hero row.
-function MetricTile({ value, unit, label, icon }) {
+function MetricTile({ value, unit, label, icon, flat = false }) {
+  // Fixed-height value zone (56 = the Low FODMAP tile's ScoreRing size) so this tile's label
+  // lands at the same vertical position as the ring tile's label, regardless of icon/no-icon.
+  const content = (
+    <>
+      <View style={{ height: 56, alignItems: 'center', justifyContent: 'center' }}>
+        {icon ? <Text style={{ fontSize: 15, marginBottom: 4 }}>{icon}</Text> : null}
+        <Text style={{ fontSize: 30, fontWeight: '800', color: THEME.ink, lineHeight: 32 }}>
+          {value}{unit ? <Text style={{ fontSize: 16, fontWeight: '700' }}>{unit}</Text> : null}
+        </Text>
+      </View>
+      <Text style={{ fontSize: 12, color: THEME.textSoft, marginTop: 8, fontWeight: '600' }}>{label}</Text>
+    </>
+  );
+  // flat = outlined variant (no shadow, real border) — stays a plain View, no Surface needed.
+  if (flat) {
+    return (
+      <View style={{ flex: 1, backgroundColor: THEME.card, borderRadius: THEME.rCard, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: THEME.cardBorder }}>
+        {content}
+      </View>
+    );
+  }
   return (
-    <View style={[s.shadow, { flex: 1, backgroundColor: THEME.card, borderRadius: 20, paddingVertical: 16, alignItems: 'center', justifyContent: 'center' }]}>
-      {icon ? <Text style={{ fontSize: 15, marginBottom: 4 }}>{icon}</Text> : null}
-      <Text style={{ fontSize: 30, fontWeight: '800', color: THEME.ink, lineHeight: 32 }}>
-        {value}{unit ? <Text style={{ fontSize: 16, fontWeight: '700' }}>{unit}</Text> : null}
-      </Text>
-      <Text style={{ fontSize: 12, color: THEME.textSoft, marginTop: 10, fontWeight: '600' }}>{label}</Text>
-    </View>
+    <Surface elevation={1} tinted={false} style={{ flex: 1, backgroundColor: THEME.card, borderRadius: THEME.rCard, paddingVertical: 16, alignItems: 'center' }}>
+      {content}
+    </Surface>
   );
 }
 
@@ -6452,6 +6814,7 @@ function homeStats(log, reintroProgress, symptomFreeCount, t) {
     symptomsCount: todaySymptoms.length,
     sleep: lastSleep ? lastSleep.hours : '—',
     sleepUnit: lastSleep ? 'h' : '',
+    waterGlasses: today.filter(e => e.type === 'water').reduce((a, w) => a + (w.glasses || 0), 0),
   };
 }
 
@@ -6469,8 +6832,7 @@ function ColonyCard({ log, reintroProgress, onOpenBreakdown, t }) {
         <Text accessibilityRole="header" style={s.sectionTitle}>{t('home_colony_title')}</Text>
         <Text style={s.sectionLink}>{t('home_see_colony')}</Text>
       </View>
-      <View style={[s.shadow, { backgroundColor: '#e9f3e3', borderRadius: 24 }]}>
-        <View style={{ backgroundColor: '#e9f3e3', borderRadius: 24, padding: 18, overflow: 'hidden' }}>
+      <View style={{ backgroundColor: '#dcebdc', borderRadius: THEME.rCard, padding: 18 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 6 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'white', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
             {complete && <CheckIcon color={THEME.primaryDark} size={12.5} />}
@@ -6501,7 +6863,6 @@ function ColonyCard({ log, reintroProgress, onOpenBreakdown, t }) {
             </View>
           </View>
         )}
-        </View>
       </View>
     </TouchableOpacity>
   );
@@ -6528,6 +6889,46 @@ function SlideOverModal({ visible, onClose, children }) {
       <Animated.View accessibilityViewIsModal style={{ flex: 1, transform: [{ translateX: tx }] }}>
         {children}
       </Animated.View>
+    </Modal>
+  );
+}
+
+// Bottom-sheet modal: the dark backdrop fades in place while only the panel slides up from the
+// bottom. (Native animationType="slide" on a transparent modal slides the dim too, which reads
+// as the dim "moving".) Honours Reduce Motion; tapping the backdrop closes it.
+function BottomSheet({ visible, onClose, children }) {
+  const [rendered, setRendered] = useState(visible);
+  const backdrop = useRef(new Animated.Value(0)).current;
+  const ty = useRef(new Animated.Value(0)).current;
+  const H = Dimensions.get('window').height;
+  useEffect(() => {
+    if (visible) {
+      setRendered(true);
+      ty.setValue(H);
+      if (_reduceMotion) { backdrop.setValue(1); ty.setValue(0); return; }
+      Animated.parallel([
+        Animated.timing(backdrop, { toValue: 1, duration: 200, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.spring(ty, { toValue: 0, friction: 12, tension: 80, useNativeDriver: true }),
+      ]).start();
+    } else if (rendered) {
+      if (_reduceMotion) { backdrop.setValue(0); setRendered(false); return; }
+      Animated.parallel([
+        Animated.timing(backdrop, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(ty, { toValue: H, duration: 220, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+      ]).start(({ finished }) => { if (finished) setRendered(false); });
+    }
+  }, [visible]);
+  if (!rendered) return null;
+  return (
+    <Modal visible transparent animationType="none" onRequestClose={onClose}>
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <Animated.View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20,33,15,0.45)', opacity: backdrop }}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} accessibilityRole="button" accessibilityLabel={tG('close')} />
+        </Animated.View>
+        <Animated.View style={{ transform: [{ translateY: ty }] }}>
+          {children}
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
@@ -6609,7 +7010,7 @@ function ColonyModal({ visible, onClose, log, reintroProgress, t }) {
 
           <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.ink, marginBottom: 10 }}>{t('colony_earned')}</Text>
           {rows.map((r, i) => (
-            <View key={i} style={[s.card, { marginHorizontal: 0, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+            <View key={i} style={[s.cardOutlined, { marginHorizontal: 0, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
               <Text style={{ fontSize: 24 }}>{r.icon}</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: THEME.ink }}>{r.label}</Text>
@@ -6630,7 +7031,7 @@ function ColonyModal({ visible, onClose, log, reintroProgress, t }) {
 
 // Celebratory overlay shown when Flora levels up: she springs in while a
 // ring of sparkles bursts outward. Driven by the Animated API (no deps).
-function LevelUpCelebration({ visible, level, complete, onClose, t }) {
+function LevelUpCelebration({ visible, level, complete, onClose, signedIn, onOpenAccount, t }) {
   const scale = useRef(new Animated.Value(0)).current;
   const burst = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -6658,7 +7059,8 @@ function LevelUpCelebration({ visible, level, complete, onClose, t }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 30 }}>
-        <Animated.View accessibilityViewIsModal style={{ transform: [{ scale }], backgroundColor: 'white', borderRadius: 24, padding: 28, alignItems: 'center', alignSelf: 'stretch' }}>
+        <Animated.View accessibilityViewIsModal style={{ transform: [{ scale }], alignSelf: 'stretch' }}>
+        <Surface elevation={3} primaryColor={THEME.primary} style={{ backgroundColor: THEME.card, borderRadius: 24, padding: 28, alignItems: 'center' }}>
           <View style={{ width: 140, height: 140, alignItems: 'center', justifyContent: 'center' }}>
             {sparkles}
             {complete
@@ -6685,6 +7087,12 @@ function LevelUpCelebration({ visible, level, complete, onClose, t }) {
             </>
           )}
           <TouchableOpacity onPress={onClose} style={[s.btnPrimary, { alignSelf: 'stretch', marginTop: 20 }]}><Text style={s.btnPrimaryText}>{t('levelup_btn')}</Text></TouchableOpacity>
+          {!signedIn && (
+            <TouchableOpacity onPress={onOpenAccount} accessibilityRole="button" style={{ marginTop: 14, alignItems: 'center' }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.primary }}>{t('levelup_save_cta')}</Text>
+            </TouchableOpacity>
+          )}
+        </Surface>
         </Animated.View>
       </View>
     </Modal>
@@ -6716,7 +7124,31 @@ function logFeedback(kind, value, t) {
     if (value === 3) return { mood: 'soso', emoji: '🌀', title: t('lf_stress_mid_title'), message: t('lf_stress_mid_msg') };
     return { mood: 'bad', emoji: '😮‍💨', title: t('lf_stress_high_title'), message: t('lf_stress_high_msg') };
   }
+  if (kind === 'water') {
+    return { mood: 'good', emoji: '💧', title: t('lf_water_title'), message: t('lf_water_msg') };
+  }
   return null;
+}
+
+// A dedicated, more playful illustration for hitting the daily water goal: Flora beaming
+// inside a big water droplet, ringed by bubbles and sparkles. Used by LogFeedbackModal.
+function WaterGoalArt({ size = 140 }) {
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} viewBox="0 0 150 150" style={{ position: 'absolute' }}>
+        <Circle cx="75" cy="86" r="66" fill="#eaf4fc" />
+        <Path d="M75 20 C 75 20 40 72 40 96 a 35 35 0 1 0 70 0 C 110 72 75 20 75 20 Z" fill="#cfe6f9" stroke="#5aa0e0" strokeWidth="2.5" />
+        <Path d="M58 98 a 15 18 0 0 0 8 24" stroke="#ffffff" strokeWidth="4.5" fill="none" strokeLinecap="round" opacity="0.85" />
+        <Circle cx="114" cy="110" r="6" fill="#bcdcf5" stroke="#5aa0e0" strokeWidth="1.5" />
+        <Circle cx="32" cy="118" r="4.5" fill="#bcdcf5" stroke="#5aa0e0" strokeWidth="1.5" />
+        <Path d="M124 42 l2.4 6.6 6.6 2.4 -6.6 2.4 -2.4 6.6 -2.4 -6.6 -6.6 -2.4 6.6 -2.4 z" fill="#f0bd4f" />
+        <Path d="M22 52 l1.8 5 5 1.8 -5 1.8 -1.8 5 -1.8 -5 -5 -1.8 5 -1.8 z" fill="#5fb06a" />
+      </Svg>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', paddingTop: size * 0.4 }}>
+        <Flora size={size * 0.46} mood="good" />
+      </View>
+    </View>
+  );
 }
 
 function LogFeedbackModal({ feedback, onClose, t }) {
@@ -6732,17 +7164,23 @@ function LogFeedbackModal({ feedback, onClose, t }) {
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity activeOpacity={1} onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 30 }}>
-        <Animated.View accessibilityViewIsModal style={{ transform: [{ scale }], backgroundColor: 'white', borderRadius: 24, padding: 26, alignItems: 'center', alignSelf: 'stretch' }}>
-          <View style={{ width: 132, height: 132, alignItems: 'center', justifyContent: 'center' }}>
-            <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: halo }} />
-            <Flora size={110} mood={feedback.mood} />
-            <View style={{ position: 'absolute', bottom: 4, right: 8, width: 42, height: 42, borderRadius: 21, backgroundColor: 'white', borderWidth: 1, borderColor: THEME.cardBorder, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 22 }}>{feedback.emoji}</Text>
+        <Animated.View accessibilityViewIsModal style={{ transform: [{ scale }], alignSelf: 'stretch' }}>
+        <Surface elevation={3} primaryColor={THEME.primary} style={{ backgroundColor: THEME.card, borderRadius: 24, padding: 26, alignItems: 'center' }}>
+          {feedback.art === 'water' ? (
+            <WaterGoalArt size={140} />
+          ) : (
+            <View style={{ width: 132, height: 132, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: halo }} />
+              <Flora size={110} mood={feedback.mood} />
+              <View style={{ position: 'absolute', bottom: 4, right: 8, width: 42, height: 42, borderRadius: 21, backgroundColor: 'white', borderWidth: 1, borderColor: THEME.cardBorder, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 22 }}>{feedback.emoji}</Text>
+              </View>
             </View>
-          </View>
+          )}
           <Text style={{ fontSize: 20, fontWeight: '700', color: THEME.ink, marginTop: 12 }}>{feedback.title}</Text>
           <Text style={{ fontSize: 13, color: THEME.textMuted, marginTop: 6, textAlign: 'center', lineHeight: 19 }}>{feedback.message}</Text>
           <TouchableOpacity onPress={onClose} style={[s.btnPrimary, { alignSelf: 'stretch', marginTop: 18 }]}><Text style={s.btnPrimaryText}>{t('lf_got_it')}</Text></TouchableOpacity>
+        </Surface>
         </Animated.View>
       </TouchableOpacity>
     </Modal>
@@ -6772,6 +7210,10 @@ function WeeklyBars({ data, color, max, height = 100 }) {
 }
 
 // Builds the last `n` calendar days (oldest→newest) with per-day buckets.
+const WATER_GOAL = 10; // glasses/day — 10 × 200 ml ≈ 2 L, a common hydration target
+const WATER_GLASS_ML = 200; // 1 glass ≈ 200 ml → a 10-glass goal ≈ 2 L/day
+const WATER_GOAL_LITERS = (WATER_GOAL * WATER_GLASS_ML) / 1000; // 2
+
 function buildDailySeries(log, n, reintroProgress) {
   const days = [];
   const dow = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -6792,6 +7234,7 @@ function buildDailySeries(log, n, reintroProgress) {
       symptoms: entries.filter(e => e.type === 'symptom').length,
       adherence: meals.length ? Math.round((low / meals.length) * 100) : null,
       sleep: sleep ? sleep.hours : 0,
+      water: entries.filter(e => e.type === 'water').reduce((a, w) => a + (w.glasses || 0), 0),
       mealCount: meals.length,
     });
   }
@@ -6805,6 +7248,8 @@ function ProgressModal({ visible, onClose, log, reintroProgress, symptomFreeCoun
   const avgAdherence = adherenceDays.length ? Math.round(adherenceDays.reduce((a, d) => a + d.adherence, 0) / adherenceDays.length) : null;
   const sleepDays = series.filter(d => d.sleep > 0);
   const avgSleep = sleepDays.length ? (sleepDays.reduce((a, d) => a + d.sleep, 0) / sleepDays.length).toFixed(1) : '—';
+  const waterDays = series.filter(d => d.water > 0);
+  const avgWater = waterDays.length ? (waterDays.reduce((a, d) => a + d.water, 0) / waterDays.length).toFixed(1) : '—';
   const weekSymptoms = series.reduce((a, d) => a + d.symptoms, 0);
   const symptomFreeThisWeek = series.filter(d => (d.mealCount > 0 || d.symptoms > 0) && d.symptoms === 0).length;
 
@@ -6820,10 +7265,10 @@ function ProgressModal({ visible, onClose, log, reintroProgress, symptomFreeCoun
 
   return (
     <SlideOverModal visible={visible} onClose={onClose}>
-      <SafeAreaViewSC style={{ flex: 1, backgroundColor: THEME.bg }}>
+      <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#e7f3df' }}>
         <AppBar title={t('progress_title')} onBack={onClose} t={t} />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-          <View style={[s.card, { marginHorizontal: 0, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#f3f8f3', borderColor: '#e0ece0' }]}>
+          <View style={[s.cardFilled, { marginHorizontal: 0, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: THEME.card }]}>
             <Flora size={56} mood="good" form={floraForm(g.level)} />
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.ink }}>{tG('progress_level_points', { level: g.level, points: g.points })}</Text>
@@ -6831,20 +7276,21 @@ function ProgressModal({ visible, onClose, log, reintroProgress, symptomFreeCoun
             </View>
           </View>
           {/* Hero ring — the week at a glance (Google Fit style) */}
-          <View style={[s.card, { marginHorizontal: 0, alignItems: 'center', paddingTop: 24, paddingBottom: 20 }]}>
+          <View style={[s.cardOutlined, { marginHorizontal: 0, alignItems: 'center', paddingTop: 24, paddingBottom: 20 }]}>
             <Text style={{ fontSize: 12, fontWeight: '700', letterSpacing: 1, color: THEME.textMuted, marginBottom: 14 }}>{t('progress_last7')}</Text>
             <ScoreRing value={weekScore || 0} size={150} stroke={13} color={scoreColor} centerValue={weekScore == null ? '—' : weekScore} centerLabel={t('progress_gut_score')} />
             <Text style={{ fontSize: 14, color: THEME.textSoft, marginTop: 14, textAlign: 'center' }}>{scoreWord}</Text>
           </View>
 
           {/* Metric summary cards */}
-          <View style={{ flexDirection: 'row', gap: 8, marginVertical: 4 }}>
-            <MetricTile icon="🌿" value={symptomFreeThisWeek} label={t('progress_calm_days')} />
-            <MetricTile icon="🥗" value={avgAdherence == null ? '—' : `${avgAdherence}%`} label={t('progress_adherence')} />
-            <MetricTile icon="😴" value={avgSleep} unit={avgSleep === '—' ? '' : 'h'} label={t('progress_avg_sleep')} />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 4 }}>
+            <View style={{ width: '48%' }}><MetricTile flat icon="🌿" value={symptomFreeThisWeek} label={t('progress_calm_days')} /></View>
+            <View style={{ width: '48%' }}><MetricTile flat icon="🥗" value={avgAdherence == null ? '—' : `${avgAdherence}%`} label={t('progress_adherence')} /></View>
+            <View style={{ width: '48%' }}><MetricTile flat icon="😴" value={avgSleep} unit={avgSleep === '—' ? '' : 'h'} label={t('progress_avg_sleep')} /></View>
+            <View style={{ width: '48%' }}><MetricTile flat icon="💧" value={avgWater} label={t('progress_avg_water')} /></View>
           </View>
 
-          <View style={[s.card, { marginHorizontal: 0, marginTop: 12 }]}>
+          <View style={[s.cardOutlined, { marginHorizontal: 0, marginTop: 12 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <Text accessibilityRole="header" style={{ fontSize: 15, fontWeight: '700', color: THEME.ink }}>{t('progress_adherence_title')}</Text>
               <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.primary }}>{avgAdherence == null ? '—' : `${avgAdherence}%`}</Text>
@@ -6853,7 +7299,7 @@ function ProgressModal({ visible, onClose, log, reintroProgress, symptomFreeCoun
             <WeeklyBars data={series.map(d => ({ label: d.label, value: d.adherence || 0, display: d.adherence != null ? `${d.adherence}%` : '' }))} color={THEME.primary} max={100} />
           </View>
 
-          <View style={[s.card, { marginHorizontal: 0 }]}>
+          <View style={[s.cardOutlined, { marginHorizontal: 0 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <Text accessibilityRole="header" style={{ fontSize: 15, fontWeight: '700', color: THEME.ink }}>{t('progress_symptoms_title')}</Text>
               <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.amber }}>{t('progress_symptoms_this_week', { n: weekSymptoms })}</Text>
@@ -6862,13 +7308,22 @@ function ProgressModal({ visible, onClose, log, reintroProgress, symptomFreeCoun
             <WeeklyBars data={series.map(d => ({ label: d.label, value: d.symptoms }))} color={THEME.amber} />
           </View>
 
-          <View style={[s.card, { marginHorizontal: 0 }]}>
+          <View style={[s.cardOutlined, { marginHorizontal: 0 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <Text accessibilityRole="header" style={{ fontSize: 15, fontWeight: '700', color: THEME.ink }}>{t('progress_sleep_title')}</Text>
               <Text style={{ fontSize: 13, fontWeight: '700', color: '#456a92' }}>{avgSleep === '—' ? '—' : t('progress_sleep_avg', { n: avgSleep })}</Text>
             </View>
             <Text style={{ fontSize: 12, color: THEME.textMuted, marginTop: 2, marginBottom: 16 }}>{t('progress_sleep_sub')}</Text>
             <WeeklyBars data={series.map(d => ({ label: d.label, value: d.sleep, display: d.sleep ? `${d.sleep}h` : '' }))} color="#7da0c0" max={10} />
+          </View>
+
+          <View style={[s.cardOutlined, { marginHorizontal: 0 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <Text accessibilityRole="header" style={{ fontSize: 15, fontWeight: '700', color: THEME.ink }}>{t('progress_water_title')}</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#2f7bbf' }}>{avgWater === '—' ? '—' : t('progress_water_avg', { n: avgWater })}</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: THEME.textMuted, marginTop: 2, marginBottom: 16 }}>{t('progress_water_sub')}</Text>
+            <WeeklyBars data={series.map(d => ({ label: d.label, value: d.water, display: d.water ? `${d.water}` : '' }))} color="#5aa0e0" max={WATER_GOAL} />
           </View>
 
           <View style={{ height: 30 }} />
@@ -6932,6 +7387,17 @@ function LogEntryRow({ entry, reintroProgress, lang, t, onPress }) {
       <View importantForAccessibility="no" style={{ marginLeft: 6 }}><ChevronIcon size={16} color="#647264" /></View>
     </TouchableOpacity>
   );
+  if (entry.type === 'water') {
+    const glassesLabel = entry.glasses === 1 ? t('water_glasses_one', { n: 1 }) : t('water_glasses', { n: entry.glasses });
+    return (
+      <TouchableOpacity onPress={onPress} accessibilityRole="button" accessibilityLabel={`${t('water_title')}, ${glassesLabel}, ${entry.time}`} accessibilityHint={editHint} style={s.timelineRow}>
+        <View style={[s.timelineDot, { backgroundColor: '#dceaf7' }]}><Text style={{ fontSize: 16 }}>💧</Text></View>
+        <View style={{ flex: 1 }}><Text style={s.timelineTitle}>{t('water_title')}</Text><Text style={s.timelineMeta}>{glassesLabel}</Text></View>
+        <Text style={s.timelineTime}>{entry.time}</Text>
+        <View importantForAccessibility="no" style={{ marginLeft: 6 }}><ChevronIcon size={16} color="#647264" /></View>
+      </TouchableOpacity>
+    );
+  }
   if (entry.productName) {
     const col = CAT_COLORS[entry.productRisk || 'low'];
     return (
@@ -6947,17 +7413,23 @@ function LogEntryRow({ entry, reintroProgress, lang, t, onPress }) {
   const col = CAT_COLORS[meal.overall];
   const names = (entry.items || []).map(i => { const f = FOODS.find(x => x.id === i.foodId); return f ? foodName(f, lang) : null; }).filter(Boolean).join(', ');
   const dishNames = (entry.mealDishes || []).map(id => { const f = FOODS.find(x => x.id === id); return f ? foodName(f, lang) : null; }).filter(Boolean).join(', ');
-  const title = dishNames || names || t('timeline_meal_fallback');
+  // Ingredients the user added on top of the dish(es) — everything in the meal that isn't
+  // claimed by a logged dish's own recipe. Uses the same grouping helper as the detail view
+  // (so a food shared by two dishes is counted per dish, not swallowed for the whole meal).
+  const extraItems = dishNames ? groupMealItemsByDish(entry.items || [], entry.mealDishes).extras : [];
+  const extraNames = extraItems.map(it => { const f = FOODS.find(x => x.id === it.foodId); return f ? foodName(f, lang) : null; }).filter(Boolean).join(', ');
+  const extraLabel = extraItems.length > 0 ? ' ' + (extraItems.length === 1 ? t('timeline_extra_one', { n: 1 }) : t('timeline_extra', { n: extraItems.length })) : '';
+  const title = dishNames ? dishNames + extraLabel : (names || t('timeline_meal_fallback'));
   const firstFood = FOODS.find(f => f.id === (entry.mealDishes?.[0] || entry.items?.[0]?.foodId));
   const mtLabel = entry.mealType ? t('meal_type_' + entry.mealType) : '';
   const why = mealWhyText(meal, lang);
-  const a11yLabel = `${title}${dishNames && names ? ', ' + names : ''}, ${catLabel(meal.overall)}${mtLabel ? ', ' + mtLabel : ''}, ${entry.time}`;
+  const a11yLabel = `${title}${extraNames ? ', ' + extraNames : ''}, ${catLabel(meal.overall)}${mtLabel ? ', ' + mtLabel : ''}, ${entry.time}`;
   return (
     <TouchableOpacity onPress={onPress} accessibilityRole="button" accessibilityLabel={a11yLabel} accessibilityHint={editHint} style={s.timelineRow}>
       <View style={[s.timelineDot, { backgroundColor: col.bg }]}><Text style={{ fontSize: 16 }}>{firstFood?.emoji || '🍽️'}</Text></View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={s.timelineTitle} numberOfLines={1}>{title}</Text>
-        {dishNames && names ? <Text style={{ fontSize: 11, color: THEME.textMuted, marginTop: 1 }} numberOfLines={1}>{names}</Text> : null}
+        {extraNames ? <Text style={{ fontSize: 11, color: THEME.textMuted, marginTop: 1 }} numberOfLines={1}>{extraNames}</Text> : null}
         <Text style={s.timelineMeta} numberOfLines={1}>{mtLabel ? mtLabel + ' · ' : ''}{entry.time}</Text>
         {why ? <Text style={{ fontSize: 11, color: col.text, marginTop: 3, lineHeight: 15 }} numberOfLines={2}>{t('meal_why_label')}: {why}</Text> : null}
       </View>
@@ -6971,7 +7443,7 @@ function LogEntryRow({ entry, reintroProgress, lang, t, onPress }) {
 function HistoryModal({ visible, onClose, log, reintroProgress, onEditEntry, lang, t }) {
   const groups = groupLogByDay(log, t, lang);
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: THEME.bg }}>
         <AppBar title={t('history_title')} onBack={onClose} backIcon="close" t={t} />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -6989,7 +7461,48 @@ function HistoryModal({ visible, onClose, log, reintroProgress, onEditEntry, lan
   );
 }
 
-function HomeScreen({ profile, log, dayCount, reintroProgress, periodActive, currentPhase, phaseStartDate, onStartElimination, onStartReintroduction, onOpenSettings, onLogPeriod, onEditEntry, onQuickLog, onOpenHistory, onOpenRecipes, onOpenRecipe, onOpenColony, onOpenProgress, onGoToPlan, onDiagnosed, lang, t }) {
+const PATTERN_SEV = {
+  watch: { bg: '#fff4f0', border: '#f0d0c0', tag: '#a04030' },
+  maybe: { bg: '#fbeed3', border: '#f0dca8', tag: '#a05a10' },
+  info: { bg: '#f0f4f8', border: '#d8e0ea', tag: '#4a6a8a' },
+  good: { bg: '#f0f7f0', border: '#cfe0cf', tag: '#2d6a2d' },
+};
+
+function PatternsModal({ visible, onClose, log, lang, t }) {
+  const patterns = detectPatterns(log, lang);
+  const sevLabel = { watch: t('sev_watch'), maybe: t('sev_maybe'), info: t('sev_info'), good: t('sev_good') };
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <SafeAreaViewSC style={{ flex: 1, backgroundColor: THEME.bg }}>
+        <AppBar title={t('home_patterns')} onBack={onClose} backIcon="close" t={t} />
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+          <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12, lineHeight: 17 }}>{t('patterns_sub')}</Text>
+          {patterns.length === 0 ? (
+            <Text style={{ fontSize: 14, color: THEME.textMuted, textAlign: 'center', marginTop: 40 }}>
+              {log.length < 6 ? t('patterns_empty_early') : t('patterns_empty_none')}
+            </Text>
+          ) : patterns.map(p => {
+            const sev = PATTERN_SEV[p.severity];
+            return (
+              <View key={p.id} style={{ marginBottom: 8, backgroundColor: sev.bg, borderWidth: 1, borderColor: sev.border, borderRadius: 14, padding: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <Text style={{ fontSize: 18 }}>{p.icon}</Text>
+                  <View style={{ backgroundColor: sev.tag, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 9, color: 'white', fontWeight: '700', letterSpacing: 0.3 }}>{sevLabel[p.severity]}</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 4 }}>{p.title}</Text>
+                <Text style={{ fontSize: 12, color: '#6b7a6b', lineHeight: 18 }}>{p.detail}</Text>
+              </View>
+            );
+          })}
+        </ScrollView>
+      </SafeAreaViewSC>
+    </Modal>
+  );
+}
+
+function HomeScreen({ profile, log, dayCount, reintroProgress, periodActive, currentPhase, phaseStartDate, onStartElimination, onStartReintroduction, onOpenSettings, onLogPeriod, onEditEntry, onQuickLog, onOpenHistory, onOpenRecipes, onOpenRecipe, onOpenColony, onOpenProgress, onOpenPatterns, onGoToPlan, onDiagnosed, signedIn, onOpenAccount, accountBannerDismissed, onDismissAccountBanner, lang, t }) {
   const greeting = profile.name ? t('home_hi_name', { name: profile.name }) : t('home_hi');
   const showPeriod = profile.menstruates === 'yes';
   const [showDoctorInfo, setShowDoctorInfo] = useState(false);
@@ -7119,12 +7632,36 @@ function HomeScreen({ profile, log, dayCount, reintroProgress, periodActive, cur
               <TouchableOpacity onPress={onOpenProgress}><Text style={s.sectionLink}>{t('home_see_progress')}</Text></TouchableOpacity>
             </View>
             <TouchableOpacity activeOpacity={0.85} onPress={onOpenProgress} style={{ flexDirection: 'row', gap: 11, marginHorizontal: 20, marginBottom: 12 }}>
-              <View style={[s.shadow, { flex: 1, backgroundColor: THEME.card, borderRadius: 20, paddingVertical: 16, alignItems: 'center' }]}>
+              <Surface elevation={1} tinted={false} style={{ flex: 1, backgroundColor: THEME.card, borderRadius: THEME.rCard, paddingVertical: 16, alignItems: 'center' }}>
                 <ScoreRing value={stats.adherencePct || 0} size={56} stroke={6} color={stats.ringColor} centerValue={stats.adherencePct == null ? '—' : `${stats.adherencePct}%`} />
                 <Text style={{ fontSize: 12, color: THEME.textSoft, marginTop: 8, fontWeight: '600' }}>{t('home_low_fodmap')}</Text>
-              </View>
+              </Surface>
               <MetricTile value={stats.symptomsCount} label={t('home_symptoms')} />
               <MetricTile value={stats.sleep} unit={stats.sleepUnit} label={t('home_sleep')} />
+            </TouchableOpacity>
+
+            {/* Hydration — today's glasses vs a daily goal; tap to log more water */}
+            <TouchableOpacity activeOpacity={0.85} onPress={() => onQuickLog && onQuickLog('water')} accessibilityRole="button" accessibilityLabel={`${t('water_title')}, ${t('water_progress', { n: stats.waterGlasses, goal: WATER_GOAL, liters: WATER_GOAL_LITERS })}`}>
+            <Surface elevation={1} tinted={false} style={[s.cardFilled, { backgroundColor: THEME.card, marginTop: 0 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#dceaf7', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text importantForAccessibility="no" style={{ fontSize: 18 }}>💧</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.ink }}>{t('water_title')}</Text>
+                  <Text style={{ fontSize: 12, color: THEME.textSoft, marginTop: 1 }}>{t('water_progress', { n: stats.waterGlasses, goal: WATER_GOAL, liters: WATER_GOAL_LITERS })}</Text>
+                </View>
+                <View importantForAccessibility="no" style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#dcebdc', alignItems: 'center', justifyContent: 'center' }}>
+                  <IconPlus size={18} color={THEME.primaryDark} />
+                </View>
+              </View>
+              <View importantForAccessibility="no" style={{ flexDirection: 'row', gap: 5, marginTop: 12 }}>
+                {Array.from({ length: WATER_GOAL }).map((_, i) => (
+                  <View key={i} style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: i < stats.waterGlasses ? '#5aa0e0' : '#e3e9ef' }} />
+                ))}
+              </View>
+              {stats.waterGlasses >= WATER_GOAL && <Text style={{ fontSize: 11.5, color: '#2f7bbf', fontWeight: '600', marginTop: 8 }}>{t('water_goal_reached')}</Text>}
+            </Surface>
             </TouchableOpacity>
           </>
         )}
@@ -7135,10 +7672,10 @@ function HomeScreen({ profile, log, dayCount, reintroProgress, periodActive, cur
 
       {currentPhase === 'elimination' && <TodaysMealsCard dayCount={dayCount} onOpenRecipes={onOpenRecipes} onOpenRecipe={onOpenRecipe} lang={lang} />}
 
-      {log.length > 0 && <InsightsCard log={log} lang={lang} />}
+      {log.length > 0 && <InsightsCard log={log} lang={lang} onOpenPatterns={onOpenPatterns} />}
 
       {showPeriod && (
-        <View style={[s.card, { borderColor: periodActive ? '#eccdd4' : THEME.cardBorder, backgroundColor: periodActive ? '#fdf2f4' : 'white' }]}>
+        <Surface elevation={1} primaryColor={THEME.primary} style={[s.cardFilled, { backgroundColor: periodActive ? '#fdf2f4' : THEME.card }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#fde0e6', alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 18 }}>🩸</Text>
@@ -7158,7 +7695,7 @@ function HomeScreen({ profile, log, dayCount, reintroProgress, periodActive, cur
           <Text style={{ fontSize: 12, color: THEME.textSoft, lineHeight: 18, marginTop: 12 }}>
             {t('period_body')}
           </Text>
-        </View>
+        </Surface>
       )}
 
       {log.length > 0 && (() => {
@@ -7171,6 +7708,7 @@ function HomeScreen({ profile, log, dayCount, reintroProgress, periodActive, cur
         const loggedToday = (type) => log.some(e => e.type === type && e.timestamp && new Date(e.timestamp) >= startOfToday);
         const needSleep = !loggedToday('sleep');
         const needStress = !loggedToday('stress');
+        const needWater = !loggedToday('water');
         const NudgeChip = ({ emoji, label, onPress }) => (
           <TouchableOpacity onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'white', borderWidth: 1, borderColor: '#c4cec4', borderRadius: 20, paddingLeft: 10, paddingRight: 14, paddingVertical: 7 }}>
             <Text importantForAccessibility="no" style={{ fontSize: 15 }}>{emoji}</Text>
@@ -7183,17 +7721,35 @@ function HomeScreen({ profile, log, dayCount, reintroProgress, periodActive, cur
               <Text style={{ fontSize: 15, fontWeight: '600' }}>{t('home_journal')}</Text>
               <Text style={{ fontSize: 12, color: '#647264' }}>{t('timeline_entries', { n: log.length })}</Text>
             </View>
-            {(needSleep || needStress) && (
+            {(needSleep || needStress || needWater) && (
               <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: '#dcebdc', borderRadius: 14, padding: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
                   <BulbIcon size={24} color={THEME.primaryDark} />
                   <Text style={{ flex: 1, fontSize: 12.5, color: '#3d4d3d', lineHeight: 17 }}>{t('nudge_lifestyle')}</Text>
                 </View>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   {needSleep && <NudgeChip emoji="😴" label={t('log_sleep')} onPress={() => onQuickLog && onQuickLog('sleep')} />}
                   {needStress && <NudgeChip emoji="🧘" label={t('log_stress')} onPress={() => onQuickLog && onQuickLog('stress')} />}
+                  {needWater && <NudgeChip emoji="💧" label={t('log_water')} onPress={() => onQuickLog && onQuickLog('water')} />}
                 </View>
               </View>
+            )}
+            {/* Guest-first nudge, styled like the Foods "Recipes" tile (green card) so it
+                reads as a friendly CTA. Only while signed out, not dismissed, and (by
+                being here) entries already exist. Tap → account; ✕ → dismiss. */}
+            {!signedIn && !accountBannerDismissed && (
+              <TouchableOpacity onPress={onOpenAccount} activeOpacity={0.85} accessibilityRole="button" accessibilityLabel={`${t('account_nudge_title')}, ${t('account_nudge_cta')}`} style={{ marginHorizontal: 20, marginBottom: 12, padding: 14, borderRadius: 16, backgroundColor: THEME.primary, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}>
+                  <TablerIcon size={22} color="#ffffff" paths={['M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0', 'M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2']} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#ffffff' }}>{t('account_nudge_title')}</Text>
+                  <Text style={{ fontSize: 12, color: '#eaf3ea', marginTop: 2, lineHeight: 16, fontWeight: '600' }}>{t('account_nudge_cta')}</Text>
+                </View>
+                <TouchableOpacity onPress={onDismissAccountBanner} accessibilityRole="button" accessibilityLabel={t('close')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                  <XIcon size={24} color="#eaf3ea" />
+                </TouchableOpacity>
+              </TouchableOpacity>
             )}
             {homeGroups.map(group => (
               <View key={group.key}>
@@ -7226,10 +7782,12 @@ function PhaseProgressWidget({ currentPhase, phaseStartDate, onStartElimination,
     return (
       <View>
         <PlanHeader />
-        <TouchableOpacity activeOpacity={0.85} onPress={onGoToPlan} style={[s.card, { borderColor: '#4e7d4e', backgroundColor: '#f5faf5' }]}>
-          <Text style={{ fontSize: 20 }}>🌱</Text>
-          <Text style={[s.cardTitle, { marginTop: 8 }]}>{t('phase_ready_title')}</Text>
-          <Text style={s.cardText}>{t('phase_ready_body')}</Text>
+        <TouchableOpacity activeOpacity={0.85} onPress={onGoToPlan}>
+          <Surface elevation={1} tinted={false} style={[s.cardFilled, { backgroundColor: THEME.card }]}>
+            <Text style={{ fontSize: 20 }}>🌱</Text>
+            <Text style={[s.cardTitle, { marginTop: 8 }]}>{t('phase_ready_title')}</Text>
+            <Text style={s.cardText}>{t('phase_ready_body')}</Text>
+          </Surface>
         </TouchableOpacity>
       </View>
     );
@@ -7248,13 +7806,15 @@ function PhaseProgressWidget({ currentPhase, phaseStartDate, onStartElimination,
     return (
       <View>
         <PlanHeader />
-        <TouchableOpacity activeOpacity={0.85} onPress={onGoToPlan} style={[s.card, { borderColor: '#c4cec4', backgroundColor: '#f5faf5' }]}>
-          <View style={s.badgeGreen}><Text style={s.badgeGreenText}>{t('phase_elim_badge', { n: weekNum })}</Text></View>
-          <Text style={[s.cardTitle, { marginTop: 8 }]}>{headline}</Text>
-          <Text style={s.cardText}>{readyForReintro ? t('phase_elim_body_ready') : t('phase_elim_body_early')}</Text>
-          <View style={{ height: 8, backgroundColor: '#e0e8e0', borderRadius: 4, marginTop: 12, overflow: 'hidden' }}>
-            <View style={{ height: 8, backgroundColor: '#4e7d4e', width: `${progress}%`, borderRadius: 4 }} />
-          </View>
+        <TouchableOpacity activeOpacity={0.85} onPress={onGoToPlan}>
+          <Surface elevation={1} tinted={false} style={[s.cardFilled, { backgroundColor: THEME.card }]}>
+            <View style={s.badgeGreen}><Text style={s.badgeGreenText}>{t('phase_elim_badge', { n: weekNum })}</Text></View>
+            <Text style={[s.cardTitle, { marginTop: 8 }]}>{headline}</Text>
+            <Text style={s.cardText}>{readyForReintro ? t('phase_elim_body_ready') : t('phase_elim_body_early')}</Text>
+            <View style={{ height: 8, backgroundColor: '#e0e8e0', borderRadius: 4, marginTop: 12, overflow: 'hidden' }}>
+              <View style={{ height: 8, backgroundColor: '#4e7d4e', width: `${progress}%`, borderRadius: 4 }} />
+            </View>
+          </Surface>
         </TouchableOpacity>
       </View>
     );
@@ -7265,13 +7825,15 @@ function PhaseProgressWidget({ currentPhase, phaseStartDate, onStartElimination,
     return (
       <View>
         <PlanHeader />
-        <TouchableOpacity activeOpacity={0.85} onPress={onGoToPlan} style={[s.card, { borderColor: '#fff4d0' }]}>
-          <View style={s.badge}><Text style={s.badgeText}>{t('phase_reintro_badge')}</Text></View>
-          <Text style={[s.cardTitle, { marginTop: 8 }]}>{t('phase_reintro_headline', { n: weekNum, total: totalWeeks })}</Text>
-          <Text style={s.cardText}>{t('phase_reintro_body')}</Text>
-          <View style={{ height: 8, backgroundColor: '#f0f4f0', borderRadius: 4, marginTop: 12, overflow: 'hidden' }}>
-            <View style={{ height: 8, backgroundColor: '#d4a040', width: `${progress}%`, borderRadius: 4 }} />
-          </View>
+        <TouchableOpacity activeOpacity={0.85} onPress={onGoToPlan}>
+          <Surface elevation={1} tinted={false} style={[s.cardFilled, { backgroundColor: THEME.card }]}>
+            <View style={s.badge}><Text style={s.badgeText}>{t('phase_reintro_badge')}</Text></View>
+            <Text style={[s.cardTitle, { marginTop: 8 }]}>{t('phase_reintro_headline', { n: weekNum, total: totalWeeks })}</Text>
+            <Text style={s.cardText}>{t('phase_reintro_body')}</Text>
+            <View style={{ height: 8, backgroundColor: '#f0f4f0', borderRadius: 4, marginTop: 12, overflow: 'hidden' }}>
+              <View style={{ height: 8, backgroundColor: '#d4a040', width: `${progress}%`, borderRadius: 4 }} />
+            </View>
+          </Surface>
         </TouchableOpacity>
       </View>
     );
@@ -7292,31 +7854,37 @@ function FoodExplorerScreen({ reintroProgress, onOpenRecipes, profile, t, lang }
   const q = search.trim().toLowerCase();
   const hasFilters = !!(q || filter !== 'all' || catFilter.length > 0);
   const clearFilters = () => { setSearch(''); setFilter('all'); setCatFilter([]); };
-  // Best (lowest) match rank across a food's names: 0 exact, 1 starts-with, 2 contains, 3 none.
-  const searchRank = (f) => {
-    let best = 3;
-    for (const n of [foodName(f, lang).toLowerCase(), f.name.toLowerCase(), (f.alias || '').toLowerCase()]) {
-      if (!n) continue;
-      if (n === q) return 0;
-      if (n.startsWith(q)) best = Math.min(best, 1);
-      else if (n.indexOf(q) >= 0) best = Math.min(best, 2);
-    }
-    return best;
-  };
-  const filtered = FOODS.filter(f => {
-    if (q) {
-      const en = f.name.toLowerCase();
+  // Filter + sort in one memoized pass. Precomputing each food's localized name and search
+  // rank once (instead of recomputing them inside the comparator, thousands of times) keeps
+  // the Foods tab snappy — this previously ran over the whole ~260-item DB on every render.
+  const filtered = useMemo(() => {
+    const rows = [];
+    for (const f of FOODS) {
+      if (f.dishOnly) continue;   // combined dish-only ingredients aren't browsable foods
       const loc = foodName(f, lang).toLowerCase();
+      const en = f.name.toLowerCase();
       const alias = (f.alias || '').toLowerCase();
-      if (en.indexOf(q) < 0 && loc.indexOf(q) < 0 && alias.indexOf(q) < 0) return false;
+      if (q && en.indexOf(q) < 0 && loc.indexOf(q) < 0 && alias.indexOf(q) < 0) continue;
+      if (filter !== 'all' && f.cat !== filter) continue;
+      if (catFilter.length > 0 && !catFilter.includes(f.group)) continue;
+      // Best (lowest) match rank across the food's names: 0 exact, 1 starts-with, 2 contains, 3 none.
+      let rank = 3;
+      if (q) {
+        for (const n of [loc, en, alias]) {
+          if (!n) continue;
+          if (n === q) { rank = 0; break; }
+          if (n.startsWith(q)) rank = Math.min(rank, 1);
+          else if (n.indexOf(q) >= 0) rank = Math.min(rank, 2);
+        }
+      }
+      rows.push({ f, name: loc, rank });
     }
-    if (filter !== 'all' && f.cat !== filter) return false;
-    if (catFilter.length > 0 && !catFilter.includes(f.group)) return false;
-    return true;
-  }).sort((a, b) => {
-    if (q) { const r = searchRank(a) - searchRank(b); if (r !== 0) return r; }  // relevance first when searching
-    return foodName(a, lang).localeCompare(foodName(b, lang), lang);   // alphabetical (localized)
-  });
+    rows.sort((a, b) => {
+      if (q && a.rank !== b.rank) return a.rank - b.rank;   // relevance first when searching
+      return a.name.localeCompare(b.name, lang);            // alphabetical (localized)
+    });
+    return rows.map(r => r.f);
+  }, [q, filter, catFilter, lang]);
   const filters = [{ id: 'all', label: t('filter_all') }, { id: 'high', label: t('filter_high') }, { id: 'mod', label: t('filter_mod') }, { id: 'low', label: t('filter_low') }];
   if (selected) return <FoodDetailView food={selected} status={reintroProgress[selected.groups[0]]} profile={profile} t={t} lang={lang} onBack={() => setSelected(null)} />;
   const renderItem = ({ item: f }) => {
@@ -7355,7 +7923,7 @@ function FoodExplorerScreen({ reintroProgress, onOpenRecipes, profile, t, lang }
       <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: '#e6ede6', borderRadius: 28, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 52 }}>
         <View style={{ marginRight: 10 }}><SearchIcon size={20} /></View>
         <TextInput accessibilityLabel={t('foods_search')} value={search} onChangeText={setSearch} placeholder={t('foods_search')} style={{ flex: 1, paddingVertical: 12, fontSize: 16 }} />
-        {search ? <TouchableOpacity onPress={() => setSearch('')} accessibilityRole="button" accessibilityLabel={t('a11y_clear')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} activeOpacity={0.6} style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#16210f', alignItems: 'center', justifyContent: 'center', marginLeft: 4 }}><Text importantForAccessibility="no" style={{ color: 'white', fontSize: 12, fontWeight: '600', lineHeight: 14 }}>✕</Text></TouchableOpacity> : null}
+        {search ? <TouchableOpacity onPress={() => setSearch('')} accessibilityRole="button" accessibilityLabel={t('a11y_clear')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} activeOpacity={0.6} style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#16210f', alignItems: 'center', justifyContent: 'center', marginLeft: 4 }}><XIcon size={13} color="#ffffff" /></TouchableOpacity> : null}
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12, paddingHorizontal: 16 }}>
         {filters.map(f => (
@@ -7427,29 +7995,27 @@ function FoodExplorerScreen({ reintroProgress, onOpenRecipes, profile, t, lang }
         windowSize={11}
         removeClippedSubviews
       />
-      <Modal visible={catModalOpen} transparent animationType="fade" onRequestClose={() => setCatModalOpen(false)}>
-        <TouchableOpacity activeOpacity={1} onPress={() => setCatModalOpen(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'flex-end' }}>
-          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ backgroundColor: '#fafbfa', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 28, maxHeight: '75%' }}>
-            <View style={{ alignItems: 'center', paddingVertical: 10 }}><View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#d0d8d0' }} /></View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 8 }}>
-              <Text accessibilityRole="header" style={{ fontSize: 18, fontWeight: '700' }}>{t('cat_modal_title')}</Text>
-              {catFilter.length > 0 && <TouchableOpacity onPress={() => setCatFilter([])} accessibilityRole="button" accessibilityLabel={t('cat_modal_clear')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Text style={{ fontSize: 14, color: '#4e7d4e', fontWeight: '600' }}>{t('cat_modal_clear')}</Text></TouchableOpacity>}
-            </View>
-            <ScrollView style={{ paddingHorizontal: 12 }}>
-              {CATEGORY_IDS.map(id => {
-                const on = catFilter.includes(id);
-                return (
-                  <TouchableOpacity key={id} onPress={() => toggleCat(id)} accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={catLabel(id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 12, borderRadius: 12, backgroundColor: on ? '#e8f0e8' : 'transparent' }}>
-                    <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: on ? '#4e7d4e' : '#c4cec4', backgroundColor: on ? '#4e7d4e' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>{on && <CheckIcon color="#ffffff" size={14} />}</View>
-                    <Text style={{ fontSize: 15, color: '#2d3a2d', fontWeight: on ? '600' : '400' }}>{catLabel(id)}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-            <TouchableOpacity onPress={() => setCatModalOpen(false)} accessibilityRole="button" style={[s.btnPrimary, { marginHorizontal: 20, marginTop: 12 }]}><Text style={s.btnPrimaryText}>{t('cat_modal_done', { n: filtered.length })}</Text></TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+      <BottomSheet visible={catModalOpen} onClose={() => setCatModalOpen(false)}>
+        <Surface elevation={3} primaryColor={THEME.primary} style={{ backgroundColor: '#fafbfa', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 28, maxHeight: Dimensions.get('window').height * 0.75 }}>
+          <View style={{ alignItems: 'center', paddingVertical: 10 }}><View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#d0d8d0' }} /></View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 8 }}>
+            <Text accessibilityRole="header" style={{ fontSize: 18, fontWeight: '700' }}>{t('cat_modal_title')}</Text>
+            {catFilter.length > 0 && <TouchableOpacity onPress={() => setCatFilter([])} accessibilityRole="button" accessibilityLabel={t('cat_modal_clear')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Text style={{ fontSize: 14, color: '#4e7d4e', fontWeight: '600' }}>{t('cat_modal_clear')}</Text></TouchableOpacity>}
+          </View>
+          <ScrollView style={{ paddingHorizontal: 12 }}>
+            {CATEGORY_IDS.map(id => {
+              const on = catFilter.includes(id);
+              return (
+                <TouchableOpacity key={id} onPress={() => toggleCat(id)} accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={catLabel(id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 12, borderRadius: 12, backgroundColor: on ? '#e8f0e8' : 'transparent' }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: on ? '#4e7d4e' : '#c4cec4', backgroundColor: on ? '#4e7d4e' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>{on && <CheckIcon color="#ffffff" size={14} />}</View>
+                  <Text style={{ fontSize: 15, color: '#2d3a2d', fontWeight: on ? '600' : '400' }}>{catLabel(id)}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          <TouchableOpacity onPress={() => setCatModalOpen(false)} accessibilityRole="button" style={[s.btnPrimary, { marginHorizontal: 20, marginTop: 12 }]}><Text style={s.btnPrimaryText}>{t('cat_modal_done', { n: filtered.length })}</Text></TouchableOpacity>
+        </Surface>
+      </BottomSheet>
     </View>
   );
 }
@@ -7495,7 +8061,7 @@ function FoodDetailView({ food, status, onBack, profile, t, lang }) {
             </Text>
           </View>
         )}
-        <View style={[s.card, { borderColor: '#c4cec4', marginHorizontal: 0, marginTop: 16 }]}>
+        <Surface elevation={1} primaryColor={THEME.primary} style={[s.cardFilled, { backgroundColor: THEME.card, marginHorizontal: 0, marginTop: 16 }]}>
           <Text style={{ fontSize: 12, fontWeight: '600', color: '#647264', marginBottom: 8 }}>{t('detail_portion_head')}</Text>
           {food.cat === 'low' && !food.lowT && <Text style={{ fontSize: 14 }}>{t('detail_portion_safe')}</Text>}
           {food.cat === 'low' && food.lowT && <Text style={{ fontSize: 14 }}>{t('detail_portion_low_then', { g: food.lowT })}</Text>}
@@ -7507,7 +8073,7 @@ function FoodDetailView({ food, status, onBack, profile, t, lang }) {
             </View>
           )}
           {food.cat === 'high' && <Text style={{ fontSize: 14 }}>{t('detail_portion_high_note')}</Text>}
-        </View>
+        </Surface>
         {FERMENTATION_NOTES[food.id] && (() => {
           const baseNote = FERMENTATION_NOTES[food.id];
           const localized = fermentationText(food.id, baseNote, lang);
@@ -7520,7 +8086,7 @@ function FoodDetailView({ food, status, onBack, profile, t, lang }) {
             ? { bg: '#fff4f0', border: '#f0d0c0', tag: '#a04030', label: t('detail_ferm_caution') }
             : { bg: '#fffbf0', border: '#f0e0b0', tag: '#b87a1a', label: t('detail_ferm_mixed') };
           return (
-            <View style={[s.card, { borderColor: palette.border, backgroundColor: palette.bg, marginHorizontal: 0 }]}>
+            <Surface elevation={1} primaryColor={THEME.primary} style={[s.cardFilled, { backgroundColor: palette.bg, marginHorizontal: 0 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <Text style={{ fontSize: 18 }}>🫧</Text>
                 <View style={{ backgroundColor: palette.tag, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
@@ -7535,11 +8101,11 @@ function FoodDetailView({ food, status, onBack, profile, t, lang }) {
                   </Text>
                 </View>
               )}
-            </View>
+            </Surface>
           );
         })()}
         {LOW_FODMAP_SWAPS[food.id] && (
-          <View style={[s.card, { borderColor: '#c4cec4', backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
+          <Surface elevation={1} primaryColor={THEME.primary} style={[s.cardFilled, { backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <Text style={{ fontSize: 18 }}>🌱</Text>
               <Text style={{ fontSize: 14, fontWeight: '700', color: '#2d6a2d' }}>{t('detail_swap_head')}</Text>
@@ -7559,13 +8125,13 @@ function FoodDetailView({ food, status, onBack, profile, t, lang }) {
                 </View>
               );
             })}
-          </View>
+          </Surface>
         )}
         {!LOW_FODMAP_SWAPS[food.id] && food.cat === 'high' && (() => {
           const tips = lightenGuidance(food, lang);
           if (!tips.length) return null;
           return (
-            <View style={[s.card, { borderColor: '#c4cec4', backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
+            <Surface elevation={1} primaryColor={THEME.primary} style={[s.cardFilled, { backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                 <Text style={{ fontSize: 18 }}>🌱</Text>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#2d6a2d' }}>{t('detail_lighten_head')}</Text>
@@ -7582,10 +8148,10 @@ function FoodDetailView({ food, status, onBack, profile, t, lang }) {
                   </View>
                 </View>
               ))}
-            </View>
+            </Surface>
           );
         })()}
-        <View style={[s.card, { borderColor: '#c4cec4', marginHorizontal: 0 }]}>
+        <Surface elevation={1} primaryColor={THEME.primary} style={[s.cardFilled, { backgroundColor: THEME.card, marginHorizontal: 0 }]}>
           <Text style={{ fontSize: 12, fontWeight: '600', color: '#647264', marginBottom: 8 }}>{t('detail_trigger_head')}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: triggerBand(food.popTrigger, t).color }} />
@@ -7594,9 +8160,9 @@ function FoodDetailView({ food, status, onBack, profile, t, lang }) {
           <Text style={{ fontSize: 12, color: '#647264', marginTop: 6, lineHeight: 17 }}>
             {t('detail_trigger_note')}
           </Text>
-        </View>
+        </Surface>
         {food.groups.length > 0 && (
-          <View style={[s.card, { borderColor: '#c4cec4', marginHorizontal: 0 }]}>
+          <Surface elevation={1} primaryColor={THEME.primary} style={[s.cardFilled, { backgroundColor: THEME.card, marginHorizontal: 0 }]}>
             <Text style={{ fontSize: 12, fontWeight: '600', color: '#647264', marginBottom: 8 }}>{t('detail_why_head')}</Text>
             {food.groups.map(g => {
               const gi = groupInfoText(g, lang);
@@ -7607,7 +8173,7 @@ function FoodDetailView({ food, status, onBack, profile, t, lang }) {
                 </View>
               );
             })}
-          </View>
+          </Surface>
         )}
         <View style={{ marginHorizontal: 0, marginTop: 4, padding: 12, borderRadius: 12, backgroundColor: '#f0f4f0' }}>
           <Text style={{ fontSize: 11, color: '#6b7a6b', lineHeight: 16 }}>{t('foods_src_note')}</Text>
@@ -7653,7 +8219,7 @@ function PlanScreen({ profile, reintroProgress, periodActive, currentPhase, phas
       </View>
 
       {periodActive && reintroStatus === 'current' && (
-        <View style={[s.card, { borderColor: '#f0e3c4', backgroundColor: '#fffbf0' }]}>
+        <Surface elevation={1} primaryColor={THEME.primary} style={[s.cardFilled, { backgroundColor: '#fffbf0' }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Text style={{ fontSize: 20 }}>🩸</Text>
             <View style={{ flex: 1 }}>
@@ -7661,10 +8227,10 @@ function PlanScreen({ profile, reintroProgress, periodActive, currentPhase, phas
               <Text style={{ fontSize: 12, color: '#6b7a6b', lineHeight: 17, marginTop: 4 }}>{t('plan_period_pause_sub')}</Text>
             </View>
           </View>
-        </View>
+        </Surface>
       )}
 
-      <View style={[s.shadow, { marginHorizontal: 20, marginBottom: 16, backgroundColor: 'white', borderRadius: 20, opacity: eliminationStatus === 'upcoming' ? 0.85 : 1 }]}>
+      <Surface elevation={1} primaryColor={THEME.primary} style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: THEME.card, borderRadius: THEME.rCard, opacity: eliminationStatus === 'upcoming' ? 0.85 : 1 }}>
         <PhaseHeader band="#eef5ee" illustration={<FloraPauseB width={196} />} eyebrow={t('plan_phase1_eyebrow')} title={t('plan_phase1_title')} status={eliminationStatus} />
         <View style={{ paddingHorizontal: 18, paddingTop: 10, paddingBottom: 18 }}>
           <Text style={{ fontSize: 13, color: THEME.textSoft, lineHeight: 20, marginBottom: 14 }}>
@@ -7688,9 +8254,9 @@ function PlanScreen({ profile, reintroProgress, periodActive, currentPhase, phas
             </View>
           )}
         </View>
-      </View>
+      </Surface>
 
-      <View style={[s.shadow, { marginHorizontal: 20, marginBottom: 16, backgroundColor: 'white', borderRadius: 20 }]}>
+      <Surface elevation={1} primaryColor={THEME.primary} style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: THEME.card, borderRadius: THEME.rCard }}>
         <PhaseHeader band="#fdf3e3" illustration={<FloraExplore width={196} />} eyebrow={t('plan_phase2_eyebrow')} title={t('plan_phase2_title')} status={reintroStatus} />
         <View style={{ paddingHorizontal: 18, paddingTop: 10, paddingBottom: 18 }}>
           <Text style={{ fontSize: 13, color: THEME.textSoft, lineHeight: 20, marginBottom: 14 }}>
@@ -7758,7 +8324,7 @@ function PlanScreen({ profile, reintroProgress, periodActive, currentPhase, phas
           </View>
         )}
         </View>
-      </View>
+      </Surface>
 
       <View style={{ marginHorizontal: 20, marginTop: 4, padding: 12, borderRadius: 12, backgroundColor: '#f0f4f0' }}>
         <Text style={{ fontSize: 11, color: '#6b7a6b', lineHeight: 16 }}>
@@ -7844,7 +8410,7 @@ function GutGuideScreen({ t: tr, lang }) {
       <View style={{ marginHorizontal: 20, marginBottom: 14, backgroundColor: '#e6ede6', borderRadius: 28, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 52 }}>
         <View style={{ marginRight: 10 }}><SearchIcon size={20} /></View>
         <TextInput accessibilityLabel={tr('guide_search')} value={search} onChangeText={setSearch} placeholder={tr('guide_search')} placeholderTextColor="#6b7a6b" style={{ flex: 1, paddingVertical: 12, fontSize: 16 }} />
-        {search ? <TouchableOpacity onPress={() => setSearch('')} accessibilityRole="button" accessibilityLabel={tr('a11y_clear')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} activeOpacity={0.6} style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#16210f', alignItems: 'center', justifyContent: 'center', marginLeft: 4 }}><Text importantForAccessibility="no" style={{ color: 'white', fontSize: 12, fontWeight: '600', lineHeight: 14 }}>✕</Text></TouchableOpacity> : null}
+        {search ? <TouchableOpacity onPress={() => setSearch('')} accessibilityRole="button" accessibilityLabel={tr('a11y_clear')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} activeOpacity={0.6} style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#16210f', alignItems: 'center', justifyContent: 'center', marginLeft: 4 }}><XIcon size={13} color="#ffffff" /></TouchableOpacity> : null}
       </View>
       <View style={{ height: 44, marginBottom: 8 }}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, alignItems: 'center' }}>
@@ -7901,19 +8467,29 @@ function GutGuideScreen({ t: tr, lang }) {
 // Tabler search icon (outline, 2px) for search fields.
 // All app icons are Tabler icons (outline, 2px stroke), inlined as SVG paths so
 // there's no runtime dependency — react-native-svg is already used everywhere.
-function TablerIcon({ size, color, paths }) {
+function TablerIcon({ size = 24, color, paths, style }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={style}>
       {paths.map((d, i) => <Path key={i} d={d} stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />)}
     </Svg>
   );
 }
 
-function SearchIcon({ size = 18, color = '#647264' }) {
+// Solid/filled Tabler icon variant — these are separate solid-shape path sets (not the outline
+// paths with fill added), so they need their own renderer with no stroke.
+function TablerIconFilled({ size = 24, color, paths, style }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={style}>
+      {paths.map((d, i) => <Path key={i} d={d} />)}
+    </Svg>
+  );
+}
+
+function SearchIcon({ size = 24, color = '#647264' }) {
   return <TablerIcon size={size} color={color} paths={['M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0', 'M21 21l-6 -6']} />;
 }
 
-function CheckIcon({ size = 18, color = '#4e7d4e' }) {
+function CheckIcon({ size = 24, color = '#4e7d4e' }) {
   return <TablerIcon size={size} color={color} paths={['M5 12l5 5l10 -10']} />;
 }
 
@@ -7929,6 +8505,10 @@ function IconPlus({ size = 24, color = THEME.ink }) {
   return <TablerIcon size={size} color={color} paths={['M12 5l0 14', 'M5 12l14 0']} />;
 }
 
+function IconMinus({ size = 24, color = THEME.ink, style }) {
+  return <TablerIcon size={size} color={color} paths={['M5 12l14 0']} style={style} />;
+}
+
 function IconLock({ size = 24, color = THEME.ink }) {
   return <TablerIcon size={size} color={color} paths={['M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6', 'M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0', 'M8 11v-4a4 4 0 1 1 8 0v4']} />;
 }
@@ -7937,20 +8517,84 @@ function IconExternalLink({ size = 24, color = THEME.ink }) {
   return <TablerIcon size={size} color={color} paths={['M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6', 'M11 13l9 -9', 'M15 4h5v5']} />;
 }
 
-function BarcodeIcon({ size = 22, color = THEME.ink }) {
+function IconReportMedical({ size = 24, color = THEME.ink }) {
+  return <TablerIcon size={size} color={color} paths={['M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2', 'M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2', 'M10 14l4 0', 'M12 12l0 4']} />;
+}
+
+function IconDropletFilled({ size = 24, color = THEME.ink }) {
+  return <TablerIconFilled size={size} color={color} paths={['M10.708 2.372a2.382 2.382 0 0 0 -.71 .686l-4.892 7.26c-1.981 3.314 -1.22 7.466 1.767 9.882c2.969 2.402 7.286 2.402 10.254 0c2.987 -2.416 3.748 -6.569 1.795 -9.836l-4.919 -7.306c-.722 -1.075 -2.192 -1.376 -3.295 -.686z']} />;
+}
+
+function IconAlertTriangleFilled({ size = 24, color = THEME.ink }) {
+  return <TablerIconFilled size={size} color={color} paths={['M12 1.67c.955 0 1.845 .467 2.39 1.247l.105 .16l8.114 13.548a2.914 2.914 0 0 1 -2.307 4.363l-.195 .008h-16.225a2.914 2.914 0 0 1 -2.582 -4.2l.099 -.185l8.11 -13.538a2.914 2.914 0 0 1 2.491 -1.403zm.01 13.33l-.127 .007a1 1 0 0 0 0 1.986l.117 .007l.127 -.007a1 1 0 0 0 0 -1.986l-.117 -.007zm-.01 -7a1 1 0 0 0 -.993 .883l-.007 .117v4l.007 .117a1 1 0 0 0 1.986 0l.007 -.117v-4l-.007 -.117a1 1 0 0 0 -.993 -.883z']} />;
+}
+
+function IconWorld({ size = 24, color = THEME.ink }) {
+  return <TablerIcon size={size} color={color} paths={['M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0', 'M3.6 9h16.8', 'M3.6 15h16.8', 'M11.5 3a17 17 0 0 0 0 18', 'M12.5 3a17 17 0 0 1 0 18']} />;
+}
+
+function IconCalendarWeekFilled({ size = 24, color = THEME.ink }) {
+  return <TablerIconFilled size={size} color={color} paths={['M16 2c.183 0 .355 .05 .502 .135l.033 .02c.28 .177 .465 .49 .465 .845v1h1a3 3 0 0 1 2.995 2.824l.005 .176v12a3 3 0 0 1 -2.824 2.995l-.176 .005h-12a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-12a3 3 0 0 1 2.824 -2.995l.176 -.005h1v-1a1 1 0 0 1 .514 -.874l.093 -.046l.066 -.025l.1 -.029l.107 -.019l.12 -.007q .083 0 .161 .013l.122 .029l.04 .012l.06 .023c.328 .135 .568 .44 .61 .806l.007 .117v1h6v-1a1 1 0 0 1 1 -1m3 7h-14v9.625c0 .705 .386 1.286 .883 1.366l.117 .009h12c.513 0 .936 -.53 .993 -1.215l.007 -.16z', 'M9.015 13a1 1 0 0 1 -1 1a1.001 1.001 0 1 1 -.005 -2c.557 0 1.005 .448 1.005 1', 'M13.015 13a1 1 0 0 1 -1 1a1.001 1.001 0 1 1 -.005 -2c.557 0 1.005 .448 1.005 1', 'M17.02 13a1 1 0 0 1 -1 1a1.001 1.001 0 1 1 -.005 -2c.557 0 1.005 .448 1.005 1', 'M12.02 15a1 1 0 0 1 0 2a1.001 1.001 0 1 1 -.005 -2z', 'M9.015 16a1 1 0 0 1 -1 1a1.001 1.001 0 1 1 -.005 -2c.557 0 1.005 .448 1.005 1']} />;
+}
+
+function BarcodeIcon({ size = 24, color = THEME.ink }) {
   return <TablerIcon size={size} color={color} paths={['M4 7v-1a2 2 0 0 1 2 -2h2', 'M4 17v1a2 2 0 0 0 2 2h2', 'M16 4h2a2 2 0 0 1 2 2v1', 'M16 20h2a2 2 0 0 0 2 -2v-1', 'M5 11h1v2h-1l0 -2', 'M10 11l0 2', 'M14 11h1v2h-1l0 -2', 'M19 11l0 2']} />;
 }
 
-function KitchenIcon({ size = 22, color = THEME.ink }) {
+function KitchenIcon({ size = 24, color = THEME.ink }) {
   return <TablerIcon size={size} color={color} paths={['M19 3v12h-5c-.023 -3.681 .184 -7.406 5 -12m0 12v6h-1v-3m-10 -14v17m-3 -17v3a3 3 0 1 0 6 0v-3']} />;
 }
 
-function ChevronIcon({ size = 16, color = '#647264' }) {
+function ChevronIcon({ size = 24, color = '#647264' }) {
   return <TablerIcon size={size} color={color} paths={['M9 6l6 6l-6 6']} />;
+}
+
+// Tabler "x" — a proper 2pt outline close/clear icon (replaces the ✕ text glyph).
+function XIcon({ size = 24, color = THEME.ink }) {
+  return <TablerIcon size={size} color={color} paths={['M18 6l-12 12', 'M6 6l12 12']} />;
+}
+
+// Password visibility toggle. `off` shows the crossed-out eye (currently visible → tap to hide).
+function EyeIcon({ size = 24, color = '#647264', off = false }) {
+  return <TablerIcon size={size} color={color} paths={off
+    ? ['M10.585 10.587a2 2 0 0 0 2.829 2.828', 'M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-4 0 -7.333 -2.333 -10 -7c.847 -1.482 1.809 -2.74 2.865 -3.773m2.925 -1.766a9.9 9.9 0 0 1 4.21 -.961c4 0 7.333 2.333 10 7c-.556 .973 -1.146 1.836 -1.766 2.59', 'M3 3l18 18']
+    : ['M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0', 'M22 12c-2.667 4.667 -6 7 -10 7s-7.333 -2.333 -10 -7c2.667 -4.667 6 -7 10 -7s7.333 2.333 10 7']} />;
 }
 
 function BulbIcon({ size = 24, color = THEME.amberText }) {
   return <TablerIcon size={size} color={color} paths={['M3 12h1m8 -9v1m8 8h1m-15.4 -6.4l.7 .7m12.1 -.7l-.7 .7', 'M9 16a5 5 0 1 1 6 0a3.5 3.5 0 0 0 -1 3a2 2 0 0 1 -4 0a3.5 3.5 0 0 0 -1 -3', 'M9.7 17l4.6 0']} />;
+}
+
+// Reusable shimmer placeholder for genuinely-async content (barcode lookup, AI scan, and
+// future remote fetches). Pulses its opacity; honours the OS "Reduce Motion" setting.
+function Skeleton({ width = '100%', height = 14, radius = 8, style }) {
+  const pulse = useRef(new Animated.Value(0.5)).current;
+  useEffect(() => {
+    if (_reduceMotion) { pulse.setValue(0.7); return; }
+    const anim = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 650, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0.5, duration: 650, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+    ]));
+    anim.start();
+    return () => anim.stop();
+  }, []);
+  return <Animated.View style={[{ width, height, borderRadius: radius, backgroundColor: '#e4e9e4', opacity: pulse }, style]} />;
+}
+
+// Skeleton of a scan result card (used while a barcode/AI lookup is in flight) — mirrors
+// the real result layout (label, product name, risk block) so the fill-in is seamless.
+function ScanResultSkeleton({ label }) {
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: '#fafbfa' }}>
+      <View style={{ padding: 24 }}>
+        {label ? <Text style={{ fontSize: 11, color: '#647264', fontWeight: '600', marginBottom: 12 }}>{label}</Text> : null}
+        <Skeleton width={'70%'} height={26} radius={6} />
+        <Skeleton width={'40%'} height={13} radius={4} style={{ marginTop: 10 }} />
+        <Skeleton width={'100%'} height={96} radius={20} style={{ marginTop: 18 }} />
+        <Skeleton width={'100%'} height={104} radius={16} style={{ marginTop: 16 }} />
+      </View>
+    </ScrollView>
+  );
 }
 
 // Shared meal-of-day selector — one component reused everywhere. Chips size to their
@@ -7958,7 +8602,7 @@ function BulbIcon({ size = 24, color = THEME.amberText }) {
 // ever shrinking its left/right padding. Wraps on long locales instead of squeezing.
 function MealTypeSelector({ value, onChange, t, style }) {
   return (
-    <View style={[{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, style]}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={style} contentContainerStyle={{ flexDirection: 'row', gap: 8 }}>
       {MEAL_TYPES.map(mt => {
         const on = value === mt.id;
         return (
@@ -7968,11 +8612,11 @@ function MealTypeSelector({ value, onChange, t, style }) {
           </TouchableOpacity>
         );
       })}
-    </View>
+    </ScrollView>
   );
 }
 
-function ChevronDownIcon({ size = 16, color = '#647264' }) {
+function ChevronDownIcon({ size = 24, color = '#647264' }) {
   return <TablerIcon size={size} color={color} paths={['M6 9l6 6l6 -6']} />;
 }
 
@@ -8044,10 +8688,15 @@ function TabBar({ current, setTab, onPlusPress, t }) {
   const insets = useSafeAreaInsets();
   const leftTabs = [{ id: 'home', icon: 'today', label: t('tab_home') }, { id: 'foods', icon: 'foods', label: t('tab_foods') }];
   const rightTabs = [{ id: 'plan', icon: 'plan', label: t('tab_plan') }, { id: 'chat', icon: 'guide', label: t('tab_guide') }];
-  const TabButton = ({ tab }) => {
+  // Inline render (not a nested component) so switching tabs doesn't remount the buttons.
+  // Switch on press-IN for instant response; keep onPress so screen readers still activate it
+  // (setTab to the current tab is a no-op, so firing both is harmless). Big hitSlop + padding
+  // give a generous, reliable tap target at the very bottom of the screen.
+  const renderTab = (tab) => {
     const active = current === tab.id;
+    const go = () => setTab(tab.id);
     return (
-      <TouchableOpacity style={s.tabBtn} onPress={() => setTab(tab.id)} accessibilityRole="tab" accessibilityState={{ selected: active }} accessibilityLabel={tab.label}>
+      <TouchableOpacity key={tab.id} style={s.tabBtn} onPressIn={go} onPress={go} activeOpacity={0.6} hitSlop={{ top: 12, bottom: 10, left: 6, right: 6 }} accessibilityRole="tab" accessibilityState={{ selected: active }} accessibilityLabel={tab.label}>
         <TabIcon name={tab.icon} color={active ? '#4e7d4e' : '#9aa69a'} filled={active} size={25} />
         <Text style={{ fontSize: 9, fontWeight: '600', color: active ? '#4e7d4e' : '#647264', marginTop: 2 }}>{tab.label}</Text>
       </TouchableOpacity>
@@ -8055,11 +8704,11 @@ function TabBar({ current, setTab, onPlusPress, t }) {
   };
   return (
     <View style={[s.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {leftTabs.map(tab => <TabButton key={tab.id} tab={tab} />)}
-      <TouchableOpacity style={s.plusBtn} onPress={onPlusPress} accessibilityRole="button" accessibilityLabel={t('a11y_add_log')}>
-        <View style={s.plusInner}><IconPlus size={30} color="#ffffff" /></View>
+      {leftTabs.map(renderTab)}
+      <TouchableOpacity style={s.plusBtn} onPress={onPlusPress} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('a11y_add_log')}>
+        <View style={s.plusInner}><IconPlus size={24} color="#ffffff" /></View>
       </TouchableOpacity>
-      {rightTabs.map(tab => <TabButton key={tab.id} tab={tab} />)}
+      {rightTabs.map(renderTab)}
     </View>
   );
 }
@@ -8070,14 +8719,14 @@ function LogTypeChooserModal({ visible, onClose, onPick, t }) {
     { id: 'symptom', icon: '⚠️', label: t('log_symptom'), sub: t('log_symptom_sub') },
     { id: 'sleep', icon: '😴', label: t('log_sleep'), sub: t('log_sleep_sub') },
     { id: 'stress', icon: '🧘', label: t('log_stress'), sub: t('log_stress_sub') },
+    { id: 'water', icon: '💧', label: t('log_water'), sub: t('log_water_sub') },
   ];
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
-        <View accessibilityViewIsModal style={{ backgroundColor: THEME.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 30 }}>
+    <BottomSheet visible={visible} onClose={onClose}>
+        <Surface accessibilityViewIsModal elevation={1} primaryColor={THEME.primary} style={{ backgroundColor: THEME.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 30 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Text style={{ fontSize: 20, fontWeight: '700' }}>{t('log_chooser_title')}</Text>
-            <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')}><Text importantForAccessibility="no" style={{ fontSize: 18, color: '#647264' }}>✕</Text></TouchableOpacity>
+            <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')}><XIcon size={24} color="#647264" /></TouchableOpacity>
           </View>
           {opts.map(opt => (
             <Pressable key={opt.id} onPress={() => { onClose(); setTimeout(() => onPick(opt.id), 200); }} accessibilityRole="button" accessibilityLabel={`${opt.label}. ${opt.sub}`} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, backgroundColor: pressed ? '#dcebdc' : 'white', borderRadius: 16, marginBottom: 10 })}>
@@ -8089,9 +8738,8 @@ function LogTypeChooserModal({ visible, onClose, onPick, t }) {
               <View importantForAccessibility="no"><ChevronIcon size={16} color="#647264" /></View>
             </Pressable>
           ))}
-        </View>
-      </View>
-    </Modal>
+        </Surface>
+    </BottomSheet>
   );
 }
 
@@ -8102,7 +8750,7 @@ function SleepModal({ visible, onClose, onSave, t }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f4f0' }}>
-          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><Text style={{ fontSize: 16 }}>✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><XIcon size={24} color={THEME.ink} /></TouchableOpacity>
           <Text style={{ fontSize: 20, fontWeight: '700' }}>{t('sleep_title')}</Text>
         </View>
         <ScrollView style={{ flex: 1 }}>
@@ -8126,6 +8774,50 @@ function SleepModal({ visible, onClose, onSave, t }) {
   );
 }
 
+function WaterModal({ visible, onClose, onSave, t }) {
+  const [glasses, setGlasses] = useState(2);
+  const [when, setWhen] = useState(new Date());
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f4f0' }}>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><XIcon size={24} color={THEME.ink} /></TouchableOpacity>
+          <Text style={{ fontSize: 20, fontWeight: '700' }}>{t('water_title')}</Text>
+        </View>
+        <ScrollView style={{ flex: 1 }}>
+          <View style={{ padding: 20 }}>
+            <DateTimeRow value={when} onChange={setWhen} />
+            <Text style={{ fontSize: 13, color: '#6b7a6b', marginBottom: 4 }}>{t('water_amount_label')}</Text>
+            <Text style={{ fontSize: 12, color: THEME.textMuted, marginBottom: 12 }}>{t('water_unit_hint')}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
+                const on = glasses === n;
+                return (
+                  <TouchableOpacity key={n} onPress={() => setGlasses(n)} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={n === 1 ? t('water_glasses_one', { n }) : t('water_glasses', { n })} style={{ width: 56, paddingVertical: 12, borderRadius: 12, backgroundColor: on ? '#dcebdc' : 'transparent', borderWidth: 1, borderColor: on ? '#4e7d4e' : '#c4cec4', alignItems: 'center' }}>
+                    <Text importantForAccessibility="no" style={{ fontSize: 20 }}>💧</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '700', marginTop: 2, color: on ? '#2d6a2d' : '#2d3a2d' }}>{n}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {/* The reminder — why staying hydrated matters for the gut */}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: '#eef4fb', borderRadius: 14, padding: 14 }}>
+              <Text importantForAccessibility="no" style={{ fontSize: 20 }}>💧</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#2f5b8a', marginBottom: 4 }}>{t('water_why_title')}</Text>
+                <Text style={{ fontSize: 12.5, color: '#3d5266', lineHeight: 18 }}>{t('water_why')}</Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={() => { onSave(glasses, when); setGlasses(2); setWhen(new Date()); }} style={[s.btnPrimary, { marginTop: 20 }]}>
+              <Text style={s.btnPrimaryText}>{t('save')}</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaViewSC>
+    </Modal>
+  );
+}
+
 function StressModal({ visible, onClose, onSave, t }) {
   const [level, setLevel] = useState(3);
   const [when, setWhen] = useState(new Date());
@@ -8134,7 +8826,7 @@ function StressModal({ visible, onClose, onSave, t }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f4f0' }}>
-          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><Text style={{ fontSize: 16 }}>✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><XIcon size={24} color={THEME.ink} /></TouchableOpacity>
           <Text style={{ fontSize: 20, fontWeight: '700' }}>{t('stress_title')}</Text>
         </View>
         <ScrollView style={{ flex: 1 }}>
@@ -8158,30 +8850,50 @@ function StressModal({ visible, onClose, onSave, t }) {
   );
 }
 
-function BarcodeModal({ visible, onClose, onComplete, t }) {
+function BarcodeModal({ visible, onClose, onComplete, lang, t }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [barcodeWhen, setBarcodeWhen] = useState(new Date());
 
+  // The modal stays mounted (visibility is prop-driven), so clear the last scan whenever it
+  // closes — otherwise reopening it shows the previous product instead of the live camera.
+  useEffect(() => {
+    if (!visible) { setScanned(false); setResult(null); setLoading(false); }
+    else { setBarcodeWhen(new Date()); }
+  }, [visible]);
+
   const handleBarcode = async ({ data }) => {
     if (scanned) return;
     setScanned(true); setLoading(true);
     try {
-      const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${data}.json?fields=product_name,brands,ingredients_text,allergens_tags`);
+      // Ask Open Food Facts for the name/ingredients in the app's language too — the base
+      // `product_name` comes back in whatever language the product was entered in (often the
+      // origin country's, e.g. Russian), which looked wrong to users on another locale.
+      const fields = `product_name,product_name_${lang},product_name_en,brands,ingredients_text,ingredients_text_${lang},ingredients_text_en,allergens_tags`;
+      const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${data}.json?fields=${fields}`);
       const json = await res.json();
       let product;
       if (json.status === 1 && json.product) {
         const p = json.product;
-        const ing = (p.ingredients_text || '').toLowerCase();
+        // Prefer the app language, then English, then whatever was stored.
+        const name = p['product_name_' + lang] || p.product_name_en || p.product_name || 'Unknown';
+        const ingText = p['ingredients_text_' + lang] || p.ingredients_text_en || p.ingredients_text || '';
+        // Scan every language variant we fetched so trigger detection still works even when
+        // only the localized text is present.
+        const ing = [p['ingredients_text_' + lang], p.ingredients_text_en, p.ingredients_text].filter(Boolean).join(' ').toLowerCase();
         const triggered = [];
-        const high = { fructans: ['onion', 'zwiebel', 'garlic', 'knoblauch', 'wheat', 'weizen', 'inulin'], lactose: ['milk', 'milch', 'cream', 'sahne', 'lactose', 'laktose'], fructose: ['honey', 'honig', 'agave'] };
+        const high = {
+          fructans: ['onion', 'zwiebel', 'cipolla', 'cebolla', 'oignon', 'garlic', 'knoblauch', 'aglio', 'ajo', 'wheat', 'weizen', 'frumento', 'trigo', 'blé', 'froment', 'inulin', 'inuline', 'inulina'],
+          lactose: ['milk', 'milch', 'latte', 'leche', 'lait', 'cream', 'sahne', 'panna', 'crema', 'crème', 'nata', 'lactose', 'laktose', 'lattosio', 'lactosa'],
+          fructose: ['honey', 'honig', 'miele', 'miel', 'agave'],
+        };
         for (const [g, kws] of Object.entries(high)) {
           for (const kw of kws) if (ing.includes(kw)) { triggered.push(g); break; }
         }
         const risk = triggered.length === 0 ? 'low' : 'high';
-        product = { name: p.product_name || 'Unknown', brand: p.brands || '', ingredients: p.ingredients_text || 'No data', risk, triggered: Array.from(new Set(triggered)), advice: risk === 'low' ? 'No high-FODMAP ingredients detected.' : `Contains ${Array.from(new Set(triggered)).join(', ')}.` };
+        product = { name, brand: p.brands || '', ingredients: ingText || 'No data', risk, triggered: Array.from(new Set(triggered)), advice: risk === 'low' ? 'No high-FODMAP ingredients detected.' : `Contains ${Array.from(new Set(triggered)).join(', ')}.` };
       } else {
         product = { name: 'Product not found', brand: '', ingredients: 'Not in database', risk: 'low', triggered: [], advice: 'No data available.' };
       }
@@ -8197,7 +8909,7 @@ function BarcodeModal({ visible, onClose, onComplete, t }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: 'black' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 }}>
-          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><Text style={{ color: 'white', fontSize: 18 }}>✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><XIcon size={24} color="#ffffff" /></TouchableOpacity>
           <Text style={{ color: 'white', fontSize: 17, fontWeight: '600' }}>{t ? t('barcode_title') : 'Scan barcode'}</Text>
         </View>
         {!result && !loading && (
@@ -8219,7 +8931,7 @@ function BarcodeModal({ visible, onClose, onComplete, t }) {
             </View>
           )
         )}
-        {loading && <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator size="large" color="white" /><Text style={{ color: 'white', marginTop: 16 }}>{t ? t('barcode_looking') : 'Looking up'}</Text></View>}
+        {loading && <ScanResultSkeleton label={t ? t('barcode_looking') : 'Looking up'} />}
         {result && col && (
           <ScrollView style={{ flex: 1, backgroundColor: '#fafbfa' }}>
             <View style={{ padding: 24 }}>
@@ -8232,10 +8944,10 @@ function BarcodeModal({ visible, onClose, onComplete, t }) {
                 <Text style={{ color: 'white', fontSize: 13, marginTop: 8, lineHeight: 19 }}>{result.advice}</Text>
               </View>
               {result.ingredients && (
-                <View style={[s.card, { borderColor: '#c4cec4', marginHorizontal: 0, marginTop: 16 }]}>
+                <Surface elevation={1} primaryColor={THEME.primary} style={[s.cardFilled, { backgroundColor: THEME.card, marginHorizontal: 0, marginTop: 16 }]}>
                   <Text style={{ fontSize: 12, color: '#647264', fontWeight: '600', marginBottom: 8 }}>{t ? t('barcode_ingredients') : 'INGREDIENTS'}</Text>
                   <Text style={{ fontSize: 13, color: '#4a5a4a', lineHeight: 19 }}>{result.ingredients}</Text>
-                </View>
+                </Surface>
               )}
               <View style={{ marginTop: 16 }}><DateTimeRow value={barcodeWhen} onChange={setBarcodeWhen} /></View>
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
@@ -8253,12 +8965,14 @@ function BarcodeModal({ visible, onClose, onComplete, t }) {
 function AIScanModal({ visible, onClose, onComplete, scansRemaining }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [stage, setStage] = useState('camera');
+  // Reset to the camera whenever the modal closes, so reopening never shows the old result.
+  useEffect(() => { if (!visible) setStage('camera'); }, [visible]);
   const capture = async () => { setStage('analyzing'); await new Promise(r => setTimeout(r, 2000)); setStage('result'); };
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: 'black' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 }}>
-          <TouchableOpacity onPress={() => { onClose(); setStage('camera'); }} accessibilityRole="button" accessibilityLabel={tG('close')} style={s.modalCloseBtn}><Text importantForAccessibility="no" style={{ color: 'white', fontSize: 18 }}>✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => { onClose(); setStage('camera'); }} accessibilityRole="button" accessibilityLabel={tG('close')} style={s.modalCloseBtn}><XIcon size={24} color="#ffffff" /></TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={{ color: 'white', fontSize: 17, fontWeight: '600' }}>AI scan meal</Text>
             {typeof scansRemaining === 'number' && <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>{scansRemaining} scans left this month</Text>}
@@ -8283,12 +8997,7 @@ function AIScanModal({ visible, onClose, onComplete, scansRemaining }) {
             <TouchableOpacity style={s.btnPrimary} onPress={requestPermission}><Text style={s.btnPrimaryText}>Allow</Text></TouchableOpacity>
           </View>
         ))}
-        {stage === 'analyzing' && (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 60, marginBottom: 20 }}>✨</Text>
-            <Text style={{ color: 'white', fontSize: 16, fontWeight: '600' }}>Analyzing</Text>
-          </View>
-        )}
+        {stage === 'analyzing' && <ScanResultSkeleton label="Analyzing…" />}
         {stage === 'result' && (
           <ScrollView style={{ flex: 1, backgroundColor: '#fafbfa' }}>
             <View style={{ padding: 24 }}>
@@ -8319,7 +9028,7 @@ function ScanLimitModal({ visible, onClose, allowance, t }) {
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 30 }}>
-        <View accessibilityViewIsModal style={{ backgroundColor: 'white', borderRadius: 20, padding: 24, width: '100%' }}>
+        <Surface accessibilityViewIsModal elevation={3} primaryColor={THEME.primary} style={{ backgroundColor: THEME.card, borderRadius: 20, padding: 24, width: '100%' }}>
           <Text style={{ fontSize: 40, textAlign: 'center' }}>✨</Text>
           <Text style={{ fontSize: 18, fontWeight: '700', textAlign: 'center', marginTop: 10 }}>{t('scan_limit_title')}</Text>
           <Text style={{ fontSize: 13, color: '#6b7a6b', textAlign: 'center', marginTop: 8, lineHeight: 19 }}>
@@ -8328,7 +9037,7 @@ function ScanLimitModal({ visible, onClose, allowance, t }) {
           <TouchableOpacity style={[s.btnPrimary, { marginTop: 18 }]} onPress={onClose}>
             <Text style={s.btnPrimaryText}>{t('gotIt')}</Text>
           </TouchableOpacity>
-        </View>
+        </Surface>
       </View>
     </Modal>
   );
@@ -8343,7 +9052,11 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
   const [when, setWhen] = useState(new Date());
   const [mealType, setMealType] = useState(null); // null = follow the time-of-day default
   const effMealType = mealType || defaultMealType(when);
+  // The food currently being portioned in the bottom-sheet overlay, or null when it's
+  // closed. Kept separate from `selected` so the "Il tuo pasto" strip stays put while editing.
+  const [editingId, setEditingId] = useState(null);
   const [introSheet, setIntroSheet] = useState(false);
+  const [discardConfirm, setDiscardConfirm] = useState(false);
   const [introSeen, setIntroSeen] = useState(true);
   useEffect(() => { storageGet(STORAGE_KEYS.barcodeIntroSeen).then(v => setIntroSeen(!!v)); }, []);
   const openScanner = () => { onClose(); setTimeout(onBarcode, 300); };
@@ -8356,13 +9069,25 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
   // Distinct past meals for one-tap re-logging (only worth showing multi-food meals).
   const recentMealList = recentMeals(log, 6).filter(m => m.ids.length >= 2).slice(0, 4);
   const filtered = search.trim() ? FOODS.filter(f => {
+    if (f.dishOnly) return false;   // combined dish-only meats (e.g. "Lamb or chicken") aren't searchable
     const q = search.trim().toLowerCase();
     // Match English name, the user's-language name, and any alias — same as the browse screen.
     return f.name.toLowerCase().includes(q) || foodName(f, lang).toLowerCase().includes(q) || (f.alias || '').toLowerCase().includes(q);
   }).slice(0, 8) : [];
   const toggle = (id) => setSelected(selected.find(x => x.foodId === id) ? selected.filter(x => x.foodId !== id) : selected.concat([makeMealItem(id)]));
   // Change one ingredient's portion size, updating its stored gram/unit value.
-  const setItemSize = (foodId, size) => setSelected(selected.map(x => x.foodId === foodId ? { foodId, size, portionG: portionForItem(FOODS.find(f => f.id === foodId), size) } : x));
+  const setItemSize = (foodId, size) => setSelected(selected.map(x => x.foodId === foodId ? Object.assign({}, x, { size, portionG: portionForItem(FOODS.find(f => f.id === foodId), size) }) : x));
+  // Leave out / put back a single ingredient of a prepared dish (e.g. onion out of a
+  // kebab). Kept as an `exclude` list on the dish item; resolveMeal drops those, so the
+  // FODMAP verdict updates live. Always keeps at least one ingredient.
+  const toggleExclude = (dishFoodId, ingId) => setSelected(selected.map(x => {
+    if (x.foodId !== dishFoodId) return x;
+    const recipe = DISH_INGREDIENTS[dishFoodId] || [];
+    const ex = x.exclude || [];
+    const isExcluded = ex.includes(ingId);
+    if (!isExcluded && recipe.length - ex.length <= 1) return x; // keep at least one
+    return Object.assign({}, x, { exclude: isExcluded ? ex.filter(i => i !== ingId) : ex.concat([ingId]) });
+  }));
   // Add a food that isn't in the database, with a user-declared FODMAP level.
   const addCustom = (cat) => {
     const name = search.trim();
@@ -8417,17 +9142,25 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
     setAiSuggestions(null);
     setAiText('');
   };
-  const reset = () => { setSelected([]); setSearch(''); setAiText(''); setAiSuggestions(null); setWhen(new Date()); setMealType(null); };
+  const reset = () => { setSelected([]); setSearch(''); setAiText(''); setAiSuggestions(null); setWhen(new Date()); setMealType(null); setEditingId(null); };
+  // Closing the builder (✕ or hardware back) throws the meal away — so confirm first when
+  // there's anything selected. An empty builder just closes, no prompt.
+  const attemptClose = () => {
+    if (selected.length > 0) setDiscardConfirm(true);
+    else { onClose(); reset(); }
+  };
+  const confirmDiscard = () => { setDiscardConfirm(false); onClose(); reset(); };
 
   // While searching, show matches only (don't fall back to recents — that hid the fact that
   // nothing matched). Recents show when the search box is empty.
   const list = search.trim() ? filtered : recent;
   const xWarn = mealCrossWarnings(selected, profile);
+  const hasBase = selected.some(it => { const f = FOODS.find(x => x.id === it.foodId); return f && f.base; });
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" onRequestClose={attemptClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: THEME.bg }}>
-        <AppBar title={t('meal_modal_title')} onBack={() => { onClose(); reset(); }} backIcon="close" t={t} />
+        <AppBar title={t('meal_modal_title')} onBack={attemptClose} backIcon="close" t={t} />
         <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
           <View style={{ paddingHorizontal: 16, paddingTop: 4 }}>
             <DateTimeRow value={when} onChange={setWhen} />
@@ -8441,7 +9174,7 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
             <SearchIcon size={20} />
             <TextInput accessibilityLabel={t('meal_modal_search_ph')} value={search} onChangeText={setSearch} placeholder={t('meal_modal_search_ph')} placeholderTextColor="#6b7a6b" style={{ flex: 1, paddingVertical: 13, fontSize: 16, marginLeft: 10 }} />
             {search
-              ? <TouchableOpacity onPress={() => setSearch('')} accessibilityRole="button" accessibilityLabel={t('a11y_clear')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} activeOpacity={0.6} style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#16210f', alignItems: 'center', justifyContent: 'center', marginLeft: 4 }}><Text importantForAccessibility="no" style={{ color: 'white', fontSize: 12, fontWeight: '600', lineHeight: 14 }}>✕</Text></TouchableOpacity>
+              ? <TouchableOpacity onPress={() => setSearch('')} accessibilityRole="button" accessibilityLabel={t('a11y_clear')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} activeOpacity={0.6} style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#16210f', alignItems: 'center', justifyContent: 'center', marginLeft: 4 }}><XIcon size={13} color="#ffffff" /></TouchableOpacity>
               : <TouchableOpacity onPress={handleScanPress} accessibilityRole="button" accessibilityLabel={t('barcode_title')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} activeOpacity={0.6} style={{ paddingLeft: 8, paddingVertical: 4 }}><BarcodeIcon size={24} color={THEME.primaryDark} /></TouchableOpacity>}
           </View>
 
@@ -8455,9 +9188,11 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
                   const foods = m.ids.map(id => FOODS.find(f => f.id === id)).filter(Boolean);
                   const names = foods.map(f => foodName(f, lang)).join(', ');
                   return (
-                    <TouchableOpacity key={i} onPress={() => setSelected(m.ids.map(id => makeMealItem(id)))} accessibilityRole="button" accessibilityLabel={names} style={[s.shadow, { backgroundColor: 'white', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, maxWidth: 180 }]}>
-                      <Text importantForAccessibility="no" style={{ fontSize: 17 }}>{foods.slice(0, 4).map(f => f.emoji).join(' ')}</Text>
-                      <Text importantForAccessibility="no" numberOfLines={1} style={{ fontSize: 12, color: THEME.ink, marginTop: 3, maxWidth: 156 }}>{names}</Text>
+                    <TouchableOpacity key={i} onPress={() => setSelected(m.ids.map(id => makeMealItem(id)))} accessibilityRole="button" accessibilityLabel={names}>
+                      <Surface elevation={1} tinted={false} style={{ backgroundColor: THEME.card, borderRadius: THEME.rCard, paddingHorizontal: 12, paddingVertical: 10, maxWidth: 180, borderWidth: 1, borderColor: THEME.cardBorder }}>
+                        <Text importantForAccessibility="no" style={{ fontSize: 17 }}>{foods.slice(0, 4).map(f => f.emoji).join(' ')}</Text>
+                        <Text importantForAccessibility="no" numberOfLines={1} style={{ fontSize: 12, color: THEME.ink, marginTop: 3, maxWidth: 156 }}>{names}</Text>
+                      </Surface>
                     </TouchableOpacity>
                   );
                 })}
@@ -8465,61 +9200,8 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
             </View>
           )}
 
-          {/* Your meal — selected foods as removable pills + portion */}
-          {selected.length > 0 && (
-            <View style={[s.shadow, { marginHorizontal: 16, marginBottom: 16, backgroundColor: 'white', borderRadius: 16, padding: 14 }]}>
-              <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.textSoft, marginBottom: 10 }}>{t('meal_modal_your_meal')}</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
-                {selected.map(it => {
-                  const f = FOODS.find(x => x.id === it.foodId);
-                  return (
-                    <TouchableOpacity key={it.foodId} onPress={() => toggle(it.foodId)} accessibilityRole="button" accessibilityLabel={`${t('a11y_remove')}: ${foodName(f, lang)}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e8f0e8', borderRadius: 14, paddingLeft: 10, paddingRight: 8, paddingVertical: 6 }}>
-                      <Text importantForAccessibility="no" style={{ fontSize: 14 }}>{f?.emoji}</Text>
-                      <Text importantForAccessibility="no" style={{ fontSize: 13, color: '#2d6a2d', fontWeight: '500' }}>{foodName(f, lang)}</Text>
-                      <Text importantForAccessibility="no" style={{ color: '#4e7d4e', fontSize: 14, marginLeft: 1 }}>✕</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              {selected.some(it => { const f = FOODS.find(x => x.id === it.foodId); return f && f.base; }) && (
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#f0f6ef', borderRadius: 12, padding: 10, marginBottom: 14 }}>
-                  <BulbIcon size={16} color={THEME.primaryDark} />
-                  <Text style={{ flex: 1, fontSize: 12, color: '#3d4d3d', lineHeight: 17 }}>{t('meal_base_hint')}</Text>
-                </View>
-              )}
-              <Text style={{ fontSize: 11, color: '#647264', marginBottom: 2 }}>{t('edit_portion')}</Text>
-              <Text style={{ fontSize: 13, color: '#3d4d3d', marginBottom: 12, lineHeight: 18 }}>{t('meal_portion_hint')}</Text>
-              {selected.map((it, idx) => {
-                const f = FOODS.find(x => x.id === it.foodId);
-                if (!f) return null;
-                return (
-                  <View key={it.foodId} style={{ marginBottom: idx === selected.length - 1 ? 0 : 14 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                      <Text importantForAccessibility="no" style={{ fontSize: 15 }}>{f.emoji}</Text>
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.ink }}>{foodName(f, lang)}</Text>
-                    </View>
-                    {DISH_INGREDIENTS[f.id] && (
-                      <Text style={{ fontSize: 11, color: THEME.textMuted, marginBottom: 8, lineHeight: 15 }}>{t('meal_dish_contains')}: {dishIngredientNames(f.id, lang).join(', ')}</Text>
-                    )}
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                      {[{ id: 'S', label: t('edit_portion_s') }, { id: 'M', label: t('edit_portion_m') }, { id: 'L', label: t('edit_portion_l') }].map(p => {
-                        const on = it.size === p.id;
-                        return (
-                          <TouchableOpacity key={p.id} onPress={() => setItemSize(it.foodId, p.id)} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={`${foodName(f, lang)}, ${p.label}, ${itemSizeLabel(f, p.id, t, lang)}`} style={{ flex: 1, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: on ? '#dcebdc' : '#c4cec4', backgroundColor: on ? '#dcebdc' : 'transparent', alignItems: 'center' }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                              {on && <CheckIcon color="#2d6a2d" size={13} />}
-                              <Text style={{ fontSize: 13, fontWeight: '600', color: on ? '#2d6a2d' : '#2d3a2d' }}>{p.label}</Text>
-                            </View>
-                            <Text style={{ fontSize: 14, fontWeight: '600', marginTop: 3, color: on ? '#2d6a2d' : '#3d4d3d' }}>{itemSizeLabel(f, p.id, t, lang)}</Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
+          {/* "Your meal" now lives in the sticky bottom bar (always visible + removable),
+              so it no longer scrolls away under the search box. See the bottom section below. */}
 
           {/* Histamine alert */}
           {xWarn && (
@@ -8544,9 +9226,16 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
               // not its raw category — a moderate food can be low in a small portion.
               const rowCat = isSel ? (meal?.items.find(v => v.id === f.id)?.verdictCat || f.cat) : f.cat;
               return (
-                <TouchableOpacity key={f.id} onPress={() => toggle(f.id)} accessibilityRole="checkbox" accessibilityState={{ checked: isSel }} accessibilityLabel={foodName(f, lang)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f1f4f1' }}>
+                <TouchableOpacity key={f.id} onPress={() => { if (!isSel) setSelected(selected.concat([makeMealItem(f.id)])); setEditingId(f.id); setSearch(''); }} accessibilityRole="button" accessibilityState={{ checked: isSel }} accessibilityLabel={foodName(f, lang)} accessibilityHint={t('meal_edit_portion_of', { food: foodName(f, lang) })} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f1f4f1' }}>
                   <Text importantForAccessibility="no" style={{ fontSize: 22 }}>{f.emoji}</Text>
-                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '500', color: THEME.ink }}>{foodName(f, lang)}</Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: THEME.ink }}>{foodName(f, lang)}</Text>
+                    {/* Base dishes list their ingredients so they're clearly distinct from a plain
+                        single ingredient (e.g. "Pizza Margherita (plain)" vs "Pizza dough"). */}
+                    {DISH_INGREDIENTS[f.id] && (
+                      <Text importantForAccessibility="no" style={{ fontSize: 11, color: THEME.textMuted, marginTop: 1 }} numberOfLines={1}>{t('meal_dish_contains')}: {dishIngredientNames(f.id, lang).join(', ')}</Text>
+                    )}
+                  </View>
                   <RiskPill cat={rowCat} t={t} />
                   <View importantForAccessibility="no" style={{ width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: isSel ? '#4e7d4e' : '#c4cec4', backgroundColor: isSel ? '#4e7d4e' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
                     {isSel ? <CheckIcon color="#fff" size={13} /> : <Text style={{ color: '#3d4d3d', fontSize: 17, fontWeight: '700', lineHeight: 19 }}>+</Text>}
@@ -8559,7 +9248,7 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
 
           {/* Add a custom food not in the database, with a self-declared FODMAP level */}
           {search.trim().length > 0 && !alreadyExact && (
-            <View style={[s.shadow, { marginHorizontal: 16, marginTop: 14, backgroundColor: 'white', borderRadius: 16, padding: 16 }]}>
+            <Surface elevation={1} primaryColor={THEME.primary} style={{ marginHorizontal: 16, marginTop: 14, backgroundColor: THEME.card, borderRadius: THEME.rCard, padding: 16 }}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.ink }}>{t('meal_custom_q', { name: search.trim() })}</Text>
               {/* Prominent tip about single ingredients */}
               <View style={{ backgroundColor: '#f5faf5', borderRadius: 12, padding: 12, marginVertical: 12, borderLeftWidth: 4, borderLeftColor: '#4e7d4e', flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
@@ -8578,43 +9267,149 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
                   </TouchableOpacity>
                 ))}
               </View>
-            </View>
+            </Surface>
           )}
           <View style={{ height: 24 }} />
         </ScrollView>
 
-        {/* Sticky bottom — live verdict + save */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, borderTopWidth: 1, borderTopColor: THEME.cardBorder, backgroundColor: 'white' }}>
-          <View style={{ flex: 1 }}>
-            {selected.length > 0 && meal ? (
-              <>
-                <Text style={{ fontSize: 11, color: '#647264' }}>{t('meal_modal_your_meal')} · {selected.length === 1 ? t('meal_modal_items_one', { n: 1 }) : t('meal_modal_items', { n: selected.length })}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                  <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: col.dot }} />
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: col.text }}>{meal.overall === 'low' ? t('meal_low') : meal.overall === 'high' ? t('meal_high') : t('meal_moderate')}</Text>
-                  {mealReason && <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: '#647264' }}>· {mealReason}</Text>}
+        {/* Sticky bottom — your meal (tap a chip to edit its portion, ✕ to remove) + live
+            verdict + save. Kept here so the meal is always visible while you search/add. */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, borderTopWidth: 1, borderTopColor: THEME.cardBorder, backgroundColor: 'white', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 14, shadowOffset: { width: 0, height: -4 }, elevation: 16 }}>
+          {selected.length > 0 && (
+            <>
+              {/* Personalised meal-of-day name — labels what you're about to save */}
+              <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.ink, marginBottom: 8 }}>{t('meal_my_' + effMealType)}</Text>
+              {hasBase && (
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#f0f6ef', borderRadius: 12, padding: 10, marginBottom: 10 }}>
+                  <BulbIcon size={16} color={THEME.primaryDark} />
+                  <Text style={{ flex: 1, fontSize: 12, color: '#3d4d3d', lineHeight: 17 }}>{t('meal_base_hint')}</Text>
                 </View>
-                {swapTips.map((tip, i) => (
-                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
-                    <BulbIcon size={14} color="#4e7d4e" />
-                    <Text numberOfLines={1} style={{ flex: 1, fontSize: 11.5, color: '#4e7d4e', fontWeight: '600' }}>{tip}</Text>
+              )}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 10 }}>
+                {selected.map(it => {
+                  const f = FOODS.find(x => x.id === it.foodId);
+                  if (!f) return null;
+                  const sizeLabel = t('edit_portion_' + (it.size || 'M').toLowerCase());
+                  return (
+                    <View key={it.foodId} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e8f0e8', borderRadius: 14, paddingLeft: 10, paddingRight: 5, paddingVertical: 6 }}>
+                      <TouchableOpacity onPress={() => setEditingId(it.foodId)} accessibilityRole="button" accessibilityLabel={`${foodName(f, lang)}, ${sizeLabel}`} accessibilityHint={t('meal_edit_portion_of', { food: foodName(f, lang) })} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text importantForAccessibility="no" style={{ fontSize: 14 }}>{f.emoji}</Text>
+                        <Text importantForAccessibility="no" style={{ fontSize: 13, color: '#2d6a2d', fontWeight: '500' }}>{foodName(f, lang)}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => toggle(it.foodId)} accessibilityRole="button" accessibilityLabel={`${t('meal_remove_item')} · ${foodName(f, lang)}`} hitSlop={{ top: 8, bottom: 8, left: 2, right: 8 }} style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#cfe3cf', alignItems: 'center', justifyContent: 'center' }}>
+                        <XIcon size={11} color="#2d6a2d" />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            </>
+          )}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              {selected.length > 0 && meal ? (
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: col.dot }} />
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: col.text }}>{meal.overall === 'low' ? t('meal_low') : meal.overall === 'high' ? t('meal_high') : t('meal_moderate')}</Text>
+                    {mealReason && <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: '#647264' }}>· {mealReason}</Text>}
                   </View>
-                ))}
-              </>
-            ) : (
-              <Text style={{ fontSize: 13, color: '#647264' }}>{t('meal_modal_pick')}</Text>
-            )}
+                  {swapTips.map((tip, i) => (
+                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
+                      <BulbIcon size={14} color="#4e7d4e" />
+                      <Text numberOfLines={1} style={{ flex: 1, fontSize: 11.5, color: '#4e7d4e', fontWeight: '600' }}>{tip}</Text>
+                    </View>
+                  ))}
+                </>
+              ) : (
+                <Text style={{ fontSize: 13, color: '#647264' }}>{t('meal_modal_pick')}</Text>
+              )}
+            </View>
+            <TouchableOpacity onPress={() => { onSave(resolved.items, when, effMealType, resolved.dishes); reset(); }} disabled={selected.length === 0} style={{ backgroundColor: selected.length ? '#4e7d4e' : '#c0d0c0', borderRadius: 14, paddingHorizontal: 26, paddingVertical: 13 }}>
+              <Text style={{ color: 'white', fontSize: 15, fontWeight: '700' }}>{t('save')}</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => { onSave(resolved.items, when, effMealType, resolved.dishes); reset(); }} disabled={selected.length === 0} style={{ backgroundColor: selected.length ? '#4e7d4e' : '#c0d0c0', borderRadius: 14, paddingHorizontal: 26, paddingVertical: 13 }}>
-            <Text style={{ color: 'white', fontSize: 15, fontWeight: '700' }}>{t('save')}</Text>
-          </TouchableOpacity>
         </View>
       </SafeAreaViewSC>
 
+      {/* Portion editor — a bottom-sheet overlay that floats ON TOP of the meal screen so
+          the "Il tuo pasto" strip stays visible behind it. Opened by tapping a chip or a
+          search/recent result. Confirm/dismiss collapses it; the strip's badge updates. */}
+      {(() => {
+        const it = selected.find(x => x.foodId === editingId);
+        const f = it && FOODS.find(x => x.id === editingId);
+        return (
+          <BottomSheet visible={!!(it && f)} onClose={() => setEditingId(null)}>
+              {it && f && (
+                <View accessibilityViewIsModal style={{ backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 28 }}>
+                  <View style={{ alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: '#d6ddd6', marginBottom: 18 }} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                    <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: '#e8f0e8', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text importantForAccessibility="no" style={{ fontSize: 24 }}>{f.emoji}</Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ fontSize: 12, color: THEME.textMuted, fontWeight: '600' }} numberOfLines={1}>{t('edit_portion')}</Text>
+                      <Text style={{ fontSize: 18, fontWeight: '700', color: THEME.ink }} numberOfLines={1}>{foodName(f, lang)}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setEditingId(null)} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><XIcon size={24} color={THEME.ink} /></TouchableOpacity>
+                  </View>
+                  {/* Full dish: show ingredients big with emoji, and let the user leave any out
+                      (e.g. onion out of a kebab). Tapping toggles it; resolveMeal drops excluded
+                      ones so the FODMAP verdict updates live. */}
+                  {DISH_INGREDIENTS[f.id] && (
+                    <View style={{ backgroundColor: '#f0f6ef', borderRadius: 14, padding: 12, marginBottom: 18 }}>
+                      <Text style={{ fontSize: 12, color: THEME.textMuted, fontWeight: '600' }}>{t('meal_dish_contains')}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.textMuted, marginTop: 2, marginBottom: 10 }}>{t('meal_dish_remove_hint')}</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                        {DISH_INGREDIENTS[f.id].map(([iid]) => {
+                          const ing = FOODS.find(x => x.id === iid);
+                          if (!ing) return null;
+                          const excluded = (it.exclude || []).includes(iid);
+                          return (
+                            <TouchableOpacity key={iid} onPress={() => toggleExclude(f.id, iid)} accessibilityRole="button" accessibilityState={{ selected: !excluded }} accessibilityLabel={`${foodName(ing, lang)}${excluded ? ', ' + t('meal_ingredient_removed') : ''}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: excluded ? 'transparent' : 'white', borderWidth: 1, borderStyle: 'dashed', borderColor: excluded ? '#b7c2b7' : 'transparent', borderRadius: 12, paddingLeft: 9, paddingRight: 10, paddingVertical: 7, opacity: excluded ? 0.6 : 1 }}>
+                              <Text importantForAccessibility="no" style={{ fontSize: 22 }}>{ing.emoji}</Text>
+                              <Text style={{ fontSize: 15, color: THEME.ink, fontWeight: '600', textDecorationLine: excluded ? 'line-through' : 'none' }}>{foodName(ing, lang)}</Text>
+                              {excluded ? <IconPlus size={15} color="#647264" /> : <XIcon size={14} color="#4e7d4e" />}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                      {/* Nudge: dishes are a base recipe — extras (sauces, dips, grilled veg…)
+                          are added as separate foods from the meal screen's search. */}
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#dceadc' }}>
+                        <BulbIcon size={14} color={THEME.primaryDark} />
+                        <Text style={{ flex: 1, fontSize: 11.5, color: '#3d4d3d', lineHeight: 16 }}>{t('meal_dish_add_hint')}</Text>
+                      </View>
+                    </View>
+                  )}
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+                    {[{ id: 'S', label: t('edit_portion_s') }, { id: 'M', label: t('edit_portion_m') }, { id: 'L', label: t('edit_portion_l') }].map(p => {
+                      const on = it.size === p.id;
+                      return (
+                        <TouchableOpacity key={p.id} onPress={() => setItemSize(f.id, p.id)} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={`${p.label}, ${itemSizeLabel(f, p.id, t, lang)}`} style={{ flex: 1, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5, borderColor: on ? '#4e7d4e' : '#c4cec4', backgroundColor: on ? '#dcebdc' : 'transparent', alignItems: 'center' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            {on && <CheckIcon color="#2d6a2d" size={13} />}
+                            <Text style={{ fontSize: 14, fontWeight: '700', color: on ? '#2d6a2d' : '#2d3a2d' }}>{p.label}</Text>
+                          </View>
+                          <Text style={{ fontSize: 13, fontWeight: '600', marginTop: 3, color: on ? '#2d6a2d' : '#3d4d3d' }}>{itemSizeLabel(f, p.id, t, lang)}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <TouchableOpacity onPress={() => setEditingId(null)} style={[s.btnPrimary, { marginTop: 0 }]}>
+                    <Text style={s.btnPrimaryText}>{t('done')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => { toggle(f.id); setEditingId(null); }} accessibilityRole="button" style={{ paddingVertical: 14, alignItems: 'center', marginTop: 4 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#a03030' }}>{t('meal_remove_item')}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+          </BottomSheet>
+        );
+      })()}
+
       {/* First-run explainer for barcode scanning */}
-      <Modal visible={introSheet} transparent animationType="slide" onRequestClose={() => setIntroSheet(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(20,33,15,0.45)', justifyContent: 'flex-end' }}>
-          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setIntroSheet(false)} accessibilityRole="button" accessibilityLabel={t('close')} />
+      <BottomSheet visible={introSheet} onClose={() => setIntroSheet(false)}>
           <View accessibilityViewIsModal style={{ backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 32 }}>
             <View style={{ alignItems: 'center', marginBottom: 16 }}>
               <View style={{ alignItems: 'center', justifyContent: 'center' }}>
@@ -8633,8 +9428,22 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
               <Text style={{ fontSize: 14, color: THEME.textMuted, fontWeight: '600' }}>{t('barcode_intro_later')}</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+      </BottomSheet>
+
+      {/* Discard-meal confirmation — replaces the native Alert.alert so the primary action
+          uses the app's own green rather than the OS system tint (blue on iOS). */}
+      <BottomSheet visible={discardConfirm} onClose={() => setDiscardConfirm(false)}>
+          <View accessibilityViewIsModal style={{ backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 22, paddingBottom: 32 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: THEME.ink, textAlign: 'center' }}>{t('meal_discard_title')}</Text>
+            <Text style={{ fontSize: 14, color: THEME.textSoft, textAlign: 'center', lineHeight: 20, marginTop: 8 }}>{t('meal_discard_body')}</Text>
+            <TouchableOpacity onPress={() => setDiscardConfirm(false)} style={[s.btnPrimary, { marginTop: 20 }]}>
+              <Text style={s.btnPrimaryText}>{t('meal_discard_keep')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={confirmDiscard} accessibilityRole="button" style={{ paddingVertical: 14, alignItems: 'center' }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#a03030' }}>{t('meal_discard_confirm')}</Text>
+            </TouchableOpacity>
+          </View>
+      </BottomSheet>
     </Modal>
   );
 }
@@ -8667,7 +9476,7 @@ function SymptomModal({ visible, onClose, onSave, t }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f4f0' }}>
-          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><Text style={{ fontSize: 16 }}>✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><XIcon size={24} color={THEME.ink} /></TouchableOpacity>
           <Text style={{ fontSize: 20, fontWeight: '700' }}>{t('symptom_title')}</Text>
         </View>
         <ScrollView style={{ flex: 1 }}>
@@ -8728,7 +9537,7 @@ function PaywallModal({ visible, onClose, onUpgrade, reason, t }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
         <View style={{ alignItems: 'flex-end', padding: 16 }}>
-          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ width: 36, height: 36, backgroundColor: '#f0f4f0', borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}><Text importantForAccessibility="no">✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ width: 36, height: 36, backgroundColor: '#f0f4f0', borderRadius: 18, alignItems: 'center', justifyContent: 'center' }}><XIcon size={24} color={THEME.ink} /></TouchableOpacity>
         </View>
         <ScrollView>
           <View style={{ alignItems: 'center', paddingHorizontal: 24 }}>
@@ -8800,23 +9609,77 @@ function PaywallModal({ visible, onClose, onUpgrade, reason, t }) {
   );
 }
 
+// Turn a Supabase auth error into a short, localized, user-safe message — never
+// dump a raw error object or HTTP response into the UI.
+function friendlyAuthError(err, t) {
+  if (!err) return t('auth_err_generic');
+  const msg = typeof err.message === 'string' ? err.message : '';
+  const status = err.status || 0;
+  const code = err.code || '';
+  if (/invalid login credentials/i.test(msg)) return t('auth_err_credentials');
+  if (/already registered|already been registered|user already exists/i.test(msg)) return t('auth_err_exists');
+  if (/not confirmed|confirm your email/i.test(msg)) return t('auth_err_unconfirmed');
+  if (status >= 500 || code === 'unexpected_failure' || /sending.*email|smtp|confirmation email/i.test(msg)) return t('auth_err_send');
+  if (msg && msg.length < 120) return msg; // a short, clean API message is fine to show as-is
+  return t('auth_err_generic');
+}
+
+// Full-screen confirmation shown after a successful sign-up: Flora springs in
+// (on top of her own breathe/blink) and we tell the user to check their inbox.
+function AuthSentScreen({ email, variant = 'signup', onBackToLogin, onClose, t }) {
+  const enter = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(enter, { toValue: 1, friction: 6, tension: 55, useNativeDriver: true }).start();
+  }, []);
+  const scale = enter.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] });
+  const textY = enter.interpolate({ inputRange: [0, 1], outputRange: [14, 0] });
+  const body = variant === 'reset' ? t('auth_reset_sent_body', { email }) : t('auth_sent_body', { email });
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ alignItems: 'flex-end', padding: 16 }}>
+        <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><XIcon size={24} color={THEME.ink} /></TouchableOpacity>
+      </View>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, marginTop: -40 }}>
+        <Animated.View style={{ transform: [{ scale }] }}>
+          <BlinkingFlora size={150} mood="good" />
+        </Animated.View>
+        <Animated.View style={{ opacity: enter, transform: [{ translateY: textY }], alignItems: 'center' }}>
+          <Text style={{ fontSize: 24, fontWeight: '700', color: '#26302a', marginTop: 24, textAlign: 'center' }}>{t('auth_sent_title')}</Text>
+          <Text style={{ fontSize: 15, color: '#5b6a5b', marginTop: 12, textAlign: 'center', lineHeight: 22 }}>{body}</Text>
+        </Animated.View>
+      </View>
+      <View style={{ padding: 20 }}>
+        <TouchableOpacity onPress={onBackToLogin} accessibilityRole="button" style={[s.btnPrimary, { alignSelf: 'stretch' }]}>
+          <Text style={s.btnPrimaryText}>{t('auth_back_to_login')}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 // Account screen: sign in, create an account, or request a password reset.
 // The app works fully signed-out; this only layers an account on top. Sign-in
 // success is handled by the App's onAuthStateChange listener (toast + ownerId
 // backfill), so on success we simply close.
-function AuthModal({ visible, onClose, user, onSignOut, t }) {
+function AuthModal({ visible, onClose, initialMode, user, onSignOut, t }) {
   const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'reset'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');   // signup: confirm-password field
+  const [showPw, setShowPw] = useState(false);  // eye toggle for password fields
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState(''); // success message (check email / reset sent)
+  const [notice, setNotice] = useState(''); // success message (reset sent)
+  const [sentEmail, setSentEmail] = useState(''); // set after signup/reset → shows full-screen "check your email"
+  const [sentVariant, setSentVariant] = useState('signup'); // 'signup' | 'reset' → which message to show
 
-  // Reset transient state whenever the modal is opened or closed.
+  // Reset transient state whenever the modal is opened or closed. On open, honor
+  // the requested starting mode (e.g. nudges open straight on "Create account").
   useEffect(() => {
-    if (!visible) { setMode('login'); setEmail(''); setPassword(''); setError(''); setNotice(''); setBusy(false); }
+    if (visible) { setMode(initialMode || 'login'); }
+    else { setMode('login'); setEmail(''); setPassword(''); setConfirm(''); setShowPw(false); setError(''); setNotice(''); setSentEmail(''); setBusy(false); }
   }, [visible]);
-  useEffect(() => { setError(''); setNotice(''); }, [mode]);
+  useEffect(() => { setError(''); setNotice(''); setConfirm(''); setShowPw(false); setSentEmail(''); }, [mode]);
 
   // If the user signs in successfully, the App listener fires and we close.
   useEffect(() => { if (visible && user) onClose(); }, [user, visible]);
@@ -8831,23 +9694,24 @@ function AuthModal({ visible, onClose, user, onSignOut, t }) {
       if (!password) { setError(t('auth_err_empty')); return; }
       if (password.length < 6) { setError(t('auth_err_password_short')); return; }
     }
+    if (mode === 'signup' && password !== confirm) { setError(t('auth_err_mismatch')); return; }
     setBusy(true);
     try {
       if (mode === 'login') {
         const { error: err } = await supabase.auth.signInWithPassword({ email: em, password });
-        if (err) { setError(err.message); return; }
+        if (err) { setError(friendlyAuthError(err, t)); return; }
         // success → App listener closes the modal
       } else if (mode === 'signup') {
         const { error: err } = await supabase.auth.signUp({ email: em, password });
-        if (err) { setError(err.message); return; }
-        setNotice(t('auth_check_email'));
+        if (err) { setError(friendlyAuthError(err, t)); return; }
+        setSentVariant('signup'); setSentEmail(em); // show the full-screen confirmation with Flora
       } else {
-        // reset: always show the same message so we don't reveal which emails exist
+        // reset: always succeed-looking so we don't reveal which emails exist
         await supabase.auth.resetPasswordForEmail(em);
-        setNotice(t('auth_reset_sent'));
+        setSentVariant('reset'); setSentEmail(em);
       }
     } catch (e) {
-      setError((e && e.message) || t('auth_err_empty'));
+      setError(friendlyAuthError(e, t));
     } finally {
       setBusy(false);
     }
@@ -8858,16 +9722,45 @@ function AuthModal({ visible, onClose, user, onSignOut, t }) {
   const cta = mode === 'signup' ? t('sign_up') : mode === 'reset' ? t('auth_send_reset') : t('sign_in');
   const inputStyle = { backgroundColor: '#f0f4f0', borderRadius: 12, padding: 14, fontSize: 16, marginTop: 6 };
 
+  // A password input with a show/hide eye button. Called as a function (not a
+  // <Component/>) so the TextInput keeps focus across renders instead of remounting.
+  const pwField = ({ label, value, onChange, ph, tc, onSubmit, returnKey }) => (
+    <View style={{ marginTop: 16 }}>
+      <Text style={{ fontSize: 13, fontWeight: '600', color: '#3d4a3d' }}>{label}</Text>
+      <View style={{ position: 'relative', marginTop: 6 }}>
+        <TextInput
+          value={value} onChangeText={onChange}
+          accessibilityLabel={label} placeholder={ph} placeholderTextColor="#9aa89a"
+          autoCapitalize="none" autoCorrect={false} secureTextEntry={!showPw}
+          textContentType={tc} editable={!busy} onSubmitEditing={onSubmit} returnKeyType={returnKey}
+          style={[inputStyle, { marginTop: 0, paddingRight: 48 }]}
+        />
+        <TouchableOpacity
+          onPress={() => setShowPw(v => !v)} accessibilityRole="button"
+          accessibilityLabel={showPw ? t('auth_hide_password') : t('auth_show_password')}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={{ position: 'absolute', right: 12, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <EyeIcon off={showPw} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
+        {sentEmail ? (
+          <AuthSentScreen email={sentEmail} variant={sentVariant} onClose={onClose} onBackToLogin={() => { setSentEmail(''); setMode('login'); }} t={t} />
+        ) : (
+        <>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f4f0' }}>
-          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><Text style={{ fontSize: 16 }}>✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><XIcon size={24} color={THEME.ink} /></TouchableOpacity>
           <Text style={{ fontSize: 20, fontWeight: '700' }}>{t('account')}</Text>
         </View>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 20 }}>
-            <Text style={{ fontSize: 40, textAlign: 'center', marginTop: 8 }}>🌿</Text>
+            <View style={{ alignItems: 'center', marginTop: 8 }}><BlinkingFlora size={76} mood="good" /></View>
             <Text style={{ fontSize: 22, fontWeight: '700', textAlign: 'center', marginTop: 8 }}>{title}</Text>
             <Text style={{ fontSize: 14, color: '#6b7a6b', textAlign: 'center', marginTop: 6, lineHeight: 20 }}>{subtitle}</Text>
 
@@ -8881,18 +9774,16 @@ function AuthModal({ visible, onClose, user, onSignOut, t }) {
               />
             </View>
 
-            {mode !== 'reset' && (
-              <View style={{ marginTop: 16 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#3d4a3d' }}>{t('auth_password')}</Text>
-                <TextInput
-                  value={password} onChangeText={setPassword}
-                  accessibilityLabel={t('auth_password')} placeholder={t('auth_password_ph')} placeholderTextColor="#9aa89a"
-                  autoCapitalize="none" autoCorrect={false} secureTextEntry
-                  textContentType={mode === 'signup' ? 'newPassword' : 'password'}
-                  editable={!busy} onSubmitEditing={submit} returnKeyType="go" style={inputStyle}
-                />
-              </View>
-            )}
+            {mode !== 'reset' && pwField({
+              label: t('auth_password'), value: password, onChange: setPassword,
+              ph: t('auth_password_ph'), tc: mode === 'signup' ? 'newPassword' : 'password',
+              onSubmit: mode === 'signup' ? undefined : submit, returnKey: mode === 'signup' ? 'next' : 'go',
+            })}
+            {mode === 'signup' && pwField({
+              label: t('auth_confirm_password'), value: confirm, onChange: setConfirm,
+              ph: t('auth_confirm_password_ph'), tc: 'newPassword',
+              onSubmit: submit, returnKey: 'go',
+            })}
 
             {mode === 'login' && (
               <TouchableOpacity onPress={() => setMode('reset')} accessibilityRole="button" style={{ alignSelf: 'flex-end', marginTop: 10 }}>
@@ -8924,8 +9815,72 @@ function AuthModal({ visible, onClose, user, onSignOut, t }) {
             )}
           </ScrollView>
         </KeyboardAvoidingView>
+        </>
+        )}
       </SafeAreaViewSC>
     </Modal>
+  );
+}
+
+// Collapsible settings row: shows the current selection as a one-line summary, expands to a
+// dropdown of options on tap. Single-select collapses after choosing; multi-select stays open.
+function SettingSelect({ label, sub, options, selectedIds, onToggle, multi = false, emptyLabel, headerIcon: HeaderIcon, iconBg = '#dcebdc', iconColor = THEME.primaryDark, t }) {
+  const [open, setOpen] = useState(false);
+  const chosen = options.filter(o => selectedIds.includes(o.id));
+  const summaryText = chosen.length ? chosen.map(o => o.label).join(', ') : (emptyLabel || '—');
+  // Single-select shows its icon (e.g. a flag) inline next to the summary text.
+  const summaryIcon = chosen.length === 1 ? chosen[0].icon : null;
+  // No card/border of its own — grouped by the caller into one shared, borderless section
+  // (see the "phase → language" group in SettingsModal) with dividers between rows.
+  return (
+    <>
+      <TouchableOpacity onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel={`${label}, ${summaryText}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        {HeaderIcon ? (
+          <View style={{ width: 38, alignItems: 'center' }}>
+            <HeaderIcon size={24} color={THEME.primaryDark} />
+          </View>
+        ) : null}
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 16, fontWeight: '500', color: THEME.ink }}>{label}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 }}>
+            {summaryIcon ? <Text importantForAccessibility="no" style={{ fontSize: 14 }}>{summaryIcon}</Text> : null}
+            <Text numberOfLines={1} style={{ fontSize: 14, color: THEME.textMuted, fontWeight: '400' }}>{summaryText}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+      <BottomSheet visible={open} onClose={() => setOpen(false)}>
+        <Surface elevation={3} tinted={false} primaryColor={THEME.primary} style={{ backgroundColor: '#ffffff', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 28, maxHeight: Dimensions.get('window').height * 0.75 }}>
+          <View style={{ alignItems: 'center', paddingVertical: 10 }}><View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#d0d8d0' }} /></View>
+          <Text accessibilityRole="header" style={{ fontSize: 18, fontWeight: '700', paddingHorizontal: 20 }}>{label}</Text>
+          {sub ? <Text style={{ fontSize: 12, color: '#6b7a6b', paddingHorizontal: 20, paddingTop: 4 }}>{sub}</Text> : null}
+          <ScrollView style={{ paddingHorizontal: 12, marginTop: 8 }}>
+            {options.map(opt => {
+              const isSel = selectedIds.includes(opt.id);
+              return (
+                <TouchableOpacity key={opt.id} onPress={() => { onToggle(opt.id); if (!multi) setOpen(false); }} accessibilityRole={multi ? 'checkbox' : 'radio'} accessibilityState={multi ? { checked: isSel } : { selected: isSel }} accessibilityLabel={opt.label} style={[s.onbOpt, { borderWidth: 0 }, isSel && s.onbOptOn]}>
+                  {multi ? (
+                    <View importantForAccessibility="no" style={{ width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: isSel ? '#4e7d4e' : '#c4cec4', backgroundColor: isSel ? '#4e7d4e' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                      {isSel && <CheckIcon color="#ffffff" size={13} />}
+                    </View>
+                  ) : (
+                    <View importantForAccessibility="no" style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: isSel ? '#4e7d4e' : '#c4cec4', alignItems: 'center', justifyContent: 'center' }}>
+                      {isSel && <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#4e7d4e' }} />}
+                    </View>
+                  )}
+                  {opt.icon ? <Text importantForAccessibility="no" style={{ fontSize: 20 }}>{opt.icon}</Text> : null}
+                  <Text style={{ flex: 1, fontSize: 15 }}>{opt.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          {multi && (
+            <TouchableOpacity onPress={() => setOpen(false)} accessibilityRole="button" style={[s.btnPrimary, { marginHorizontal: 20, marginTop: 12 }]}>
+              <Text style={s.btnPrimaryText}>{t ? t('done') : 'Done'}</Text>
+            </TouchableOpacity>
+          )}
+        </Surface>
+      </BottomSheet>
+    </>
   );
 }
 
@@ -8944,18 +9899,20 @@ function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverr
   const setMenstruates = (val) => setProfile(Object.assign({}, profile, { menstruates: val }));
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
+      <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#e7f3df' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f4f0' }}>
-          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><Text style={{ fontSize: 16 }}>✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><XIcon size={24} color={THEME.ink} /></TouchableOpacity>
           <Text style={{ fontSize: 20, fontWeight: '700' }}>{t('settings_title')}</Text>
         </View>
         <ScrollView style={{ flex: 1 }}>
           <View style={{ padding: 20 }}>
             {/* Account: sign in to back up & sync, or manage the signed-in account. */}
             {user ? (
-              <View style={[s.card, { borderColor: '#c4cec4', marginHorizontal: 0 }]}>
+              <View style={[s.cardOutlined, { marginHorizontal: 0 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Text style={{ fontSize: 22 }}>🌿</Text>
+                  <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#dcebdc', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 18 }}>🌿</Text>
+                  </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 12, color: '#6b7a6b' }}>{t('account_signed_in')}</Text>
                     <Text style={{ fontSize: 15, fontWeight: '700' }} numberOfLines={1}>{user.email}</Text>
@@ -8975,21 +9932,25 @@ function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverr
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity onPress={onOpenAccount} accessibilityRole="button" accessibilityLabel={t('account')} style={[s.card, { borderColor: '#4e7d4e', backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Text style={{ fontSize: 22 }}>🌿</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700' }}>{t('account')}</Text>
-                    <Text style={{ fontSize: 12, color: '#6b7a6b', marginTop: 2 }}>{t('account_sub')}</Text>
-                  </View>
-                  <View importantForAccessibility="no"><ChevronIcon size={16} color="#4e7d4e" /></View>
+              <View style={[s.cardFilled, { backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
+                <Text style={{ fontSize: 15, fontWeight: '700' }}>{t('account')}</Text>
+                <Text style={{ fontSize: 12, color: '#6b7a6b', marginTop: 2, marginBottom: 14 }}>{t('account_sub')}</Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity onPress={() => onOpenAccount('login')} accessibilityRole="button" style={[s.btnSecondary, { flex: 1 }]}>
+                    <Text style={s.btnSecondaryText}>{t('sign_in')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => onOpenAccount('signup')} accessibilityRole="button" style={[s.btnPrimary, { flex: 1, marginTop: 0 }]}>
+                    <Text style={s.btnPrimaryText}>{t('sign_up')}</Text>
+                  </TouchableOpacity>
                 </View>
-              </TouchableOpacity>
+              </View>
             )}
             {isPremium ? (
-              <View style={[s.card, { borderColor: '#c4cec4', backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
+              <View style={[s.cardFilled, { backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Text style={{ fontSize: 24 }}>🌱</Text>
+                  <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#dcebdc', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 18 }}>🌱</Text>
+                  </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: '#2d6a2d' }}>GutBloom Premium</Text>
                     <Text style={{ fontSize: 12, color: '#6b7a6b', marginTop: 2 }}>{t('settings_premium_active_sub')}</Text>
@@ -8997,108 +9958,118 @@ function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverr
                 </View>
               </View>
             ) : (
-              <TouchableOpacity onPress={() => { onClose(); setTimeout(onUpgrade, 250); }} style={[s.card, { borderColor: '#4e7d4e', backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
+              <TouchableOpacity onPress={() => { onClose(); setTimeout(onUpgrade, 250); }} style={[s.cardFilled, { backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Text style={{ fontSize: 24 }}>🌱</Text>
+                  <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: '#dcebdc', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 20 }}>🌱</Text>
+                  </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 15, fontWeight: '700' }}>{t('upgrade_premium')}</Text>
                     <Text style={{ fontSize: 12, color: '#6b7a6b', marginTop: 2 }}>{t('settings_premium_sub')}</Text>
                   </View>
-                  <View importantForAccessibility="no"><ChevronIcon size={16} color="#4e7d4e" /></View>
                 </View>
               </TouchableOpacity>
             )}
-            <Text style={{ fontSize: 13, color: '#6b7a6b', marginBottom: 12, marginTop: 4 }}>{t('settings_mid_journey')}</Text>
-            <View style={[s.card, { borderColor: '#c4cec4', marginHorizontal: 0 }]}>
-              <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 12 }}>{t('settings_current_phase')}</Text>
-              {[{ id: 'not_started', label: t('settings_phase_not_started') }, { id: 'elimination', label: t('settings_phase_elimination') }, { id: 'reintroduction', label: t('settings_phase_reintroduction') }].map(opt => (
-                <TouchableOpacity key={opt.id} onPress={() => setEditPhase(opt.id)} accessibilityRole="radio" accessibilityState={{ selected: editPhase === opt.id }} style={[s.onbOpt, editPhase === opt.id && s.onbOptOn]}>
-                  <Text style={{ flex: 1, fontSize: 15 }}>{opt.label}</Text>
-                  {editPhase === opt.id && <View importantForAccessibility="no"><CheckIcon color="#4e7d4e" size={18} /></View>}
-                </TouchableOpacity>
-              ))}
-            </View>
-            {editPhase !== 'not_started' && (
-              <View style={[s.card, { borderColor: '#c4cec4', marginHorizontal: 0 }]}>
-                <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 8 }}>{t('settings_week_label')}</Text>
-                <Text style={{ fontSize: 12, color: '#6b7a6b', marginBottom: 12 }}>{t('settings_week_sub')}</Text>
-                <TextInput accessibilityLabel={t('a11y_week_number')} value={weekInput} onChangeText={setWeekInput} keyboardType="number-pad" placeholder={t('week_number_ph')} placeholderTextColor="#6b7a6b" style={{ backgroundColor: '#f0f4f0', borderRadius: 12, padding: 14, fontSize: 18, textAlign: 'center' }} />
-              </View>
-            )}
-            <View style={[s.card, { borderColor: '#c4cec4', marginHorizontal: 0 }]}>
-              <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 4 }}>{t('settings_menstruate_q')}</Text>
-              <Text style={{ fontSize: 12, color: '#6b7a6b', marginBottom: 12 }}>{t('settings_menstruate_sub')}</Text>
-              {[{ id: 'yes', label: t('safety_yes') }, { id: 'no', label: t('safety_no') }].map(opt => (
-                <TouchableOpacity key={opt.id} onPress={() => setMenstruates(opt.id)} accessibilityRole="radio" accessibilityState={{ selected: profile?.menstruates === opt.id }} style={[s.onbOpt, profile?.menstruates === opt.id && s.onbOptOn]}>
-                  <Text style={{ flex: 1, fontSize: 15 }}>{opt.label}</Text>
-                  {profile?.menstruates === opt.id && <View importantForAccessibility="no"><CheckIcon color="#4e7d4e" size={18} /></View>}
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={[s.card, { borderColor: '#c4cec4', marginHorizontal: 0 }]}>
-              <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 4 }}>{t('settings_other_intolerances')}</Text>
-              <Text style={{ fontSize: 12, color: '#6b7a6b', marginBottom: 12 }}>{t('settings_other_intolerances_sub')}</Text>
-              {[
-                { id: 'histamine', icon: '🌡️', label: t('onb_known_histamine') },
-                { id: 'lactose', icon: '🥛', label: t('onb_known_lactose') },
-                { id: 'gluten', icon: '🌾', label: t('onb_known_gluten') },
-                { id: 'fructose', icon: '🍎', label: t('onb_known_fructose') },
-              ].map(opt => {
-                const known = (profile && profile.known) || [];
-                const isSel = known.indexOf(opt.id) >= 0;
-                return (
-                  <TouchableOpacity
-                    key={opt.id}
-                    onPress={() => {
-                      const next = isSel ? known.filter(x => x !== opt.id) : known.concat([opt.id]);
-                      setProfile(Object.assign({}, profile, { known: next }));
-                    }}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: isSel }}
-                    accessibilityLabel={opt.label}
-                    style={[s.onbOpt, isSel && s.onbOptOn]}
-                  >
-                    <Text importantForAccessibility="no" style={{ fontSize: 20 }}>{opt.icon}</Text>
-                    <Text style={{ flex: 1, fontSize: 15 }}>{opt.label}</Text>
-                    {isSel && <View importantForAccessibility="no"><CheckIcon color="#4e7d4e" size={18} /></View>}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <View style={[s.card, { borderColor: '#c4cec4', marginHorizontal: 0 }]}>
-              <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 4 }}>{t('lang_label')}</Text>
-              <Text style={{ fontSize: 12, color: '#6b7a6b', marginBottom: 12 }}>{t('lang_auto')} is the default.</Text>
-              {[
-                { id: 'auto', label: t('lang_auto') },
-                { id: 'en', label: 'English' },
-                { id: 'de', label: 'Deutsch' },
-                { id: 'es', label: 'Español' },
-                { id: 'fr', label: 'Français' },
-                { id: 'it', label: 'Italiano' },
-              ].map(opt => (
-                <TouchableOpacity key={opt.id} onPress={() => setLangPref(opt.id)} accessibilityRole="radio" accessibilityState={{ selected: langPref === opt.id }} style={[s.onbOpt, langPref === opt.id && s.onbOptOn]}>
-                  <Text style={{ flex: 1, fontSize: 15 }}>{opt.label}</Text>
-                  {langPref === opt.id && <View importantForAccessibility="no"><CheckIcon color="#4e7d4e" size={18} /></View>}
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity onPress={() => { onClose(); setTimeout(onExport, 250); }} style={[s.card, { borderColor: '#c4cec4', marginHorizontal: 0 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Text style={{ fontSize: 22 }}>📄</Text>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '600' }}>{t('settings_doctor_summary')}</Text>
-                    {!isPremium && <View style={{ backgroundColor: '#e8f0e8', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}><Text style={{ fontSize: 9, color: '#2d6a2d', fontWeight: '700' }}>PREMIUM</Text></View>}
+            <View style={[s.cardFilled, { backgroundColor: '#f5faf5', marginHorizontal: 0, padding: 16, overflow: 'hidden' }]}>
+              <SettingSelect
+                headerIcon={IconCalendarWeekFilled}
+                label={t('settings_current_phase')}
+                sub={t('settings_mid_journey')}
+                options={[{ id: 'not_started', label: t('settings_phase_not_started') }, { id: 'elimination', label: t('settings_phase_elimination') }, { id: 'reintroduction', label: t('settings_phase_reintroduction') }]}
+                selectedIds={[editPhase]}
+                onToggle={(id) => setEditPhase(id)}
+                t={t}
+              />
+              {editPhase !== 'not_started' && (
+                <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#dcebdc' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 8 }}>{t('settings_week_label')}</Text>
+                  <Text style={{ fontSize: 12, color: '#6b7a6b', marginBottom: 12 }}>{t('settings_week_sub')}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <TouchableOpacity onPress={() => setWeekInput(String(Math.max(1, (parseInt(weekInput, 10) || 1) - 1)))} accessibilityRole="button" accessibilityLabel={t('a11y_week_decrease')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#eaf1ea', alignItems: 'center', justifyContent: 'center' }}>
+                      <IconMinus size={20} color="#4e7d4e" style={{ opacity: (parseInt(weekInput, 10) || 1) <= 1 ? 0.35 : 1 }} />
+                    </TouchableOpacity>
+                    <TextInput accessibilityLabel={t('a11y_week_number')} value={weekInput} onChangeText={setWeekInput} keyboardType="number-pad" placeholder={t('week_number_ph')} placeholderTextColor="#6b7a6b" style={{ flex: 1, backgroundColor: '#eaf1ea', borderRadius: 12, padding: 14, fontSize: 18, textAlign: 'center' }} />
+                    <TouchableOpacity onPress={() => setWeekInput(String(Math.min(12, (parseInt(weekInput, 10) || 0) + 1)))} accessibilityRole="button" accessibilityLabel={t('a11y_week_increase')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#eaf1ea', alignItems: 'center', justifyContent: 'center' }}>
+                      <IconPlus size={20} color="#4e7d4e" />
+                    </TouchableOpacity>
                   </View>
-                  <Text style={{ fontSize: 12, color: '#6b7a6b', marginTop: 2 }}>{t('settings_doctor_sub')}</Text>
                 </View>
-                <View importantForAccessibility="no"><ChevronIcon size={16} color="#4e7d4e" /></View>
+              )}
+            </View>
+            <View style={[s.cardFilled, { backgroundColor: '#f5faf5', marginHorizontal: 0, padding: 16 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ width: 38, alignItems: 'center' }}>
+                  <IconDropletFilled size={24} color={THEME.primaryDark} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '500', color: THEME.ink }}>{t('settings_menstruate_q')}</Text>
+                  <Text style={{ fontSize: 14, color: THEME.textMuted, fontWeight: '400', marginTop: 3 }}>{profile?.menstruates === 'yes' ? t('safety_yes') : t('safety_no')}</Text>
+                </View>
+                <Switch
+                  value={profile?.menstruates === 'yes'}
+                  onValueChange={(val) => setMenstruates(val ? 'yes' : 'no')}
+                  trackColor={{ false: '#d8e0d8', true: '#4e7d4e' }}
+                  thumbColor="#ffffff"
+                  ios_backgroundColor="#d8e0d8"
+                  accessibilityLabel={t('settings_menstruate_q')}
+                />
               </View>
-            </TouchableOpacity>
+              <Text style={{ fontSize: 12, color: THEME.textMuted, lineHeight: 17, marginTop: 12 }}>{t('settings_menstruate_sub')}</Text>
+            </View>
+            <View style={[s.cardFilled, { backgroundColor: '#f5faf5', marginHorizontal: 0, padding: 16 }]}>
+              <SettingSelect
+                multi
+                headerIcon={IconAlertTriangleFilled}
+                label={t('settings_other_intolerances')}
+                sub={t('settings_other_intolerances_sub')}
+                emptyLabel={t('settings_none')}
+                options={[
+                  { id: 'histamine', icon: '🌡️', label: t('onb_known_histamine') },
+                  { id: 'lactose', icon: '🥛', label: t('onb_known_lactose') },
+                  { id: 'gluten', icon: '🌾', label: t('onb_known_gluten') },
+                  { id: 'fructose', icon: '🍎', label: t('onb_known_fructose') },
+                ]}
+                selectedIds={(profile && profile.known) || []}
+                onToggle={(id) => {
+                  const known = (profile && profile.known) || [];
+                  const next = known.indexOf(id) >= 0 ? known.filter(x => x !== id) : known.concat([id]);
+                  setProfile(Object.assign({}, profile, { known: next }));
+                }}
+                t={t}
+              />
+            </View>
+            <View style={[s.cardFilled, { backgroundColor: '#f5faf5', marginHorizontal: 0, padding: 16 }]}>
+              <SettingSelect
+                headerIcon={IconWorld}
+                label={t('lang_label')}
+                options={[
+                  { id: 'auto', icon: '🌐', label: t('lang_auto') },
+                  { id: 'en', icon: '🇬🇧', label: 'English' },
+                  { id: 'de', icon: '🇩🇪', label: 'Deutsch' },
+                  { id: 'es', icon: '🇪🇸', label: 'Español' },
+                  { id: 'fr', icon: '🇫🇷', label: 'Français' },
+                  { id: 'it', icon: '🇮🇹', label: 'Italiano' },
+                ]}
+                selectedIds={[langPref]}
+                onToggle={(id) => setLangPref(id)}
+                t={t}
+              />
+            </View>
+            <View style={[s.cardOutlined, { marginHorizontal: 0 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600' }}>{t('settings_doctor_summary')}</Text>
+                {!isPremium && <View style={{ backgroundColor: '#e8f0e8', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}><Text style={{ fontSize: 9, color: '#2d6a2d', fontWeight: '700' }}>PREMIUM</Text></View>}
+              </View>
+              <Text style={{ fontSize: 12, color: '#6b7a6b', marginBottom: 12 }}>{t('settings_doctor_sub')}</Text>
+              <TouchableOpacity onPress={() => { onClose(); setTimeout(onExport, 250); }} accessibilityRole="button" accessibilityLabel={t('settings_doctor_export_btn')} style={[s.btnSecondary, { flexDirection: 'row', justifyContent: 'center', gap: 8 }]}>
+                <IconReportMedical size={18} color="#2d6a2d" />
+                <Text style={s.btnSecondaryText}>{t('settings_doctor_export_btn')}</Text>
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity style={[s.btnPrimary, { marginTop: 8 }]} onPress={handleSave}><Text style={s.btnPrimaryText}>{t('settings_save_phase')}</Text></TouchableOpacity>
 
             {__DEV__ && (
-            <View style={[s.card, { borderColor: '#d8d0ea', backgroundColor: '#f7f5fc', marginHorizontal: 0, marginTop: 20 }]}>
+            <View style={[s.cardFilled, { backgroundColor: '#f7f5fc', marginHorizontal: 0, marginTop: 20 }]}>
               <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 2 }}>🛠 Preview states (dev)</Text>
               <Text style={{ fontSize: 12, color: '#6b7a6b', marginBottom: 12 }}>Jump the app into a state to preview on your phone. Remove before launch.</Text>
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
@@ -9116,7 +10087,7 @@ function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverr
             )}
 
             {customFoods && customFoods.length > 0 && (
-              <View style={[s.card, { marginHorizontal: 0, marginTop: 16 }]}>
+              <View style={[s.cardOutlined, { marginHorizontal: 0, marginTop: 16 }]}>
                 <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 4 }}>{t('settings_custom_foods')}</Text>
                 <Text style={{ fontSize: 12, color: '#6b7a6b', marginBottom: 4 }}>{t('settings_custom_foods_sub')}</Text>
                 {customFoods.map(f => (
@@ -9125,14 +10096,14 @@ function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverr
                     {['low', 'mod', 'high'].map(c => (
                       <TouchableOpacity key={c} onPress={() => onUpdateCustomFood(f.id, { cat: c })} accessibilityRole="radio" accessibilityState={{ selected: f.cat === c }} accessibilityLabel={c === 'low' ? t('meal_low') : c === 'high' ? t('meal_high') : t('meal_moderate')} style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: CAT_COLORS[c].dot, borderWidth: f.cat === c ? 3 : 0, borderColor: '#2d3a2d' }} />
                     ))}
-                    <TouchableOpacity onPress={() => onDeleteCustomFood(f.id)} accessibilityRole="button" accessibilityLabel={t('edit_delete_btn')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 4 }}><Text style={{ fontSize: 15, color: '#a03030', fontWeight: '700' }}>✕</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => onDeleteCustomFood(f.id)} accessibilityRole="button" accessibilityLabel={t('edit_delete_btn')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 4 }}><XIcon size={15} color="#a03030" /></TouchableOpacity>
                   </View>
                 ))}
               </View>
             )}
 
             {__DEV__ && (
-            <View style={[s.card, { borderColor: '#f0d8d8', marginHorizontal: 0, marginTop: 16 }]}>
+            <View style={[s.cardOutlined, { borderColor: '#f0d8d8', marginHorizontal: 0, marginTop: 16 }]}>
               <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 4 }}>{t('settings_start_over')} (dev only)</Text>
               <Text style={{ fontSize: 12, color: '#6b7a6b', marginBottom: 12 }}>{t('settings_start_over_sub')}</Text>
               {confirmReset ? (
@@ -9146,7 +10117,7 @@ function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverr
             </View>
             )}
 
-            <View style={[s.card, { borderColor: '#c4cec4', backgroundColor: '#f6f7f9', marginHorizontal: 0, marginTop: 16 }]}>
+            <View style={[s.cardFilled, { backgroundColor: '#f6f7f9', marginHorizontal: 0, marginTop: 16 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <Text style={{ fontSize: 16 }}>ℹ️</Text>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: THEME.ink }}>{t('settings_disclaimer_title')}</Text>
@@ -9156,7 +10127,7 @@ function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverr
               </Text>
             </View>
 
-            <View style={[s.card, { borderColor: '#c4cec4', marginHorizontal: 0, marginTop: 16, paddingVertical: 4 }]}>
+            <View style={[s.cardOutlined, { marginHorizontal: 0, marginTop: 16, paddingVertical: 4 }]}>
               {[
                 { label: t('settings_terms'), url: 'https://gutly.app/terms' },
                 { label: t('settings_privacy'), url: 'https://gutly.app/privacy' },
@@ -9180,16 +10151,25 @@ function EditEntryModal({ visible, entry, onClose, onUpdate, onDelete, onLogAgai
   const [intensity, setIntensity] = useState(3);
   const [hours, setHours] = useState(7);
   const [level, setLevel] = useState(3);
+  const [glasses, setGlasses] = useState(2);
   const [items, setItems] = useState([]);       // editable meal items: [{ foodId, size, portionG }]
   const [search, setSearch] = useState('');
   const [mealType, setMealType] = useState(null);
+  // True once the user edits the ingredients of a meal that was logged as a prepared
+  // dish. Removing or adding an ingredient means it's no longer that dish, so on save we
+  // drop its dish identity (mealDishes) and it becomes a plain custom meal.
+  const [dishCleared, setDishCleared] = useState(false);
+  const wasDish = !!(entry && entry.mealDishes && entry.mealDishes.length > 0);
+  const breakDishIfNeeded = () => { if (wasDish && !dishCleared) setDishCleared(true); };
   useEffect(() => {
     if (!entry) return;
     setWhen(entry.timestamp ? new Date(entry.timestamp) : new Date());
     setSearch('');
+    setDishCleared(false);
     if (entry.type === 'symptom') setIntensity(entry.intensity || 3);
     if (entry.type === 'sleep') setHours(entry.hours || 7);
     if (entry.type === 'stress') setLevel(entry.level || 3);
+    if (entry.type === 'water') setGlasses(entry.glasses || 2);
     if (entry.type === 'meal' && entry.items?.[0]) {
       // Rebuild per-ingredient sizes. Prefer a stored size; otherwise infer the closest
       // size from portionG (migrates entries saved before per-ingredient portions).
@@ -9211,7 +10191,21 @@ function EditEntryModal({ visible, entry, onClose, onUpdate, onDelete, onLogAgai
   const effMealType = mealType || defaultMealType(when);
   // Change one ingredient's portion size within the edited meal.
   const setItemSize = (foodId, size) => setItems(items.map(x => x.foodId === foodId ? { foodId, size, portionG: portionForItem(FOODS.find(f => f.id === foodId), size) } : x));
+  // One removable ingredient chip. Removing an ingredient of a logged dish breaks its dish
+  // identity (breakDishIfNeeded), so the grouped view collapses back to a plain food list.
+  const renderItemChip = (it) => {
+    const f = FOODS.find(x => x.id === it.foodId);
+    if (!f) return null;
+    return (
+      <TouchableOpacity key={it.foodId} onPress={() => { setItems(items.filter(x => x.foodId !== it.foodId)); breakDishIfNeeded(); }} accessibilityRole="button" accessibilityLabel={`${t('a11y_remove')}: ${foodName(f, lang)}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e8f0e8', borderRadius: 14, paddingLeft: 10, paddingRight: 8, paddingVertical: 6 }}>
+        <Text importantForAccessibility="no" style={{ fontSize: 14 }}>{f.emoji}</Text>
+        <Text importantForAccessibility="no" style={{ fontSize: 13, color: '#2d6a2d', fontWeight: '500' }}>{foodName(f, lang)}</Text>
+        <XIcon size={14} color="#4e7d4e" />
+      </TouchableOpacity>
+    );
+  };
   const editFiltered = search.trim() ? FOODS.filter(f => {
+    if (f.dishOnly) return false;   // combined dish-only meats aren't searchable
     const q = search.trim().toLowerCase();
     return f.name.toLowerCase().includes(q) || foodName(f, lang).toLowerCase().includes(q) || (f.alias || '').toLowerCase().includes(q);
   }).slice(0, 6) : [];
@@ -9221,20 +10215,24 @@ function EditEntryModal({ visible, entry, onClose, onUpdate, onDelete, onLogAgai
     if (entry.type === 'symptom') updates.intensity = intensity;
     if (entry.type === 'sleep') updates.hours = hours;
     if (entry.type === 'stress') updates.level = level;
+    if (entry.type === 'water') updates.glasses = glasses;
     if (entry.type === 'meal' && entry.items) {
       if (items.length === 0) return;             // a meal must keep at least one food
       updates.items = items.map(it => ({ foodId: it.foodId, size: it.size, portionG: it.portionG }));
       updates.mealType = effMealType;
+      if (dishCleared) updates.mealDishes = [];   // ingredients edited → no longer that dish
     }
     onUpdate(entry.id, updates);
     onClose();
   };
   const remove = () => { onDelete(entry.id); onClose(); };
+  // A meal must keep at least one food; block (and dim) Save when it's been emptied.
+  const canSave = !(entry.type === 'meal' && entry.items && items.length === 0);
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f4f0' }}>
-          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><Text style={{ fontSize: 16 }}>✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><XIcon size={24} color={THEME.ink} /></TouchableOpacity>
           <Text style={{ fontSize: 20, fontWeight: '700' }}>{t('edit_title')}</Text>
         </View>
         <ScrollView style={{ flex: 1 }}>
@@ -9243,7 +10241,7 @@ function EditEntryModal({ visible, entry, onClose, onUpdate, onDelete, onLogAgai
             {entry.type === 'meal' && entry.items && (
               <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#c4cec4', marginBottom: 16 }}>
                 {/* Dish context — this meal was logged from a prepared dish; the foods below are its ingredients */}
-                {entry.mealDishes && entry.mealDishes.length > 0 && (
+                {wasDish && !dishCleared && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#f0f6ef', borderRadius: 10, padding: 10, marginBottom: 14 }}>
                     <Text importantForAccessibility="no" style={{ fontSize: 18 }}>{FOODS.find(f => f.id === entry.mealDishes[0])?.emoji || '🍽️'}</Text>
                     <View style={{ flex: 1 }}>
@@ -9252,23 +10250,46 @@ function EditEntryModal({ visible, entry, onClose, onUpdate, onDelete, onLogAgai
                     </View>
                   </View>
                 )}
+                {/* Once its ingredients are edited, the dish becomes a plain custom meal */}
+                {wasDish && dishCleared && (
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#fff7ec', borderRadius: 10, padding: 10, marginBottom: 14 }}>
+                    <BulbIcon size={16} color="#a06020" />
+                    <Text style={{ flex: 1, fontSize: 12, color: '#7a5a20', lineHeight: 17 }}>{t('edit_now_custom')}</Text>
+                  </View>
+                )}
                 {/* Meal-of-day */}
                 <Text style={{ fontSize: 13, color: '#6b7a6b', marginBottom: 8 }}>{t('meal_type_label')}</Text>
                 <MealTypeSelector value={effMealType} onChange={setMealType} t={t} style={{ marginBottom: 14 }} />
                 {/* Foods — editable */}
                 <Text style={{ fontSize: 13, color: '#6b7a6b', marginBottom: 8 }}>{t('meal_edit_foods')}</Text>
-                {items.length > 0 ? (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
-                    {items.map(it => { const f = FOODS.find(x => x.id === it.foodId); if (!f) return null; return (
-                      <TouchableOpacity key={it.foodId} onPress={() => setItems(items.filter(x => x.foodId !== it.foodId))} accessibilityRole="button" accessibilityLabel={`${t('a11y_remove')}: ${foodName(f, lang)}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e8f0e8', borderRadius: 14, paddingLeft: 10, paddingRight: 8, paddingVertical: 6 }}>
-                        <Text importantForAccessibility="no" style={{ fontSize: 14 }}>{f.emoji}</Text>
-                        <Text importantForAccessibility="no" style={{ fontSize: 13, color: '#2d6a2d', fontWeight: '500' }}>{foodName(f, lang)}</Text>
-                        <Text importantForAccessibility="no" style={{ color: '#4e7d4e', fontSize: 14 }}>✕</Text>
-                      </TouchableOpacity>
-                    ); })}
-                  </View>
-                ) : (
+                {items.length === 0 ? (
                   <Text style={{ fontSize: 12, color: '#a03030', marginBottom: 10 }}>{t('meal_edit_none')}</Text>
+                ) : (wasDish && !dishCleared) ? (
+                  // Grouped by dish — each dish's ingredients under its own header, then any
+                  // foods added on top. Reconstructed from the flat item list at render time.
+                  (() => {
+                    const { groups, extras } = groupMealItemsByDish(items, entry.mealDishes);
+                    return (
+                      <View style={{ gap: 14, marginBottom: 10 }}>
+                        {groups.map(g => { const df = FOODS.find(x => x.id === g.dishId); return (
+                          <View key={g.dishId}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textSoft, marginBottom: 8 }}>{df ? `${df.emoji}  ${foodName(df, lang)}` : ''}</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{g.items.map(renderItemChip)}</View>
+                          </View>
+                        ); })}
+                        {extras.length > 0 && (
+                          <View>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.textSoft, marginBottom: 8 }}>{t('meal_edit_extras')}</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{extras.map(renderItemChip)}</View>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })()
+                ) : (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                    {items.map(renderItemChip)}
+                  </View>
                 )}
                 <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f4f7f2', borderRadius: 24, paddingHorizontal: 14, height: 44 }}>
                   <SearchIcon size={16} />
@@ -9277,7 +10298,7 @@ function EditEntryModal({ visible, entry, onClose, onUpdate, onDelete, onLogAgai
                 {editFiltered.length > 0 && (
                   <View style={{ marginTop: 6 }}>
                     {editFiltered.map(f => (
-                      <TouchableOpacity key={f.id} onPress={() => { if (!items.find(x => x.foodId === f.id)) setItems(items.concat([makeMealItem(f.id)])); setSearch(''); }} accessibilityRole="button" accessibilityLabel={foodName(f, lang)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#f1f4f1' }}>
+                      <TouchableOpacity key={f.id} onPress={() => { if (!items.find(x => x.foodId === f.id)) { setItems(items.concat([makeMealItem(f.id)])); breakDishIfNeeded(); } setSearch(''); }} accessibilityRole="button" accessibilityLabel={foodName(f, lang)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#f1f4f1' }}>
                         <Text importantForAccessibility="no" style={{ fontSize: 18 }}>{f.emoji}</Text>
                         <Text style={{ flex: 1, fontSize: 14, color: THEME.ink }}>{foodName(f, lang)}</Text>
                         <RiskPill cat={f.cat} t={t} />
@@ -9400,7 +10421,20 @@ function EditEntryModal({ visible, entry, onClose, onUpdate, onDelete, onLogAgai
                 </View>
               </>
             )}
-            <TouchableOpacity onPress={save} style={s.btnPrimary}><Text style={s.btnPrimaryText}>{t('edit_save_btn')}</Text></TouchableOpacity>
+            {entry.type === 'water' && (
+              <>
+                <Text style={{ fontSize: 13, color: '#6b7a6b', marginBottom: 12 }}>{t('edit_water_label')}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                    <TouchableOpacity key={n} onPress={() => setGlasses(n)} accessibilityRole="radio" accessibilityState={{ selected: glasses === n }} accessibilityLabel={n === 1 ? t('water_glasses_one', { n }) : t('water_glasses', { n })} style={{ width: 52, paddingVertical: 12, borderRadius: 12, backgroundColor: glasses === n ? '#dcebdc' : 'transparent', borderWidth: 1, borderColor: glasses === n ? '#4e7d4e' : '#c4cec4', alignItems: 'center' }}>
+                      <Text importantForAccessibility="no" style={{ fontSize: 18 }}>💧</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '700', marginTop: 2, color: glasses === n ? '#2d6a2d' : '#2d3a2d' }}>{n}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+            <TouchableOpacity onPress={save} disabled={!canSave} accessibilityState={{ disabled: !canSave }} style={[s.btnPrimary, { opacity: canSave ? 1 : 0.4 }]}><Text style={s.btnPrimaryText}>{t('edit_save_btn')}</Text></TouchableOpacity>
             <TouchableOpacity onPress={remove} style={{ marginTop: 12, padding: 16, borderRadius: 16, alignItems: 'center', backgroundColor: '#fde0e0' }}>
               <Text style={{ color: '#a03030', fontSize: 15, fontWeight: '600' }}>{t('edit_delete_btn')}</Text>
             </TouchableOpacity>
@@ -9431,17 +10465,17 @@ function StartTestModal({ visible, categoryId, onClose, onStart, t }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f4f0' }}>
-          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><Text style={{ fontSize: 16 }}>✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><XIcon size={24} color={THEME.ink} /></TouchableOpacity>
           <Text style={{ fontSize: 20, fontWeight: '700' }}>{t('test_modal_title', { name: cat?.name || '' })}</Text>
         </View>
         <ScrollView style={{ flex: 1 }}>
           <View style={{ padding: 20 }}>
-            <View style={[s.card, { borderColor: '#c4cec4', backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
+            <Surface elevation={1} primaryColor={THEME.primary} style={[s.cardFilled, { backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
               <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 6 }}>{cat?.emoji} {t('test_protocol_badge')}</Text>
               <Text style={{ fontSize: 12, color: '#6b7a6b', lineHeight: 18 }}>
                 {t('test_protocol_body', { rest: REST_DAYS_BETWEEN_TESTS })}
               </Text>
-            </View>
+            </Surface>
             <Text style={{ fontSize: 13, fontWeight: '600', marginTop: 16, marginBottom: 12 }}>{t('test_pick_food')}</Text>
             {foods.map(f => (
               <TouchableOpacity key={f.id} onPress={() => setSelectedFood(f)} accessibilityRole="radio" accessibilityState={{ selected: selectedFood?.id === f.id }} accessibilityLabel={f.name} style={{ padding: 14, borderRadius: 14, borderWidth: 2, borderColor: selectedFood?.id === f.id ? '#4e7d4e' : '#c4cec4', backgroundColor: selectedFood?.id === f.id ? '#e8f0e8' : 'white', marginBottom: 8 }}>
@@ -9467,10 +10501,10 @@ function ReintroPromptModal({ visible, info, onClose, onConfirm, t }) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 20 }}>
-        <View accessibilityViewIsModal style={{ backgroundColor: 'white', borderRadius: 24, padding: 24 }}>
+        <Surface accessibilityViewIsModal elevation={3} primaryColor={THEME.primary} style={{ backgroundColor: THEME.card, borderRadius: 24, padding: 24 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <View style={s.badge}><Text style={s.badgeText}>{t('test_badge')}</Text></View>
-            <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')}><Text importantForAccessibility="no" style={{ color: '#647264', fontSize: 18 }}>✕</Text></TouchableOpacity>
+            <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')}><XIcon size={24} color="#647264" /></TouchableOpacity>
           </View>
           <Text style={{ fontSize: 20, fontWeight: '700', marginTop: 12 }}>{t('test_count_q')}</Text>
           <Text style={{ fontSize: 14, color: '#6b7a6b', marginTop: 6, lineHeight: 20 }}>
@@ -9504,7 +10538,7 @@ function ReintroPromptModal({ visible, info, onClose, onConfirm, t }) {
           <TouchableOpacity onPress={onClose} style={{ marginTop: 8, padding: 12, alignItems: 'center' }}>
             <Text style={{ color: '#647264', fontSize: 13 }}>{t('test_skip_link')}</Text>
           </TouchableOpacity>
-        </View>
+        </Surface>
       </View>
     </Modal>
   );
@@ -9512,9 +10546,8 @@ function ReintroPromptModal({ visible, info, onClose, onConfirm, t }) {
 
 // Rendered as a plain section (a title + correlation items), not a boxed card,
 // so it sits lighter on the home screen.
-function InsightsCard({ log, lang }) {
-  const [expanded, setExpanded] = useState(false);
-  const patterns = detectPatterns(log, lang, PATTERNS_WINDOW_DAYS);
+function InsightsCard({ log, lang, onOpenPatterns }) {
+  const patterns = detectPatterns(log, lang);
 
   // Not enough data yet — a single muted line under the title, no heavy card.
   if (patterns.length === 0) {
@@ -9531,33 +10564,25 @@ function InsightsCard({ log, lang }) {
     );
   }
 
-  const SEV = {
-    watch: { bg: '#fff4f0', border: '#f0d0c0', tag: '#a04030', label: tG('sev_watch') },
-    maybe: { bg: '#fbeed3', border: '#f0dca8', tag: '#a05a10', label: tG('sev_maybe') },
-    info: { bg: '#f0f4f8', border: '#d8e0ea', tag: '#4a6a8a', label: tG('sev_info') },
-    good: { bg: '#f0f7f0', border: '#cfe0cf', tag: '#2d6a2d', label: tG('sev_good') },
-  };
-  const shown = expanded ? patterns : patterns.slice(0, 2);
+  const sevLabel = { watch: tG('sev_watch'), maybe: tG('sev_maybe'), info: tG('sev_info'), good: tG('sev_good') };
+  const shown = patterns.slice(0, 2);
 
   return (
     <View style={{ marginBottom: 8, marginTop: 4 }}>
       <View style={{ marginHorizontal: 20, marginBottom: 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <Text accessibilityRole="header" style={{ fontSize: 15, fontWeight: '600', color: THEME.ink }}>{tG('home_patterns')}</Text>
-          <View style={{ backgroundColor: '#e3ebf3', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
-            <Text style={{ fontSize: 10, color: '#3a5a7a', fontWeight: '700' }}>{tG('patterns_window', { n: PATTERNS_WINDOW_DAYS })}</Text>
-          </View>
         </View>
         <Text style={{ fontSize: 12, color: THEME.textMuted, marginTop: 2, lineHeight: 17 }}>{tG('patterns_sub')}</Text>
       </View>
       {shown.map(p => {
-        const sev = SEV[p.severity];
+        const sev = PATTERN_SEV[p.severity];
         return (
           <View key={p.id} style={{ marginHorizontal: 20, marginBottom: 8, backgroundColor: sev.bg, borderWidth: 1, borderColor: sev.border, borderRadius: 14, padding: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <Text style={{ fontSize: 18 }}>{p.icon}</Text>
               <View style={{ backgroundColor: sev.tag, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
-                <Text style={{ fontSize: 9, color: 'white', fontWeight: '700', letterSpacing: 0.3 }}>{sev.label}</Text>
+                <Text style={{ fontSize: 9, color: 'white', fontWeight: '700', letterSpacing: 0.3 }}>{sevLabel[p.severity]}</Text>
               </View>
             </View>
             <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 4 }}>{p.title}</Text>
@@ -9566,10 +10591,8 @@ function InsightsCard({ log, lang }) {
         );
       })}
       {patterns.length > 2 && (
-        <TouchableOpacity onPress={() => setExpanded(!expanded)} style={{ alignItems: 'center', paddingVertical: 6 }}>
-          <Text style={{ fontSize: 13, color: '#4e7d4e', fontWeight: '600' }}>
-            {expanded ? tG('show_less') : tG('show_more', { n: patterns.length - 2 })}
-          </Text>
+        <TouchableOpacity onPress={onOpenPatterns} accessibilityRole="button" style={{ alignItems: 'center', paddingVertical: 6 }}>
+          <Text style={{ fontSize: 13, color: '#4e7d4e', fontWeight: '600' }}>{tG('patterns_see_all')}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -9579,7 +10602,7 @@ function InsightsCard({ log, lang }) {
 function TodaysMealsCard({ dayCount, onOpenRecipes, onOpenRecipe, lang }) {
   const meals = todaysMeals(Math.max(0, dayCount));
   return (
-    <View style={[s.card, { borderColor: '#c4cec4' }]}>
+    <Surface elevation={1} primaryColor={THEME.primary} style={s.cardFilled}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
         <Text accessibilityRole="header" style={[s.cardTitle, { marginBottom: 0 }]}>{tG('home_eat_well')}</Text>
         <TouchableOpacity onPress={onOpenRecipes} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ paddingHorizontal: 6, paddingVertical: 6 }}>
@@ -9598,7 +10621,7 @@ function TodaysMealsCard({ dayCount, onOpenRecipes, onOpenRecipe, lang }) {
           <View importantForAccessibility="no"><ChevronIcon size={16} color="#647264" /></View>
         </TouchableOpacity>
       ))}
-    </View>
+    </Surface>
   );
 }
 
@@ -9688,7 +10711,7 @@ function RecipeDetailModal({ visible, recipe, onClose, onLogAsMeal, lang, t }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f4f0' }}>
-          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><Text style={{ fontSize: 16 }}>✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><XIcon size={24} color={THEME.ink} /></TouchableOpacity>
           <Text style={{ fontSize: 20, fontWeight: '700', flex: 1 }} numberOfLines={1}>{recipeTitle(recipe, lang)}</Text>
         </View>
         <ScrollView style={{ flex: 1 }}>
@@ -9744,12 +10767,12 @@ function ExportModal({ visible, onClose, report, t }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f4f0' }}>
-          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><Text style={{ fontSize: 16 }}>✕</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel={t('close')} style={s.modalCloseBtn}><XIcon size={24} color={THEME.ink} /></TouchableOpacity>
           <Text style={{ fontSize: 20, fontWeight: '700' }}>{t('export_modal_title')}</Text>
         </View>
         <ScrollView style={{ flex: 1 }}>
           <View style={{ padding: 20 }}>
-            <View style={[s.card, { borderColor: '#c4cec4', backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
+            <Surface elevation={1} primaryColor={THEME.primary} style={[s.cardFilled, { backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <Text style={{ fontSize: 20 }}>📄</Text>
                 <Text style={{ fontSize: 14, fontWeight: '700' }}>{t('export_appt_title')}</Text>
@@ -9757,7 +10780,7 @@ function ExportModal({ visible, onClose, report, t }) {
               <Text style={{ fontSize: 12, color: '#6b7a6b', lineHeight: 18 }}>
                 {t('export_appt_body')}
               </Text>
-            </View>
+            </Surface>
             <Text style={{ fontSize: 12, fontWeight: '600', color: '#647264', marginTop: 8, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('export_preview_label')}</Text>
             <View style={{ backgroundColor: 'white', borderRadius: 14, borderWidth: 1, borderColor: '#c4cec4', padding: 14 }}>
               <Text style={{ fontSize: 11, color: '#4a5a4a', lineHeight: 17, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>{report}</Text>
@@ -9797,8 +10820,10 @@ root: { flex: 1, backgroundColor: THEME.bg },
   moodSub: { fontSize: 14.5, color: THEME.textSoft, marginTop: 6, lineHeight: 21, textAlign: 'center' },
   phasePill: { backgroundColor: '#e3efdd', borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8, marginTop: 14 },
   phasePillText: { fontSize: 13, fontWeight: '700', color: THEME.primaryDark },
-  card: { marginHorizontal: 20, marginBottom: 12, backgroundColor: 'white', borderRadius: 20, padding: 18, shadowColor: '#2d3a2d', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
-  shadow: { shadowColor: '#2d3a2d', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  // M3 card variants — mutually exclusive: elevated (Surface, shadow), filled (tint), outlined (border).
+  // Elevated cards go through <Surface elevation={1}> (see Surface.tsx) instead of a style key.
+  cardFilled: { marginHorizontal: 20, marginBottom: 12, borderRadius: THEME.rCard, padding: 18 },
+  cardOutlined: { marginHorizontal: 20, marginBottom: 12, backgroundColor: THEME.card, borderRadius: THEME.rCard, padding: 18, borderWidth: 1, borderColor: THEME.cardBorder },
   badge: { backgroundColor: '#fff4d0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, alignSelf: 'flex-start' },
   badgeText: { color: '#8a5a10', fontSize: 11, fontWeight: '600' },
   badgeRed: { backgroundColor: '#fde0e0', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, alignSelf: 'flex-start' },
@@ -9813,10 +10838,14 @@ root: { flex: 1, backgroundColor: THEME.bg },
   timelineTitle: { fontSize: 14, fontWeight: '500' },
   timelineMeta: { fontSize: 12, color: '#647264', marginTop: 2 },
   timelineTime: { fontSize: 12, color: '#647264' },
-  tabBar: { flexDirection: 'row', backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#c4cec4', paddingBottom: 8, paddingTop: 8 },
-  tabBtn: { flex: 1, alignItems: 'center', gap: 3 },
+  // Bottom nav bar (M3 level 2, 3dp). Pinned to the screen bottom, so the shadow needs to fall
+  // upward toward the content above it — getElevation()'s default downward offset would be
+  // invisible here (Android's ambient elevation shadow doesn't have this problem; only iOS's
+  // fixed-direction shadowOffset does).
+  tabBar: { flexDirection: 'row', backgroundColor: 'white', paddingBottom: 8, paddingTop: 8, ...getElevation(2), shadowOffset: { width: 0, height: -1.5 } },
+  tabBtn: { flex: 1, alignItems: 'center', gap: 3, paddingVertical: 5 },
   plusBtn: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  plusInner: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#4e7d4e', alignItems: 'center', justifyContent: 'center', marginTop: -16 },
+  plusInner: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#4e7d4e', alignItems: 'center', justifyContent: 'center', marginTop: -22 },
   chatMsg: { maxWidth: '85%', padding: 12, borderRadius: 16, marginBottom: 10 },
   chatAI: { backgroundColor: 'white', alignSelf: 'flex-start', borderWidth: 1, borderColor: '#c4cec4', borderBottomLeftRadius: 4 },
   chatUser: { backgroundColor: '#4e7d4e', alignSelf: 'flex-end', borderBottomRightRadius: 4 },
