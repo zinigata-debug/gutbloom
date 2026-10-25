@@ -3973,7 +3973,7 @@ const FORMS = {
   grown:    { rBody: 50, body: '#6fa86f', inner: '#bfe0bf', cilia: 18, leaves: 0, glow: false, sparkle: false, specks: 3 },
   thriving: { rBody: 50, body: '#5fa85f', inner: '#b8e0b8', cilia: 18, leaves: 3, glow: true,  sparkle: true,  specks: 4 },
 };
-function Flora({ size = 140, mood = 'good', form = 'grown', blink = false }) {
+function Flora({ size = 140, mood = 'good', form = 'grown', blink = false, look = null }) {
   const m = mood === 'happy' ? 'good' : mood === 'queasy' ? 'bad' : mood;
   const bad = m === 'bad';
   const soso = m === 'soso';
@@ -3984,6 +3984,7 @@ function Flora({ size = 140, mood = 'good', form = 'grown', blink = false }) {
   const k = f.rBody / 50; // speck scale
   const ciliaPaths = f.cilia > 0 ? ciliaFringe(f.rBody, f.cilia) : [];
   const mouth = bad ? 'M66 89 Q75 81 84 89' : soso ? 'M66 86 L84 86' : 'M66 84 Q75 93 84 84';
+  const lx = look ? look.x : 0, ly = look ? look.y : 0; // gaze offset for the open eyes
 
   return (
     <Svg width={size} height={size} viewBox="0 0 150 150">
@@ -4028,10 +4029,10 @@ function Flora({ size = 140, mood = 'good', form = 'grown', blink = false }) {
         </>
       ) : (
         <>
-          <Circle cx="63" cy="72" r="6.5" fill={THEME.ink} />
-          <Circle cx="87" cy="72" r="6.5" fill={THEME.ink} />
-          <Circle cx="65" cy="69.5" r="2.2" fill="#fff" />
-          <Circle cx="89" cy="69.5" r="2.2" fill="#fff" />
+          <Circle cx={63 + lx} cy={72 + ly} r="6.5" fill={THEME.ink} />
+          <Circle cx={87 + lx} cy={72 + ly} r="6.5" fill={THEME.ink} />
+          <Circle cx={65 + lx} cy={69.5 + ly} r="2.2" fill="#fff" />
+          <Circle cx={89 + lx} cy={69.5 + ly} r="2.2" fill="#fff" />
         </>
       )}
       {/* cheeks */}
@@ -4091,6 +4092,36 @@ function BlinkingFlora(props) {
   );
 }
 
+// Flora that stays perfectly still: only her eyes move. She blinks and glances
+// around now and then, like she's taking in the screen.
+const GLANCES = [{ x: 0, y: 0 }, { x: -3, y: 0 }, { x: 3, y: -1 }, { x: 0, y: 2 }, { x: 2.5, y: 1.5 }, { x: -2.5, y: -1 }];
+function LookingFlora(props) {
+  const [blink, setBlink] = useState(false);
+  const [look, setLook] = useState(GLANCES[0]);
+  useEffect(() => {
+    if (_reduceMotion) return;
+    let blinkTimer, openTimer, lookTimer;
+    const scheduleBlink = () => {
+      blinkTimer = setTimeout(() => {
+        setBlink(true);
+        openTimer = setTimeout(() => { setBlink(false); scheduleBlink(); }, 140);
+      }, 2400 + Math.random() * 2600);
+    };
+    // Alternate between a glance away and looking back at the user.
+    let away = false;
+    const scheduleLook = () => {
+      lookTimer = setTimeout(() => {
+        away = !away;
+        setLook(away ? GLANCES[1 + Math.floor(Math.random() * (GLANCES.length - 1))] : GLANCES[0]);
+        scheduleLook();
+      }, away ? 900 + Math.random() * 700 : 1600 + Math.random() * 1800);
+    };
+    scheduleBlink(); scheduleLook();
+    return () => { clearTimeout(blinkTimer); clearTimeout(openTimer); clearTimeout(lookTimer); };
+  }, []);
+  return <Flora {...props} blink={blink} look={look} />;
+}
+
 // Branded launch animation: Flora springs in and breathes while a ring of
 // little probiotic dots orbits her (an on-brand spinner), and the wordmark
 // fades up. Shown while the app hydrates.
@@ -4142,11 +4173,10 @@ function SplashScreen({ t }) {
 }
 
 // First screen for anyone not signed in: sign in, create an account, or skip
-// straight into onboarding. Flora floats in a soft gradient with drifting
-// colour bubbles; the copy and buttons stagger in underneath.
+// straight into onboarding. Flora sits still (only her eyes move) while dots orbit
+// her and colour bubbles drift in a soft gradient; the copy and buttons stagger in underneath.
 function WelcomeScreen({ onCreate, onLogin, onSkip, t }) {
   const enter = useRef(new Animated.Value(_reduceMotion ? 1 : 0)).current;
-  const bob = useRef(new Animated.Value(0)).current;
   const drift = useRef(new Animated.Value(0)).current;
   const orbit = useRef(new Animated.Value(0)).current;
   const rows = useRef([0, 1, 2, 3].map(() => new Animated.Value(_reduceMotion ? 1 : 0))).current;
@@ -4155,17 +4185,11 @@ function WelcomeScreen({ onCreate, onLogin, onSkip, t }) {
     if (_reduceMotion) return;
     Animated.spring(enter, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true }).start();
     Animated.stagger(120, rows.map(v => Animated.timing(v, { toValue: 1, duration: 420, delay: 250, easing: Easing.out(Easing.cubic), useNativeDriver: true }))).start();
-    const b = Animated.loop(Animated.sequence([
-      Animated.timing(bob, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      Animated.timing(bob, { toValue: 0, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-    ]));
     const d = Animated.loop(Animated.timing(drift, { toValue: 1, duration: 9000, easing: Easing.linear, useNativeDriver: true }));
     const o = Animated.loop(Animated.timing(orbit, { toValue: 1, duration: 14000, easing: Easing.linear, useNativeDriver: true }));
-    b.start(); d.start(); o.start();
-    return () => { b.stop(); d.stop(); o.stop(); };
+    d.start(); o.start();
+    return () => { d.stop(); o.stop(); };
   }, []);
-  const floraY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -10] });
-  const floraScale = enter.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] });
   const rotate = orbit.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   const slide = (v) => ({ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }] });
   // Background bubbles: horizontal position (share of width), top, size, colour.
@@ -4201,9 +4225,7 @@ function WelcomeScreen({ onCreate, onLogin, onSkip, t }) {
                   return <View key={i} style={{ position: 'absolute', left: C + Math.cos(a) * R - sz / 2, top: C + Math.sin(a) * R - sz / 2, width: sz, height: sz, borderRadius: sz / 2, backgroundColor: c }} />;
                 })}
               </Animated.View>
-              <Animated.View style={{ transform: [{ translateY: floraY }, { scale: floraScale }] }}>
-                <BlinkingFlora size={140} mood="good" form="thriving" />
-              </Animated.View>
+              <View style={{ zIndex: 1 }}><LookingFlora size={140} mood="good" form="thriving" /></View>
             </View>
             <Animated.View style={[{ alignItems: 'center' }, slide(enter)]}>
               <View style={{ backgroundColor: THEME.amberBg, borderRadius: 999, paddingVertical: 5, paddingHorizontal: 12, marginTop: 4 }}>
