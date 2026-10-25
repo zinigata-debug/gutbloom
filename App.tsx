@@ -6597,7 +6597,11 @@ export default function App() {
   }
 
   if (screen === 'onboarding') {
-    return <OnboardingScreen step={onbStep} setStep={setOnbStep} profile={profile} setProfile={setProfile} t={t} onComplete={() => {
+    // On a new phone, signing in here restores the account's plan and data
+    // (the first sync takes the cloud's state, which skips the rest of onboarding).
+    return <View style={{ flex: 1 }}>
+    <AuthModal visible={modal?.type === 'account'} initialMode={modal && modal.mode} onClose={() => setModal(null)} user={user} onSignOut={signOut} t={t} />
+    <OnboardingScreen step={onbStep} setStep={setOnbStep} profile={profile} setProfile={setProfile} t={t} onSignIn={() => setModal({ type: 'account', mode: 'login' })} onComplete={() => {
       if (profile.phase === 'elimination' && currentPhase === 'not_started') {
         setCurrentPhase('elimination');
         setPhaseStartDate(new Date().toISOString());
@@ -6607,7 +6611,8 @@ export default function App() {
       }
       setScreen('main');
       showToast(`Welcome, ${profile.name || 'friend'} 🌱`);
-    }} />;
+    }} />
+    </View>;
   }
 
   // Latch each heavy tab as "mounted" on first visit, then keep it alive (just hidden) so
@@ -6743,7 +6748,7 @@ function SafetyStep({ profile, setProfile, t }) {
   );
 }
 
-function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, t }) {
+function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, onSignIn, t }) {
   const steps = [
     { type: 'text', q: "What's your name?", sub: 'Just your first name is fine.', key: 'name', placeholder: 'Your name' },
     { type: 'info', key: '_ibs_info', q: t('onb_ibs_q'), floraMood: 'soso',
@@ -6841,6 +6846,11 @@ function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, t })
         <View style={{ alignItems: 'center', marginBottom: 16 }}>
           <Flora size={120} />
           <Text style={{ fontSize: 13, color: THEME.textMuted, marginTop: 6 }}>{t('onb_flora_intro')}</Text>
+          {onSignIn && (
+            <TouchableOpacity onPress={onSignIn} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginTop: 10 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#4e7d4e' }}>{t('auth_to_login')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
       {current.type === 'info' ? (
