@@ -536,7 +536,7 @@ const STRINGS = {
     risk_low: 'Low', risk_moderate: 'Moderate', risk_high: 'High',
     list_fermented: 'FERMENTED', list_tolerated: 'tolerated', list_trigger: 'trigger',
     hist_high: 'HIGH', hist_mod: 'MOD', hist_liberator: 'LIBERATOR',
-    pill_day: 'Day {n}', detail_ferm_tag: 'FERMENTATION', app_tagline: 'Your gut, in good hands',
+    pill_day: 'Day {n}', detail_ferm_tag: 'FERMENTATION', app_tagline: 'Your gut, in good hands', welcome_badge: 'Free to start', welcome_title: 'Find your trigger foods.\nFeel like you again.', welcome_sub: 'The guided low-FODMAP plan for IBS, with Flora by your side.', welcome_feat1: 'A step-by-step plan, week by week', welcome_feat2: 'Discover exactly which foods upset you', welcome_feat3: 'Flora grows with your progress', welcome_create: 'Create free account', welcome_login: 'I already have an account', welcome_skip: 'Continue without an account',
 
     // Form labels (Flora evolution stages)
     form_seedling: 'Seedling', form_sprout: 'Sprout', form_growing: 'Growing',
@@ -1014,7 +1014,7 @@ const STRINGS = {
     risk_low: 'Niedrig', risk_moderate: 'Mittel', risk_high: 'Hoch',
     list_fermented: 'FERMENTIERT', list_tolerated: 'vertragen', list_trigger: 'Auslöser',
     hist_high: 'HOCH', hist_mod: 'MITTEL', hist_liberator: 'FREISETZER',
-    pill_day: 'Tag {n}', detail_ferm_tag: 'FERMENTATION', app_tagline: 'Dein Darm in guten Händen',
+    pill_day: 'Tag {n}', detail_ferm_tag: 'FERMENTATION', app_tagline: 'Dein Darm in guten Händen', welcome_badge: 'Kostenlos starten', welcome_title: 'Finde deine Trigger-Lebensmittel.\nFühl dich wieder wie du.', welcome_sub: 'Der geführte Low-FODMAP-Plan bei Reizdarm, mit Flora an deiner Seite.', welcome_feat1: 'Ein Plan Schritt für Schritt, Woche für Woche', welcome_feat2: 'Finde heraus, welche Lebensmittel dir schaden', welcome_feat3: 'Flora wächst mit deinen Fortschritten', welcome_create: 'Kostenloses Konto erstellen', welcome_login: 'Ich habe schon ein Konto', welcome_skip: 'Ohne Konto fortfahren',
     form_seedling: 'Keimling', form_sprout: 'Spross', form_growing: 'Wachsend',
     form_blooming: 'Blühend', form_thriving: 'Aufblühend',
 
@@ -1490,7 +1490,7 @@ const STRINGS = {
     risk_low: 'Bajo', risk_moderate: 'Moderado', risk_high: 'Alto',
     list_fermented: 'FERMENTADO', list_tolerated: 'tolerado', list_trigger: 'desencadenante',
     hist_high: 'ALTO', hist_mod: 'MOD', hist_liberator: 'LIBERADOR',
-    pill_day: 'Día {n}', detail_ferm_tag: 'FERMENTACIÓN', app_tagline: 'Tu intestino, en buenas manos',
+    pill_day: 'Día {n}', detail_ferm_tag: 'FERMENTACIÓN', app_tagline: 'Tu intestino, en buenas manos', welcome_badge: 'Empieza gratis', welcome_title: 'Descubre qué alimentos te sientan mal.\nVuelve a sentirte tú.', welcome_sub: 'El plan bajo en FODMAP guiado para el SII, con Flora a tu lado.', welcome_feat1: 'Un plan paso a paso, semana a semana', welcome_feat2: 'Descubre exactamente qué alimentos te afectan', welcome_feat3: 'Flora crece con tu progreso', welcome_create: 'Crear cuenta gratis', welcome_login: 'Ya tengo una cuenta', welcome_skip: 'Continuar sin cuenta',
     form_seedling: 'Semilla', form_sprout: 'Brote', form_growing: 'Creciendo',
     form_blooming: 'Floreciendo', form_thriving: 'Próspera',
 
@@ -1966,7 +1966,7 @@ const STRINGS = {
     risk_low: 'Faible', risk_moderate: 'Modéré', risk_high: 'Élevé',
     list_fermented: 'FERMENTÉ', list_tolerated: 'toléré', list_trigger: 'déclencheur',
     hist_high: 'ÉLEVÉ', hist_mod: 'MODÉRÉ', hist_liberator: 'LIBÉRATEUR',
-    pill_day: 'Jour {n}', detail_ferm_tag: 'FERMENTATION', app_tagline: 'Ton intestin entre de bonnes mains',
+    pill_day: 'Jour {n}', detail_ferm_tag: 'FERMENTATION', app_tagline: 'Ton intestin entre de bonnes mains', welcome_badge: 'Gratuit pour commencer', welcome_title: 'Trouve les aliments qui te dérangent.\nRedeviens toi-même.', welcome_sub: 'Le programme pauvre en FODMAP guidé pour le SII, avec Flora à tes côtés.', welcome_feat1: 'Un programme pas à pas, semaine après semaine', welcome_feat2: 'Découvre exactement quels aliments te gênent', welcome_feat3: 'Flora grandit avec tes progrès', welcome_create: 'Créer un compte gratuit', welcome_login: "J'ai déjà un compte", welcome_skip: 'Continuer sans compte',
     form_seedling: 'Graine', form_sprout: 'Pousse', form_growing: 'En croissance',
     form_blooming: 'En fleur', form_thriving: 'Épanouie',
 
@@ -2442,7 +2442,7 @@ const STRINGS = {
     risk_low: 'Basso', risk_moderate: 'Moderato', risk_high: 'Alto',
     list_fermented: 'FERMENTATO', list_tolerated: 'tollerato', list_trigger: 'scatenante',
     hist_high: 'ALTO', hist_mod: 'MOD', hist_liberator: 'LIBERATORE',
-    pill_day: 'Giorno {n}', detail_ferm_tag: 'FERMENTAZIONE', app_tagline: 'Il tuo intestino, in buone mani',
+    pill_day: 'Giorno {n}', detail_ferm_tag: 'FERMENTAZIONE', app_tagline: 'Il tuo intestino, in buone mani', welcome_badge: 'Inizia gratis', welcome_title: 'Scopri i cibi che ti fanno male.\nTorna a sentirti te.', welcome_sub: 'Il piano low-FODMAP guidato per il colon irritabile, con Flora al tuo fianco.', welcome_feat1: 'Un piano passo dopo passo, settimana per settimana', welcome_feat2: 'Scopri esattamente quali cibi ti disturbano', welcome_feat3: 'Flora cresce insieme ai tuoi progressi', welcome_create: 'Crea un account gratuito', welcome_login: 'Ho già un account', welcome_skip: 'Continua senza account',
     form_seedling: 'Seme', form_sprout: 'Germoglio', form_growing: 'In crescita',
     form_blooming: 'In fioritura', form_thriving: 'Prospera',
 
@@ -4137,6 +4137,108 @@ function SplashScreen({ t }) {
         <Text style={{ fontSize: 13, color: THEME.textMuted, marginTop: 4 }}>{t('app_tagline')}</Text>
       </Animated.View>
     </SafeAreaViewSC>
+    </SafeAreaProvider>
+  );
+}
+
+// First screen for anyone not signed in: sign in, create an account, or skip
+// straight into onboarding. Flora floats in a soft gradient with drifting
+// colour bubbles; the copy and buttons stagger in underneath.
+function WelcomeScreen({ onCreate, onLogin, onSkip, t }) {
+  const enter = useRef(new Animated.Value(_reduceMotion ? 1 : 0)).current;
+  const bob = useRef(new Animated.Value(0)).current;
+  const drift = useRef(new Animated.Value(0)).current;
+  const orbit = useRef(new Animated.Value(0)).current;
+  const rows = useRef([0, 1, 2, 3].map(() => new Animated.Value(_reduceMotion ? 1 : 0))).current;
+  useEffect(() => {
+    NativeSplash.hideAsync().catch(() => {});
+    if (_reduceMotion) return;
+    Animated.spring(enter, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true }).start();
+    Animated.stagger(120, rows.map(v => Animated.timing(v, { toValue: 1, duration: 420, delay: 250, easing: Easing.out(Easing.cubic), useNativeDriver: true }))).start();
+    const b = Animated.loop(Animated.sequence([
+      Animated.timing(bob, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(bob, { toValue: 0, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    const d = Animated.loop(Animated.timing(drift, { toValue: 1, duration: 9000, easing: Easing.linear, useNativeDriver: true }));
+    const o = Animated.loop(Animated.timing(orbit, { toValue: 1, duration: 14000, easing: Easing.linear, useNativeDriver: true }));
+    b.start(); d.start(); o.start();
+    return () => { b.stop(); d.stop(); o.stop(); };
+  }, []);
+  const floraY = bob.interpolate({ inputRange: [0, 1], outputRange: [0, -10] });
+  const floraScale = enter.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] });
+  const rotate = orbit.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const slide = (v) => ({ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }] });
+  // Background bubbles: horizontal position (share of width), top, size, colour.
+  const winW = Dimensions.get('window').width;
+  const bubbles = [
+    { x: 0.06, y: 70, d: 46, c: '#f6c96b' }, { x: 0.78, y: 40, d: 30, c: '#ef9fbf' }, { x: 0.84, y: 210, d: 54, c: '#8fcf8f' },
+    { x: 0.10, y: 260, d: 24, c: '#86bde8' }, { x: 0.60, y: 120, d: 16, c: '#f6c96b' }, { x: 0.30, y: 20, d: 18, c: '#8fcf8f' },
+  ];
+  const dots = ['#5fb06a', '#f0bd4f', '#ec84ac', '#5fa8e0', '#5fb06a', '#f0bd4f'];
+  const R = 104, C = 110;
+  const feats = [
+    { icon: '🗓️', bg: '#dcefd6', text: t('welcome_feat1') },
+    { icon: '🔎', bg: '#fbeed3', text: t('welcome_feat2') },
+    { icon: '🌱', bg: '#fbe0ea', text: t('welcome_feat3') },
+  ];
+  return (
+    <SafeAreaProvider>
+    <LinearGradient colors={['#d9efd0', '#f4f7f2', '#fdeedd']} locations={[0, 0.55, 1]} style={{ flex: 1 }}>
+      <StatusBar barStyle="dark-content" backgroundColor="#d9efd0" />
+      <SafeAreaViewSC style={{ flex: 1 }} edges={['top', 'bottom', 'left', 'right']}>
+        {bubbles.map((bb, i) => {
+          const y = drift.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, i % 2 ? 14 : -14, 0] });
+          return <Animated.View key={i} pointerEvents="none" style={{ position: 'absolute', left: winW * bb.x, top: bb.y, width: bb.d, height: bb.d, borderRadius: bb.d / 2, backgroundColor: bb.c, opacity: 0.35, transform: [{ translateY: y }] }} />;
+        })}
+        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingBottom: 12 }} showsVerticalScrollIndicator={false} bounces={false}>
+          <View style={{ alignItems: 'center', marginTop: 20 }}>
+            <View style={{ width: 220, height: 220, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ position: 'absolute', width: 170, height: 170, borderRadius: 85, backgroundColor: '#ffffff', opacity: 0.6 }} />
+              <Animated.View pointerEvents="none" style={{ position: 'absolute', width: 220, height: 220, transform: [{ rotate }] }}>
+                {dots.map((c, i) => {
+                  const a = (i / dots.length) * 2 * Math.PI;
+                  const sz = i % 2 ? 9 : 13;
+                  return <View key={i} style={{ position: 'absolute', left: C + Math.cos(a) * R - sz / 2, top: C + Math.sin(a) * R - sz / 2, width: sz, height: sz, borderRadius: sz / 2, backgroundColor: c }} />;
+                })}
+              </Animated.View>
+              <Animated.View style={{ transform: [{ translateY: floraY }, { scale: floraScale }] }}>
+                <BlinkingFlora size={140} mood="good" form="thriving" />
+              </Animated.View>
+            </View>
+            <Animated.View style={[{ alignItems: 'center' }, slide(enter)]}>
+              <View style={{ backgroundColor: THEME.amberBg, borderRadius: 999, paddingVertical: 5, paddingHorizontal: 12, marginTop: 4 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.amberText }}>✨ {t('welcome_badge')}</Text>
+              </View>
+              <Text style={{ fontSize: 34, fontWeight: '800', color: THEME.ink, letterSpacing: -0.8, marginTop: 10 }}>GutBloom</Text>
+              <Text style={{ fontSize: 21, fontWeight: '700', color: THEME.primaryDark, textAlign: 'center', marginTop: 8, lineHeight: 28 }}>{t('welcome_title')}</Text>
+              <Text style={{ fontSize: 15, color: THEME.textSoft, textAlign: 'center', marginTop: 8, lineHeight: 21 }}>{t('welcome_sub')}</Text>
+            </Animated.View>
+          </View>
+          <View style={{ marginTop: 20, gap: 10 }}>
+            {feats.map((f, i) => (
+              <Animated.View key={i} style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 16, padding: 12 }, slide(rows[i])]}>
+                <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: f.bg, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 18 }}>{f.icon}</Text></View>
+                <Text style={{ flex: 1, fontSize: 15, fontWeight: '600', color: THEME.ink }}>{f.text}</Text>
+              </Animated.View>
+            ))}
+          </View>
+          <View style={{ flex: 1, minHeight: 20 }} />
+          <Animated.View style={slide(rows[3])}>
+            <TouchableOpacity onPress={onCreate} activeOpacity={0.85} accessibilityRole="button" style={{ borderRadius: 18, overflow: 'hidden' }}>
+              <LinearGradient colors={['#5fa865', '#3f7f47']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingVertical: 17, alignItems: 'center' }}>
+                <Text style={{ fontSize: 17, fontWeight: '700', color: '#ffffff' }}>{t('welcome_create')}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onLogin} activeOpacity={0.8} accessibilityRole="button" style={{ marginTop: 12, backgroundColor: '#ffffff', borderWidth: 2, borderColor: THEME.primary, borderRadius: 18, paddingVertical: 15, alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: THEME.primaryDark }}>{t('welcome_login')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onSkip} accessibilityRole="button" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ marginTop: 16, alignItems: 'center' }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: THEME.textMuted }}>{t('welcome_skip')}</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </ScrollView>
+      </SafeAreaViewSC>
+    </LinearGradient>
     </SafeAreaProvider>
   );
 }
@@ -5971,6 +6073,7 @@ async function storageSet(key, value) {
 
 export default function App() {
   const [screen, setScreen] = useState('onboarding');
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false); // "continue without an account" on the welcome screen
   // Language: 'auto' follows the phone; otherwise an explicit override from Settings.
   const [langPref, setLangPref] = useState('auto');
   // Regular users always follow the phone's language. The manual override is a
@@ -6596,12 +6699,21 @@ export default function App() {
     return <SplashScreen t={t} />;
   }
 
+  if (screen === 'onboarding' && !user && !welcomeDismissed) {
+    // After sign-in the welcome screen gives way: an existing account's cloud
+    // state skips onboarding, and a new one continues into it.
+    return <SafeAreaProvider style={{ flex: 1 }}>
+    <AuthModal visible={modal?.type === 'account'} initialMode={modal && modal.mode} onClose={() => setModal(null)} user={user} onSignOut={signOut} t={t} />
+    <WelcomeScreen t={t} onCreate={() => setModal({ type: 'account', mode: 'signup' })} onLogin={() => setModal({ type: 'account', mode: 'login' })} onSkip={() => setWelcomeDismissed(true)} />
+    </SafeAreaProvider>;
+  }
+
   if (screen === 'onboarding') {
     // On a new phone, signing in here restores the account's plan and data
     // (the first sync takes the cloud's state, which skips the rest of onboarding).
-    return <View style={{ flex: 1 }}>
+    return <SafeAreaProvider style={{ flex: 1 }}>
     <AuthModal visible={modal?.type === 'account'} initialMode={modal && modal.mode} onClose={() => setModal(null)} user={user} onSignOut={signOut} t={t} />
-    <OnboardingScreen step={onbStep} setStep={setOnbStep} profile={profile} setProfile={setProfile} t={t} onSignIn={() => setModal({ type: 'account', mode: 'login' })} onComplete={() => {
+    <OnboardingScreen step={onbStep} setStep={setOnbStep} profile={profile} setProfile={setProfile} t={t} onBack={user ? null : () => setWelcomeDismissed(false)} onComplete={() => {
       if (profile.phase === 'elimination' && currentPhase === 'not_started') {
         setCurrentPhase('elimination');
         setPhaseStartDate(new Date().toISOString());
@@ -6612,7 +6724,7 @@ export default function App() {
       setScreen('main');
       showToast(`Welcome, ${profile.name || 'friend'} 🌱`);
     }} />
-    </View>;
+    </SafeAreaProvider>;
   }
 
   // Latch each heavy tab as "mounted" on first visit, then keep it alive (just hidden) so
@@ -6748,7 +6860,7 @@ function SafetyStep({ profile, setProfile, t }) {
   );
 }
 
-function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, onSignIn, t }) {
+function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, onBack, t }) {
   const steps = [
     { type: 'text', q: "What's your name?", sub: 'Just your first name is fine.', key: 'name', placeholder: 'Your name' },
     { type: 'info', key: '_ibs_info', q: t('onb_ibs_q'), floraMood: 'soso',
@@ -6831,8 +6943,8 @@ function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, onSi
       <KeyboardAvoidingView style={{ flex: 1, padding: 20 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 6 }}>
         <View style={{ width: 32, height: 32, justifyContent: 'center', marginLeft: -4 }}>
-          {step > 0 && (
-            <TouchableOpacity onPress={() => setStep(step - 1)} accessibilityRole="button" accessibilityLabel={t('back')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          {(step > 0 || onBack) && (
+            <TouchableOpacity onPress={() => (step > 0 ? setStep(step - 1) : onBack())} accessibilityRole="button" accessibilityLabel={t('back')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <IconArrowLeft size={24} color={THEME.ink} />
             </TouchableOpacity>
           )}
@@ -6846,11 +6958,6 @@ function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, onSi
         <View style={{ alignItems: 'center', marginBottom: 16 }}>
           <Flora size={120} />
           <Text style={{ fontSize: 13, color: THEME.textMuted, marginTop: 6 }}>{t('onb_flora_intro')}</Text>
-          {onSignIn && (
-            <TouchableOpacity onPress={onSignIn} accessibilityRole="button" activeOpacity={0.8} style={{ marginTop: 16, alignSelf: 'stretch', backgroundColor: '#ffffff', borderWidth: 2, borderColor: '#4e7d4e', borderRadius: 16, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center' }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#4e7d4e', textAlign: 'center' }}>{t('auth_to_login')}</Text>
-            </TouchableOpacity>
-          )}
         </View>
       )}
       {current.type === 'info' ? (
