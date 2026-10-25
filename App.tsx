@@ -62,6 +62,10 @@ const STRINGS = {
     account: 'Account', account_sub: 'Sign in to back up and sync your journey across devices.',
     account_signed_in: 'Signed in', account_manage: 'Manage account',
     sign_in: 'Sign in', sign_up: 'Create account', sign_out: 'Sign out',
+    account_delete: 'Delete account', account_delete_title: 'Delete your account?',
+    account_delete_body: 'This permanently deletes your account and everything backed up in it (meals, symptoms, your plan and reintroduction results), and erases the data on this phone too. It cannot be undone.',
+    account_delete_confirm: 'Yes, delete everything', account_deleted: 'Your account and data have been deleted.',
+    account_delete_failed: "Couldn't delete your account. Check your connection and try again.",
     auth_title_login: 'Welcome back', auth_title_signup: 'Create your account', auth_title_reset: 'Reset password',
     auth_sub_login: 'Sign in to sync your gut journey across devices.',
     auth_sub_signup: 'Your data stays yours — an account backs it up and keeps it in sync.',
@@ -581,6 +585,10 @@ const STRINGS = {
     account: 'Konto', account_sub: 'Melde dich an, um deine Reise geräteübergreifend zu sichern und zu synchronisieren.',
     account_signed_in: 'Angemeldet', account_manage: 'Konto verwalten',
     sign_in: 'Anmelden', sign_up: 'Konto erstellen', sign_out: 'Abmelden',
+    account_delete: 'Konto löschen', account_delete_title: 'Konto löschen?',
+    account_delete_body: 'Dein Konto und alles, was darin gesichert ist (Mahlzeiten, Symptome, dein Plan und deine Wiedereinführungs-Ergebnisse), wird dauerhaft gelöscht – ebenso die Daten auf diesem Handy. Das kann nicht rückgängig gemacht werden.',
+    account_delete_confirm: 'Ja, alles löschen', account_deleted: 'Dein Konto und deine Daten wurden gelöscht.',
+    account_delete_failed: 'Konto konnte nicht gelöscht werden. Prüfe deine Verbindung und versuche es erneut.',
     auth_title_login: 'Willkommen zurück', auth_title_signup: 'Konto erstellen', auth_title_reset: 'Passwort zurücksetzen',
     auth_sub_login: 'Melde dich an, um deine Darm-Reise geräteübergreifend zu synchronisieren.',
     auth_sub_signup: 'Deine Daten bleiben deine — ein Konto sichert und synchronisiert sie.',
@@ -1053,6 +1061,10 @@ const STRINGS = {
     account: 'Cuenta', account_sub: 'Inicia sesión para respaldar y sincronizar tu progreso entre dispositivos.',
     account_signed_in: 'Sesión iniciada', account_manage: 'Gestionar cuenta',
     sign_in: 'Iniciar sesión', sign_up: 'Crear cuenta', sign_out: 'Cerrar sesión',
+    account_delete: 'Eliminar cuenta', account_delete_title: '¿Eliminar tu cuenta?',
+    account_delete_body: 'Se eliminará para siempre tu cuenta y todo lo guardado en ella (comidas, síntomas, tu plan y los resultados de la reintroducción), y también los datos de este teléfono. No se puede deshacer.',
+    account_delete_confirm: 'Sí, eliminar todo', account_deleted: 'Tu cuenta y tus datos se han eliminado.',
+    account_delete_failed: 'No se pudo eliminar la cuenta. Revisa tu conexión e inténtalo de nuevo.',
     auth_title_login: 'Bienvenido de nuevo', auth_title_signup: 'Crea tu cuenta', auth_title_reset: 'Restablecer contraseña',
     auth_sub_login: 'Inicia sesión para sincronizar tu progreso entre dispositivos.',
     auth_sub_signup: 'Tus datos son tuyos: una cuenta los respalda y los mantiene sincronizados.',
@@ -1525,6 +1537,10 @@ const STRINGS = {
     account: 'Compte', account_sub: 'Connecte-toi pour sauvegarder et synchroniser ton parcours sur tous tes appareils.',
     account_signed_in: 'Connecté', account_manage: 'Gérer le compte',
     sign_in: 'Se connecter', sign_up: 'Créer un compte', sign_out: 'Se déconnecter',
+    account_delete: 'Supprimer le compte', account_delete_title: 'Supprimer ton compte ?',
+    account_delete_body: 'Ton compte et tout ce qui y est sauvegardé (repas, symptômes, ton plan et tes résultats de réintroduction) seront supprimés définitivement, ainsi que les données de ce téléphone. C\'est irréversible.',
+    account_delete_confirm: 'Oui, tout supprimer', account_deleted: 'Ton compte et tes données ont été supprimés.',
+    account_delete_failed: 'Impossible de supprimer le compte. Vérifie ta connexion et réessaie.',
     auth_title_login: 'Bon retour', auth_title_signup: 'Crée ton compte', auth_title_reset: 'Réinitialiser le mot de passe',
     auth_sub_login: 'Connecte-toi pour synchroniser ton parcours sur tous tes appareils.',
     auth_sub_signup: 'Tes données restent les tiennes — un compte les sauvegarde et les synchronise.',
@@ -1997,6 +2013,10 @@ const STRINGS = {
     account: 'Account', account_sub: 'Accedi per salvare e sincronizzare il tuo percorso su tutti i dispositivi.',
     account_signed_in: 'Accesso eseguito', account_manage: 'Gestisci account',
     sign_in: 'Accedi', sign_up: 'Crea account', sign_out: 'Esci',
+    account_delete: 'Elimina account', account_delete_title: 'Eliminare il tuo account?',
+    account_delete_body: 'Il tuo account e tutto ciò che contiene (pasti, sintomi, il tuo piano e i risultati della reintroduzione) verranno eliminati per sempre, insieme ai dati su questo telefono. Non si può annullare.',
+    account_delete_confirm: 'Sì, elimina tutto', account_deleted: 'Il tuo account e i tuoi dati sono stati eliminati.',
+    account_delete_failed: "Impossibile eliminare l'account. Controlla la connessione e riprova.",
     auth_title_login: 'Bentornato', auth_title_signup: 'Crea il tuo account', auth_title_reset: 'Reimposta password',
     auth_sub_login: 'Accedi per sincronizzare il tuo percorso su tutti i dispositivi.',
     auth_sub_signup: 'I tuoi dati restano tuoi — un account li salva e li mantiene sincronizzati.',
@@ -5918,7 +5938,17 @@ const STORAGE_KEYS = {
   barcodeIntroSeen: '@gutly:barcodeIntroSeen',
   customFoods:     '@gutly:customFoods',
   accountBannerDismissed: '@gutly:accountBannerDismissed',
+  syncStateTimes:  '@gutly:syncStateTimes',   // { field: iso } when each synced app-state field last changed here
+  syncTombstones:  '@gutly:syncTombstones',   // { recordId: { kind, at } } records deleted here, so the deletion syncs
+  syncedOwner:     '@gutly:syncedOwner',      // user id this phone last synced with
 };
+
+// App state (not individual records) that follows the account to a new phone.
+// Each field is one `records` row with kind 'state' and id 'state:<field>'.
+// Premium and the scan allowance stay local until real purchases (RevenueCat) exist.
+const SYNCED_STATE_FIELDS = ['profile', 'reintroProgress', 'testHistory', 'activeTest', 'currentPhase', 'phaseStartDate', 'periodActive', 'langPref', 'celebratedLevel', 'onboardingDone'];
+// Values a fresh install starts with, as JSON — used to tell real data from defaults.
+const SYNCED_STATE_DEFAULTS = { profile: '{}', reintroProgress: '{}', testHistory: '[]', activeTest: 'null', currentPhase: '"not_started"', phaseStartDate: 'null', periodActive: 'false', langPref: '"auto"', celebratedLevel: 'null', onboardingDone: 'false' };
 
 async function storageGet(key) {
   try {
@@ -5956,6 +5986,10 @@ export default function App() {
   const openRecipes = (from) => { setRecipesReturn(from); setTab('recipes'); };
   const [log, setLog] = useState([]);
   const [customFoods, setCustomFoods] = useState([]);
+  // Sync bookkeeping (see SYNCED_STATE_FIELDS and STORAGE_KEYS.sync*).
+  const [stateTimes, setStateTimes] = useState({});
+  const [tombstones, setTombstones] = useState({});
+  const [syncedOwner, setSyncedOwner] = useState(null);
   const [reintroProgress, setReintroProgress] = useState({});
   // Kept-alive Foods screen, memoized so it doesn't re-render on unrelated App renders (e.g.
   // tapping another tab). Same element reference → React skips the subtree. Rebuilds only when
@@ -6014,6 +6048,7 @@ export default function App() {
         const [
           sProfile, sLang, sLog, sReintro, sHistory, sActive,
           sPhase, sPhaseDate, sPremium, sScan, sPeriod, sOnbDone, sCelebrated, sCustomFoods, sBannerDismissed,
+          sStateTimes, sTombstones, sSyncedOwner,
         ] = await Promise.all([
           storageGet(STORAGE_KEYS.profile),
           storageGet(STORAGE_KEYS.langPref),
@@ -6030,10 +6065,16 @@ export default function App() {
           storageGet(STORAGE_KEYS.celebratedLevel),
           storageGet(STORAGE_KEYS.customFoods),
           storageGet(STORAGE_KEYS.accountBannerDismissed),
+          storageGet(STORAGE_KEYS.syncStateTimes),
+          storageGet(STORAGE_KEYS.syncTombstones),
+          storageGet(STORAGE_KEYS.syncedOwner),
         ]);
         if (cancelled) return;
         if (typeof sCelebrated === 'number') setCelebratedLevel(sCelebrated);
         if (sBannerDismissed === true) setAccountBannerDismissed(true);
+        if (sStateTimes && typeof sStateTimes === 'object') setStateTimes(sStateTimes);
+        if (sTombstones && typeof sTombstones === 'object') setTombstones(sTombstones);
+        if (typeof sSyncedOwner === 'string') setSyncedOwner(sSyncedOwner);
         // Register saved custom foods into FOODS so meals referencing them resolve everywhere.
         if (Array.isArray(sCustomFoods)) { sCustomFoods.forEach(registerCustomFood); setCustomFoods(sCustomFoods); }
 
@@ -6068,6 +6109,9 @@ export default function App() {
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.log, log); }, [log, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.customFoods, customFoods); }, [customFoods, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.accountBannerDismissed, accountBannerDismissed); }, [accountBannerDismissed, hydrated]);
+  useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.syncStateTimes, stateTimes); }, [stateTimes, hydrated]);
+  useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.syncTombstones, tombstones); }, [tombstones, hydrated]);
+  useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.syncedOwner, syncedOwner); }, [syncedOwner, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.reintroProgress, reintroProgress); }, [reintroProgress, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.testHistory, testHistory); }, [testHistory, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.activeTest, activeTest); }, [activeTest, hydrated]);
@@ -6114,6 +6158,44 @@ export default function App() {
   const logRef = useRef(log); logRef.current = log;
   const customFoodsRef = useRef(customFoods); customFoodsRef.current = customFoods;
   const userRef = useRef(user); userRef.current = user;
+  const hydratedRef = useRef(hydrated); hydratedRef.current = hydrated;
+  const stateTimesRef = useRef(stateTimes); stateTimesRef.current = stateTimes;
+  const tombstonesRef = useRef(tombstones); tombstonesRef.current = tombstones;
+  const syncedOwnerRef = useRef(syncedOwner); syncedOwnerRef.current = syncedOwner;
+  const syncedState = { profile, reintroProgress, testHistory, activeTest, currentPhase, phaseStartDate, periodActive, langPref, celebratedLevel, onboardingDone: screen === 'main' };
+  const syncedStateRef = useRef(syncedState); syncedStateRef.current = syncedState;
+  const stateJson = (v) => JSON.stringify(v === undefined ? null : v);
+  // Applies a synced field that came from the cloud, with the same checks as loading from storage.
+  const STATE_SETTERS = {
+    profile: v => { if (v && typeof v === 'object') setProfile(v); },
+    reintroProgress: v => { if (v && typeof v === 'object') setReintroProgress(v); },
+    testHistory: v => { if (Array.isArray(v)) setTestHistory(v); },
+    activeTest: v => { if (v === null || (v && typeof v === 'object')) setActiveTest(v); },
+    currentPhase: v => { if (typeof v === 'string') setCurrentPhase(v); },
+    phaseStartDate: v => { if (v === null || typeof v === 'string') setPhaseStartDate(v); },
+    periodActive: v => { if (typeof v === 'boolean') setPeriodActive(v); },
+    langPref: v => { if (typeof v === 'string') setLangPref(v); },
+    celebratedLevel: v => { if (v === null || typeof v === 'number') setCelebratedLevel(v); },
+    onboardingDone: v => { if (v === true) setScreen('main'); },
+  };
+
+  // Stamp the time whenever a synced field changes on this phone, so sync can
+  // tell which side is newer. The first look after loading is not a change, and
+  // values applied from the cloud pre-set the snapshot so they aren't re-stamped.
+  const stateSnapRef = useRef({});
+  useEffect(() => {
+    if (!hydrated) return;
+    const snap = stateSnapRef.current;
+    const now = new Date().toISOString();
+    const stamped = {};
+    SYNCED_STATE_FIELDS.forEach(f => {
+      const json = stateJson(syncedState[f]);
+      if (!(f in snap)) { snap[f] = json; return; }
+      if (snap[f] === json) return;
+      snap[f] = json; stamped[f] = now;
+    });
+    if (Object.keys(stamped).length) setStateTimes(prev => Object.assign({}, prev, stamped));
+  }, [hydrated, profile, reintroProgress, testHistory, activeTest, currentPhase, phaseStartDate, periodActive, langPref, celebratedLevel, screen]);
 
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState(null); // ms timestamp of last successful sync
@@ -6136,19 +6218,49 @@ export default function App() {
   // Every syncable local record → a row for the `records` table. Log entries take
   // their updated_at from the entry timestamp (they don't store one locally yet);
   // custom foods already carry updatedAt. The full record is stored as `data` jsonb.
-  const collectLocalRows = (ownerId) => {
+  // Synced app-state fields are included once they've changed on this phone
+  // (skipState leaves them out, for a new phone's first sync where the cloud wins).
+  // Deletions go up as tombstones (deleted: true) so other phones drop them too.
+  const collectLocalRows = (ownerId, opts) => {
     const nowIso = new Date().toISOString();
     const rows = [];
     logRef.current.forEach(e => rows.push({ owner_id: ownerId, id: e.id, kind: 'log', data: e, updated_at: e.updatedAt || e.timestamp || nowIso, deleted: false }));
     customFoodsRef.current.forEach(f => rows.push({ owner_id: ownerId, id: f.id, kind: 'customFood', data: f, updated_at: f.updatedAt || f.createdAt || nowIso, deleted: false }));
+    if (!(opts && opts.skipState)) rows.push.apply(rows, collectStateRows(ownerId, SYNCED_STATE_FIELDS));
+    const tb = tombstonesRef.current;
+    Object.keys(tb).forEach(id => rows.push({ owner_id: ownerId, id, kind: tb[id].kind, data: {}, updated_at: tb[id].at, deleted: true }));
+    return rows;
+  };
+  const collectStateRows = (ownerId, fields) => {
+    const rows = [];
+    fields.forEach(f => {
+      const at = stateTimesRef.current[f];
+      if (at) rows.push({ owner_id: ownerId, id: 'state:' + f, kind: 'state', data: { v: syncedStateRef.current[f] === undefined ? null : syncedStateRef.current[f] }, updated_at: at, deleted: false });
+    });
     return rows;
   };
 
   // Merge remote rows into local state, last-write-wins by updated_at, honoring
   // tombstones. Additive: nothing local is dropped unless the server says deleted.
-  const mergeRemote = (remoteRows) => {
-    const logRows = remoteRows.filter(r => r.kind === 'log');
-    const foodRows = remoteRows.filter(r => r.kind === 'customFood');
+  // With preferRemote (a new phone's first sync), the cloud's app state wins.
+  const mergeRemote = (remoteRows, preferRemote) => {
+    // A record deleted here stays deleted, unless it was changed elsewhere after the deletion.
+    const tb = tombstonesRef.current;
+    const notDeletedHere = (r) => !tb[r.id] || tsMs(r.updated_at) > tsMs(tb[r.id].at);
+    const logRows = remoteRows.filter(r => r.kind === 'log' && notDeletedHere(r));
+    const foodRows = remoteRows.filter(r => r.kind === 'customFood' && notDeletedHere(r));
+    const stateRows = remoteRows.filter(r => r.kind === 'state' && !r.deleted);
+    const applied = {};
+    stateRows.forEach(r => {
+      const f = r.id.slice('state:'.length);
+      if (SYNCED_STATE_FIELDS.indexOf(f) < 0) return;
+      if (!preferRemote && tsMs(r.updated_at) <= tsMs(stateTimesRef.current[f])) return;
+      const v = r.data ? r.data.v : null;
+      stateSnapRef.current[f] = stateJson(v);
+      applied[f] = r.updated_at;
+      STATE_SETTERS[f](v);
+    });
+    if (Object.keys(applied).length) setStateTimes(prev => Object.assign({}, prev, applied));
     if (logRows.length) {
       setLog(prev => {
         const map = new Map(prev.map(e => [e.id, e]));
@@ -6178,18 +6290,45 @@ export default function App() {
   // Full two-way sync: push all local rows, then pull the user's rows and merge.
   // Failures are non-fatal — the app stays usable offline and the next trigger retries.
   const syncingRef = useRef(false);
+  const pendingSyncRef = useRef(null);
   const syncNow = async (ownerId) => {
     if (!ownerId || syncingRef.current) return;
+    // Wait until this phone's saved data has loaded, or we'd sync an empty app.
+    if (!hydratedRef.current) { pendingSyncRef.current = ownerId; return; }
     syncingRef.current = true; setSyncing(true);
     try {
-      const rows = collectLocalRows(ownerId);
+      // First sync of this account on this phone (e.g. a new phone): the cloud's
+      // plan, profile and results win over whatever this phone has, so don't push them first.
+      const preferRemote = syncedOwnerRef.current !== ownerId;
+      const rows = collectLocalRows(ownerId, { skipState: preferRemote });
       if (rows.length) {
         const { error: upErr } = await supabase.from('records').upsert(rows, { onConflict: 'owner_id,id' });
         if (upErr) throw upErr;
       }
       const { data, error: selErr } = await supabase.from('records').select('id,kind,data,updated_at,deleted').eq('owner_id', ownerId);
       if (selErr) throw selErr;
-      if (Array.isArray(data)) mergeRemote(data);
+      if (Array.isArray(data)) {
+        mergeRemote(data, preferRemote);
+        // Fields the cloud doesn't have yet: upload this phone's copy. Real data from
+        // before this field was synced has no change time yet, so stamp it now.
+        const inCloud = {};
+        data.forEach(r => { if (r.kind === 'state') inCloud[r.id.slice('state:'.length)] = true; });
+        const missing = SYNCED_STATE_FIELDS.filter(f => !inCloud[f]);
+        const stamp = {};
+        missing.forEach(f => {
+          if (!stateTimesRef.current[f] && stateJson(syncedStateRef.current[f]) !== SYNCED_STATE_DEFAULTS[f]) stamp[f] = new Date().toISOString();
+        });
+        if (Object.keys(stamp).length) {
+          stateTimesRef.current = Object.assign({}, stateTimesRef.current, stamp);
+          setStateTimes(prev => Object.assign({}, prev, stamp));
+        }
+        const missingRows = collectStateRows(ownerId, missing);
+        if (missingRows.length) {
+          const { error: upErr2 } = await supabase.from('records').upsert(missingRows, { onConflict: 'owner_id,id' });
+          if (upErr2) throw upErr2;
+        }
+      }
+      setSyncedOwner(ownerId);
       setLastSync(Date.now());
     } catch (e) {
       console.warn('[gutly] sync failed:', e && e.message);
@@ -6223,15 +6362,19 @@ export default function App() {
     return () => { mounted = false; authSub.subscription.unsubscribe(); };
   }, []);
 
+  useEffect(() => {
+    if (hydrated && pendingSyncRef.current) { const id = pendingSyncRef.current; pendingSyncRef.current = null; syncNow(id); }
+  }, [hydrated]);
+
   // Push local changes up shortly after they happen (debounced), while signed in.
   useEffect(() => {
     if (!hydrated || !user) return;
     const id = setTimeout(() => {
-      const rows = collectLocalRows(user.id);
+      const rows = collectLocalRows(user.id, { skipState: syncedOwnerRef.current !== user.id });
       if (rows.length) supabase.from('records').upsert(rows, { onConflict: 'owner_id,id' }).then(({ error }) => { if (error) console.warn('[gutly] push failed:', error.message); });
     }, 1500);
     return () => clearTimeout(id);
-  }, [log, customFoods, user, hydrated]);
+  }, [log, customFoods, stateTimes, tombstones, user, hydrated]);
 
   // Pull fresh data when the app returns to the foreground (catches edits from another device).
   useEffect(() => {
@@ -6240,6 +6383,15 @@ export default function App() {
   }, []);
 
   const signOut = async () => { await supabase.auth.signOut(); showToast(t('auth_signed_out')); };
+
+  // GDPR right to erasure: deletes the account on the server (its records go with it,
+  // see delete_my_account in supabase_schema.sql), then wipes this phone.
+  const deleteAccount = async () => {
+    const { error } = await supabase.rpc('delete_my_account');
+    if (error) { console.warn('[gutly] delete account failed:', error.message); showToast(t('account_delete_failed')); return; }
+    await resetApp();
+    showToast(t('account_deleted'));
+  };
 
   // Wipe all persisted data and return to onboarding — a fresh start.
   const resetApp = async () => {
@@ -6259,6 +6411,10 @@ export default function App() {
     setTab('home');
     setCelebratedLevel(null);
     setLevelUp(null);
+    setStateTimes({});
+    setTombstones({});
+    setSyncedOwner(null);
+    stateSnapRef.current = {};
     setScreen('onboarding');
   };
 
@@ -6323,11 +6479,13 @@ export default function App() {
   };
 
   const updateLogEntry = (id, updates) => {
-    setLog(log.map(e => e.id === id ? Object.assign({}, e, updates) : e));
+    setLog(log.map(e => e.id === id ? Object.assign({}, e, updates, { updatedAt: new Date().toISOString() }) : e));
     showToast(t('toast_updated'));
   };
+  const addTombstone = (id, kind) => setTombstones(prev => Object.assign({}, prev, { [id]: { kind, at: new Date().toISOString() } }));
   const deleteLogEntry = (id) => {
     setLog(log.filter(e => e.id !== id));
+    addTombstone(id, 'log');
     showToast(t('toast_deleted'));
   };
 
@@ -6391,6 +6549,7 @@ export default function App() {
   const deleteCustomFood = (id) => {
     const i = FOODS.findIndex(f => f.id === id); if (i >= 0) FOODS.splice(i, 1);
     setCustomFoods(prev => prev.filter(f => f.id !== id));
+    addTombstone(id, 'customFood');
   };
 
   const onMealSave = (items, when, mealType, dishes) => {
@@ -6488,7 +6647,7 @@ export default function App() {
       <AIScanModal visible={modal === 'aiscan'} onClose={() => setModal(null)} scansRemaining={scansRemaining} onComplete={() => { recordScanUsed(); setModal(null); showToast(t('toast_ai_logged')); }} />
       <ScanLimitModal visible={modal === 'scanLimit'} onClose={() => setModal(null)} allowance={PREMIUM_SCANS_PER_MONTH} t={t} />
       <PaywallModal visible={modal === 'paywall' || modal?.type === 'paywall'} reason={modal?.reason} onClose={() => setModal(null)} t={t} onUpgrade={() => { setIsPremium(true); setModal(null); showToast(t('toast_welcome_premium')); if (!user) setTimeout(() => setModal({ type: 'account', mode: 'signup' }), 500); }} />
-      <SettingsModal visible={modal === 'settings'} onClose={() => setModal(null)} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onOverride={overridePhaseWeek} profile={profile} setProfile={setProfile} isPremium={isPremium} onUpgrade={() => setModal({ type: 'paywall', reason: null })} onExport={() => { if (isPremium) setModal('export'); else setModal({ type: 'paywall', reason: 'export' }); }} langPref={langPref} setLangPref={setLangPref} onResetApp={() => { setModal(null); resetApp(); }} onSeedDemo={seedDemo} onTogglePremium={() => setIsPremium(p => !p)} onPreviewLevelUp={(opts) => { setModal(null); setTimeout(() => setLevelUp(opts), 350); }} customFoods={customFoods} onUpdateCustomFood={updateCustomFood} onDeleteCustomFood={deleteCustomFood} user={user} onOpenAccount={(mode) => { setModal(null); setTimeout(() => setModal({ type: 'account', mode }), 250); }} onSignOut={signOut} syncing={syncing} lastSync={lastSync} onSync={() => user && syncNow(user.id)} t={t} />
+      <SettingsModal visible={modal === 'settings'} onClose={() => setModal(null)} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onOverride={overridePhaseWeek} profile={profile} setProfile={setProfile} isPremium={isPremium} onUpgrade={() => setModal({ type: 'paywall', reason: null })} onExport={() => { if (isPremium) setModal('export'); else setModal({ type: 'paywall', reason: 'export' }); }} langPref={langPref} setLangPref={setLangPref} onResetApp={() => { setModal(null); resetApp(); }} onSeedDemo={seedDemo} onTogglePremium={() => setIsPremium(p => !p)} onPreviewLevelUp={(opts) => { setModal(null); setTimeout(() => setLevelUp(opts), 350); }} customFoods={customFoods} onUpdateCustomFood={updateCustomFood} onDeleteCustomFood={deleteCustomFood} user={user} onOpenAccount={(mode) => { setModal(null); setTimeout(() => setModal({ type: 'account', mode }), 250); }} onSignOut={signOut} onDeleteAccount={() => { setModal(null); deleteAccount(); }} syncing={syncing} lastSync={lastSync} onSync={() => user && syncNow(user.id)} t={t} />
       <AuthModal visible={modal === 'account' || modal?.type === 'account'} initialMode={modal && modal.mode} onClose={() => setModal(null)} user={user} onSignOut={signOut} t={t} />
       <EditEntryModal visible={modal?.type === 'edit'} entry={modal?.entry} onClose={() => setModal(null)} onUpdate={updateLogEntry} onDelete={deleteLogEntry} onLogAgain={(e) => onMealSave(e.items, new Date(), e.mealType, e.mealDishes)} lang={lang} t={t} />
       <HistoryModal visible={modal === 'history'} onClose={() => setModal(null)} log={log} reintroProgress={reintroProgress} onEditEntry={(entry) => setModal({ type: 'edit', entry })} lang={lang} t={t} />
@@ -9887,9 +10046,10 @@ function SettingSelect({ label, sub, options, selectedIds, onToggle, multi = fal
   );
 }
 
-function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverride, profile, setProfile, isPremium, onUpgrade, onExport, langPref, setLangPref, onResetApp, onSeedDemo, onTogglePremium, onPreviewLevelUp, customFoods, onUpdateCustomFood, onDeleteCustomFood, user, onOpenAccount, onSignOut, syncing, lastSync, onSync, t }) {
+function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverride, profile, setProfile, isPremium, onUpgrade, onExport, langPref, setLangPref, onResetApp, onSeedDemo, onTogglePremium, onPreviewLevelUp, customFoods, onUpdateCustomFood, onDeleteCustomFood, user, onOpenAccount, onSignOut, onDeleteAccount, syncing, lastSync, onSync, t }) {
   const [confirmReset, setConfirmReset] = useState(false);
-  useEffect(() => { if (!visible) setConfirmReset(false); }, [visible]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  useEffect(() => { if (!visible) { setConfirmReset(false); setConfirmDelete(false); } }, [visible]);
   const [editPhase, setEditPhase] = useState(currentPhase);
   const [weekInput, setWeekInput] = useState('1');
   useEffect(() => { setEditPhase(currentPhase); }, [currentPhase, visible]);
@@ -9933,6 +10093,20 @@ function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverr
                 <TouchableOpacity onPress={onSignOut} accessibilityRole="button" style={[s.btnSecondary, { marginTop: 12 }]}>
                   <Text style={{ fontSize: 14, fontWeight: '600', color: '#4e7d4e' }}>{t('sign_out')}</Text>
                 </TouchableOpacity>
+                {confirmDelete ? (
+                  <View style={{ marginTop: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#a03030' }}>{t('account_delete_title')}</Text>
+                    <Text style={{ fontSize: 12, color: '#6b7a6b', marginTop: 4, marginBottom: 12, lineHeight: 18 }}>{t('account_delete_body')}</Text>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TouchableOpacity onPress={() => setConfirmDelete(false)} accessibilityRole="button" style={[s.btnSecondary, { flex: 1 }]}><Text style={s.btnSecondaryText}>{t('cancel')}</Text></TouchableOpacity>
+                      <TouchableOpacity onPress={onDeleteAccount} accessibilityRole="button" style={{ flex: 1, backgroundColor: '#c85050', borderRadius: 16, padding: 16, alignItems: 'center' }}><Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>{t('account_delete_confirm')}</Text></TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity onPress={() => setConfirmDelete(true)} accessibilityRole="button" style={{ marginTop: 14, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#a03030' }}>{t('account_delete')}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
               <View style={[s.cardFilled, { backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>
