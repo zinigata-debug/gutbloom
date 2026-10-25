@@ -74,7 +74,7 @@ const STRINGS = {
     auth_password: 'Password', auth_password_ph: 'At least 6 characters',
     auth_forgot: 'Forgot password?',
     auth_to_signup: 'New here? Create an account', auth_to_login: 'Already have an account? Sign in',
-    auth_send_reset: 'Send reset link', auth_back_to_login: 'Back to sign in',
+    auth_send_reset: 'Send reset link', auth_back_to_login: 'Back to sign in', auth_confirmed_continue: "I've confirmed, continue",
     auth_err_empty: 'Please enter your email and password.',
     auth_err_email: 'Please enter a valid email address.',
     auth_err_password_short: 'Password must be at least 6 characters.',
@@ -86,7 +86,7 @@ const STRINGS = {
     auth_err_mismatch: 'Passwords do not match.',
     auth_confirm_password: 'Confirm password', auth_confirm_password_ph: 'Re-enter your password',
     auth_show_password: 'Show password', auth_hide_password: 'Hide password',
-    auth_sent_title: 'Check your email', auth_sent_body: 'We sent a confirmation link to {email}. Open it to activate your account, then come back and sign in.',
+    auth_sent_title: 'Check your email', auth_sent_body: 'We sent a confirmation link to {email}. Open it to activate your account, then come back here.',
     auth_reset_sent_body: 'If {email} has an account, a password reset link is on its way. Open it to choose a new password.',
     account_nudge_title: 'Save your progress', account_nudge_sub: 'Create a free account to back up your diary and colony.', account_nudge_cta: 'Create free account', account_nudge_row_sub: 'Back up your diary & colony',
     levelup_save_cta: 'Save your colony — create a free account',
@@ -597,7 +597,7 @@ const STRINGS = {
     auth_password: 'Passwort', auth_password_ph: 'Mindestens 6 Zeichen',
     auth_forgot: 'Passwort vergessen?',
     auth_to_signup: 'Neu hier? Konto erstellen', auth_to_login: 'Schon ein Konto? Anmelden',
-    auth_send_reset: 'Link senden', auth_back_to_login: 'Zurück zur Anmeldung',
+    auth_send_reset: 'Link senden', auth_back_to_login: 'Zurück zur Anmeldung', auth_confirmed_continue: 'Ich habe bestätigt, weiter',
     auth_err_empty: 'Bitte gib E-Mail und Passwort ein.',
     auth_err_email: 'Bitte gib eine gültige E-Mail-Adresse ein.',
     auth_err_password_short: 'Das Passwort muss mindestens 6 Zeichen haben.',
@@ -609,7 +609,7 @@ const STRINGS = {
     auth_err_mismatch: 'Die Passwörter stimmen nicht überein.',
     auth_confirm_password: 'Passwort bestätigen', auth_confirm_password_ph: 'Passwort erneut eingeben',
     auth_show_password: 'Passwort anzeigen', auth_hide_password: 'Passwort verbergen',
-    auth_sent_title: 'Prüfe deine E-Mails', auth_sent_body: 'Wir haben einen Bestätigungslink an {email} gesendet. Öffne ihn, um dein Konto zu aktivieren, und melde dich dann an.',
+    auth_sent_title: 'Prüfe deine E-Mails', auth_sent_body: 'Wir haben einen Bestätigungslink an {email} gesendet. Öffne ihn, um dein Konto zu aktivieren, und komm dann hierher zurück.',
     auth_reset_sent_body: 'Falls {email} ein Konto hat, ist ein Link zum Zurücksetzen unterwegs. Öffne ihn, um ein neues Passwort zu wählen.',
     account_nudge_title: 'Sichere deinen Fortschritt', account_nudge_sub: 'Erstelle ein kostenloses Konto, um dein Tagebuch und deine Kolonie zu sichern.', account_nudge_cta: 'Kostenloses Konto erstellen', account_nudge_row_sub: 'Tagebuch & Kolonie sichern',
     levelup_save_cta: 'Kolonie sichern — kostenloses Konto erstellen',
@@ -1073,7 +1073,7 @@ const STRINGS = {
     auth_password: 'Contraseña', auth_password_ph: 'Al menos 6 caracteres',
     auth_forgot: '¿Olvidaste tu contraseña?',
     auth_to_signup: '¿Nuevo aquí? Crea una cuenta', auth_to_login: '¿Ya tienes cuenta? Inicia sesión',
-    auth_send_reset: 'Enviar enlace', auth_back_to_login: 'Volver a iniciar sesión',
+    auth_send_reset: 'Enviar enlace', auth_back_to_login: 'Volver a iniciar sesión', auth_confirmed_continue: 'Ya lo confirmé, continuar',
     auth_err_empty: 'Introduce tu correo y contraseña.',
     auth_err_email: 'Introduce una dirección de correo válida.',
     auth_err_password_short: 'La contraseña debe tener al menos 6 caracteres.',
@@ -1085,7 +1085,7 @@ const STRINGS = {
     auth_err_mismatch: 'Las contraseñas no coinciden.',
     auth_confirm_password: 'Confirmar contraseña', auth_confirm_password_ph: 'Vuelve a escribir tu contraseña',
     auth_show_password: 'Mostrar contraseña', auth_hide_password: 'Ocultar contraseña',
-    auth_sent_title: 'Revisa tu correo', auth_sent_body: 'Enviamos un enlace de confirmación a {email}. Ábrelo para activar tu cuenta y luego inicia sesión.',
+    auth_sent_title: 'Revisa tu correo', auth_sent_body: 'Enviamos un enlace de confirmación a {email}. Ábrelo para activar tu cuenta y luego vuelve aquí.',
     auth_reset_sent_body: 'Si {email} tiene una cuenta, el enlace para restablecer la contraseña ya va en camino. Ábrelo para elegir una nueva contraseña.',
     account_nudge_title: 'Guarda tu progreso', account_nudge_sub: 'Crea una cuenta gratis para respaldar tu diario y tu colonia.', account_nudge_cta: 'Crear cuenta gratis', account_nudge_row_sub: 'Respalda tu diario y colonia',
     levelup_save_cta: 'Guarda tu colonia: crea una cuenta gratis',
@@ -1549,7 +1549,7 @@ const STRINGS = {
     auth_password: 'Mot de passe', auth_password_ph: 'Au moins 6 caractères',
     auth_forgot: 'Mot de passe oublié ?',
     auth_to_signup: 'Nouveau ici ? Crée un compte', auth_to_login: 'Déjà un compte ? Connecte-toi',
-    auth_send_reset: 'Envoyer le lien', auth_back_to_login: 'Retour à la connexion',
+    auth_send_reset: 'Envoyer le lien', auth_back_to_login: 'Retour à la connexion', auth_confirmed_continue: "J'ai confirmé, continuer",
     auth_err_empty: 'Saisis ton e-mail et ton mot de passe.',
     auth_err_email: 'Saisis une adresse e-mail valide.',
     auth_err_password_short: 'Le mot de passe doit comporter au moins 6 caractères.',
@@ -1561,7 +1561,7 @@ const STRINGS = {
     auth_err_mismatch: 'Les mots de passe ne correspondent pas.',
     auth_confirm_password: 'Confirmer le mot de passe', auth_confirm_password_ph: 'Ressaisis ton mot de passe',
     auth_show_password: 'Afficher le mot de passe', auth_hide_password: 'Masquer le mot de passe',
-    auth_sent_title: 'Vérifie tes e-mails', auth_sent_body: 'Nous avons envoyé un lien de confirmation à {email}. Ouvre-le pour activer ton compte, puis connecte-toi.',
+    auth_sent_title: 'Vérifie tes e-mails', auth_sent_body: 'Nous avons envoyé un lien de confirmation à {email}. Ouvre-le pour activer ton compte, puis reviens ici.',
     auth_reset_sent_body: 'Si {email} a un compte, un lien de réinitialisation est en route. Ouvre-le pour choisir un nouveau mot de passe.',
     account_nudge_title: 'Sauvegarde ta progression', account_nudge_sub: 'Crée un compte gratuit pour sauvegarder ton journal et ta colonie.', account_nudge_cta: 'Créer un compte gratuit', account_nudge_row_sub: 'Sauvegarde journal & colonie',
     levelup_save_cta: 'Sauvegarde ta colonie — crée un compte gratuit',
@@ -2025,7 +2025,7 @@ const STRINGS = {
     auth_password: 'Password', auth_password_ph: 'Almeno 6 caratteri',
     auth_forgot: 'Password dimenticata?',
     auth_to_signup: 'Nuovo qui? Crea un account', auth_to_login: 'Hai già un account? Accedi',
-    auth_send_reset: 'Invia link', auth_back_to_login: 'Torna all\'accesso',
+    auth_send_reset: 'Invia link', auth_back_to_login: 'Torna all\'accesso', auth_confirmed_continue: 'Ho confermato, continua',
     auth_err_empty: 'Inserisci email e password.',
     auth_err_email: 'Inserisci un indirizzo email valido.',
     auth_err_password_short: 'La password deve avere almeno 6 caratteri.',
@@ -2037,7 +2037,7 @@ const STRINGS = {
     auth_err_mismatch: 'Le password non coincidono.',
     auth_confirm_password: 'Conferma password', auth_confirm_password_ph: 'Reinserisci la password',
     auth_show_password: 'Mostra password', auth_hide_password: 'Nascondi password',
-    auth_sent_title: 'Controlla la tua email', auth_sent_body: 'Abbiamo inviato un link di conferma a {email}. Aprilo per attivare il tuo account, poi accedi.',
+    auth_sent_title: 'Controlla la tua email', auth_sent_body: 'Abbiamo inviato un link di conferma a {email}. Aprilo per attivare il tuo account, poi torna qui.',
     auth_reset_sent_body: 'Se {email} ha un account, il link per reimpostare la password è in arrivo. Aprilo per scegliere una nuova password.',
     account_nudge_title: 'Salva i tuoi progressi', account_nudge_sub: 'Crea un account gratuito per salvare il tuo diario e la tua colonia.', account_nudge_cta: 'Crea account gratuito', account_nudge_row_sub: 'Salva diario e colonia',
     levelup_save_cta: 'Salva la tua colonia — crea un account gratuito',
@@ -9798,7 +9798,7 @@ function friendlyAuthError(err, t) {
 
 // Full-screen confirmation shown after a successful sign-up: Flora springs in
 // (on top of her own breathe/blink) and we tell the user to check their inbox.
-function AuthSentScreen({ email, variant = 'signup', onBackToLogin, onClose, t }) {
+function AuthSentScreen({ email, variant = 'signup', onBackToLogin, onContinue, continueBusy, continueError, onClose, t }) {
   const enter = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(enter, { toValue: 1, friction: 6, tension: 55, useNativeDriver: true }).start();
@@ -9821,9 +9821,21 @@ function AuthSentScreen({ email, variant = 'signup', onBackToLogin, onClose, t }
         </Animated.View>
       </View>
       <View style={{ padding: 20 }}>
-        <TouchableOpacity onPress={onBackToLogin} accessibilityRole="button" style={[s.btnPrimary, { alignSelf: 'stretch' }]}>
-          <Text style={s.btnPrimaryText}>{t('auth_back_to_login')}</Text>
-        </TouchableOpacity>
+        {onContinue ? (
+          <>
+            {continueError ? <Text style={{ fontSize: 13, color: '#a03030', textAlign: 'center', marginBottom: 10 }}>{continueError}</Text> : null}
+            <TouchableOpacity onPress={onContinue} disabled={continueBusy} accessibilityRole="button" style={[s.btnPrimary, { alignSelf: 'stretch', opacity: continueBusy ? 0.6 : 1 }]}>
+              {continueBusy ? <ActivityIndicator color="#ffffff" /> : <Text style={s.btnPrimaryText}>{t('auth_confirmed_continue')}</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onBackToLogin} accessibilityRole="button" style={{ marginTop: 14, alignItems: 'center' }}>
+              <Text style={{ fontSize: 14, color: '#4e7d4e', fontWeight: '600' }}>{t('auth_back_to_login')}</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity onPress={onBackToLogin} accessibilityRole="button" style={[s.btnPrimary, { alignSelf: 'stretch' }]}>
+            <Text style={s.btnPrimaryText}>{t('auth_back_to_login')}</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -9856,6 +9868,33 @@ function AuthModal({ visible, onClose, initialMode, user, onSignOut, t }) {
   // If the user signs in successfully, the App listener fires and we close.
   useEffect(() => { if (visible && user) onClose(); }, [user, visible]);
 
+  // After sign-up, the confirmation link opens in the browser, which can't sign
+  // the app in. So we keep the new password in memory (never stored) and sign in
+  // with it once the user is back: on a tap, or automatically when the app returns
+  // to the foreground.
+  const [continueBusy, setContinueBusy] = useState(false);
+  const [continueError, setContinueError] = useState('');
+  const pendingLoginRef = useRef(null);
+  useEffect(() => { if (!visible || !sentEmail) pendingLoginRef.current = null; }, [visible, sentEmail]);
+  const signInAfterConfirm = async (silent) => {
+    const creds = pendingLoginRef.current;
+    if (!creds) return;
+    if (!silent) { setContinueBusy(true); setContinueError(''); }
+    try {
+      const { error: err } = await supabase.auth.signInWithPassword(creds);
+      if (err && !silent) setContinueError(friendlyAuthError(err, t));
+    } catch (e) {
+      if (!silent) setContinueError(friendlyAuthError(e, t));
+    } finally {
+      if (!silent) setContinueBusy(false);
+    }
+  };
+  useEffect(() => {
+    if (!visible || !sentEmail || sentVariant !== 'signup') return;
+    const sub = AppState.addEventListener('change', (st) => { if (st === 'active') signInAfterConfirm(true); });
+    return () => sub.remove();
+  }, [visible, sentEmail, sentVariant]);
+
   const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
 
   const submit = async () => {
@@ -9876,6 +9915,8 @@ function AuthModal({ visible, onClose, initialMode, user, onSignOut, t }) {
       } else if (mode === 'signup') {
         const { error: err } = await supabase.auth.signUp({ email: em, password });
         if (err) { setError(friendlyAuthError(err, t)); return; }
+        pendingLoginRef.current = { email: em, password };
+        setContinueError('');
         setSentVariant('signup'); setSentEmail(em); // show the full-screen confirmation with Flora
       } else {
         // reset: always succeed-looking so we don't reveal which emails exist
@@ -9923,7 +9964,7 @@ function AuthModal({ visible, onClose, initialMode, user, onSignOut, t }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
         {sentEmail ? (
-          <AuthSentScreen email={sentEmail} variant={sentVariant} onClose={onClose} onBackToLogin={() => { setSentEmail(''); setMode('login'); }} t={t} />
+          <AuthSentScreen email={sentEmail} variant={sentVariant} onClose={onClose} onBackToLogin={() => { setSentEmail(''); setMode('login'); }} onContinue={sentVariant === 'signup' ? () => signInAfterConfirm(false) : null} continueBusy={continueBusy} continueError={continueError} t={t} />
         ) : (
         <>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f4f0' }}>
