@@ -6847,8 +6847,8 @@ function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, onSi
           <Flora size={120} />
           <Text style={{ fontSize: 13, color: THEME.textMuted, marginTop: 6 }}>{t('onb_flora_intro')}</Text>
           {onSignIn && (
-            <TouchableOpacity onPress={onSignIn} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#4e7d4e' }}>{t('auth_to_login')}</Text>
+            <TouchableOpacity onPress={onSignIn} accessibilityRole="button" activeOpacity={0.8} style={{ marginTop: 16, alignSelf: 'stretch', backgroundColor: '#ffffff', borderWidth: 2, borderColor: '#4e7d4e', borderRadius: 16, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#4e7d4e', textAlign: 'center' }}>{t('auth_to_login')}</Text>
             </TouchableOpacity>
           )}
         </View>
