@@ -62,6 +62,10 @@ const STRINGS = {
     account: 'Account', account_sub: 'Sign in to back up and sync your journey across devices.',
     account_signed_in: 'Signed in', account_manage: 'Manage account',
     sign_in: 'Sign in', sign_up: 'Create account', sign_out: 'Sign out',
+    account_delete: 'Delete account', account_delete_title: 'Delete your account?',
+    account_delete_body: 'This permanently deletes your account and everything backed up in it (meals, symptoms, your plan and reintroduction results), and erases the data on this phone too. It cannot be undone.',
+    account_delete_confirm: 'Yes, delete everything', account_deleted: 'Your account and data have been deleted.',
+    account_delete_failed: "Couldn't delete your account. Check your connection and try again.",
     auth_title_login: 'Welcome back', auth_title_signup: 'Create your account', auth_title_reset: 'Reset password',
     auth_sub_login: 'Sign in to sync your gut journey across devices.',
     auth_sub_signup: 'Your data stays yours — an account backs it up and keeps it in sync.',
@@ -70,7 +74,7 @@ const STRINGS = {
     auth_password: 'Password', auth_password_ph: 'At least 6 characters',
     auth_forgot: 'Forgot password?',
     auth_to_signup: 'New here? Create an account', auth_to_login: 'Already have an account? Sign in',
-    auth_send_reset: 'Send reset link', auth_back_to_login: 'Back to sign in',
+    auth_send_reset: 'Send reset link', auth_back_to_login: 'Back to sign in', auth_confirmed_continue: "I've confirmed, continue",
     auth_err_empty: 'Please enter your email and password.',
     auth_err_email: 'Please enter a valid email address.',
     auth_err_password_short: 'Password must be at least 6 characters.',
@@ -82,7 +86,7 @@ const STRINGS = {
     auth_err_mismatch: 'Passwords do not match.',
     auth_confirm_password: 'Confirm password', auth_confirm_password_ph: 'Re-enter your password',
     auth_show_password: 'Show password', auth_hide_password: 'Hide password',
-    auth_sent_title: 'Check your email', auth_sent_body: 'We sent a confirmation link to {email}. Open it to activate your account, then come back and sign in.',
+    auth_sent_title: 'Check your email', auth_sent_body: 'We sent a confirmation link to {email}. Open it to activate your account, then come back here.',
     auth_reset_sent_body: 'If {email} has an account, a password reset link is on its way. Open it to choose a new password.',
     account_nudge_title: 'Save your progress', account_nudge_sub: 'Create a free account to back up your diary and colony.', account_nudge_cta: 'Create free account', account_nudge_row_sub: 'Back up your diary & colony',
     levelup_save_cta: 'Save your colony — create a free account',
@@ -532,7 +536,7 @@ const STRINGS = {
     risk_low: 'Low', risk_moderate: 'Moderate', risk_high: 'High',
     list_fermented: 'FERMENTED', list_tolerated: 'tolerated', list_trigger: 'trigger',
     hist_high: 'HIGH', hist_mod: 'MOD', hist_liberator: 'LIBERATOR',
-    pill_day: 'Day {n}', detail_ferm_tag: 'FERMENTATION', app_tagline: 'Your gut, in good hands',
+    pill_day: 'Day {n}', detail_ferm_tag: 'FERMENTATION', app_tagline: 'Your gut, in good hands', welcome_badge: 'Free to start', welcome_title: 'Find your trigger foods.\nFeel like you again.', welcome_sub: 'The guided low-FODMAP plan for IBS, with Flora by your side.', welcome_feat1: 'A step-by-step plan, week by week', welcome_feat2: 'Discover exactly which foods upset you', welcome_feat3: 'Flora grows with your progress', welcome_create: 'Create free account', welcome_login: 'I already have an account', welcome_skip: 'Continue without an account',
 
     // Form labels (Flora evolution stages)
     form_seedling: 'Seedling', form_sprout: 'Sprout', form_growing: 'Growing',
@@ -581,6 +585,10 @@ const STRINGS = {
     account: 'Konto', account_sub: 'Melde dich an, um deine Reise geräteübergreifend zu sichern und zu synchronisieren.',
     account_signed_in: 'Angemeldet', account_manage: 'Konto verwalten',
     sign_in: 'Anmelden', sign_up: 'Konto erstellen', sign_out: 'Abmelden',
+    account_delete: 'Konto löschen', account_delete_title: 'Konto löschen?',
+    account_delete_body: 'Dein Konto und alles, was darin gesichert ist (Mahlzeiten, Symptome, dein Plan und deine Wiedereinführungs-Ergebnisse), wird dauerhaft gelöscht – ebenso die Daten auf diesem Handy. Das kann nicht rückgängig gemacht werden.',
+    account_delete_confirm: 'Ja, alles löschen', account_deleted: 'Dein Konto und deine Daten wurden gelöscht.',
+    account_delete_failed: 'Konto konnte nicht gelöscht werden. Prüfe deine Verbindung und versuche es erneut.',
     auth_title_login: 'Willkommen zurück', auth_title_signup: 'Konto erstellen', auth_title_reset: 'Passwort zurücksetzen',
     auth_sub_login: 'Melde dich an, um deine Darm-Reise geräteübergreifend zu synchronisieren.',
     auth_sub_signup: 'Deine Daten bleiben deine — ein Konto sichert und synchronisiert sie.',
@@ -589,7 +597,7 @@ const STRINGS = {
     auth_password: 'Passwort', auth_password_ph: 'Mindestens 6 Zeichen',
     auth_forgot: 'Passwort vergessen?',
     auth_to_signup: 'Neu hier? Konto erstellen', auth_to_login: 'Schon ein Konto? Anmelden',
-    auth_send_reset: 'Link senden', auth_back_to_login: 'Zurück zur Anmeldung',
+    auth_send_reset: 'Link senden', auth_back_to_login: 'Zurück zur Anmeldung', auth_confirmed_continue: 'Ich habe bestätigt, weiter',
     auth_err_empty: 'Bitte gib E-Mail und Passwort ein.',
     auth_err_email: 'Bitte gib eine gültige E-Mail-Adresse ein.',
     auth_err_password_short: 'Das Passwort muss mindestens 6 Zeichen haben.',
@@ -601,7 +609,7 @@ const STRINGS = {
     auth_err_mismatch: 'Die Passwörter stimmen nicht überein.',
     auth_confirm_password: 'Passwort bestätigen', auth_confirm_password_ph: 'Passwort erneut eingeben',
     auth_show_password: 'Passwort anzeigen', auth_hide_password: 'Passwort verbergen',
-    auth_sent_title: 'Prüfe deine E-Mails', auth_sent_body: 'Wir haben einen Bestätigungslink an {email} gesendet. Öffne ihn, um dein Konto zu aktivieren, und melde dich dann an.',
+    auth_sent_title: 'Prüfe deine E-Mails', auth_sent_body: 'Wir haben einen Bestätigungslink an {email} gesendet. Öffne ihn, um dein Konto zu aktivieren, und komm dann hierher zurück.',
     auth_reset_sent_body: 'Falls {email} ein Konto hat, ist ein Link zum Zurücksetzen unterwegs. Öffne ihn, um ein neues Passwort zu wählen.',
     account_nudge_title: 'Sichere deinen Fortschritt', account_nudge_sub: 'Erstelle ein kostenloses Konto, um dein Tagebuch und deine Kolonie zu sichern.', account_nudge_cta: 'Kostenloses Konto erstellen', account_nudge_row_sub: 'Tagebuch & Kolonie sichern',
     levelup_save_cta: 'Kolonie sichern — kostenloses Konto erstellen',
@@ -1006,7 +1014,7 @@ const STRINGS = {
     risk_low: 'Niedrig', risk_moderate: 'Mittel', risk_high: 'Hoch',
     list_fermented: 'FERMENTIERT', list_tolerated: 'vertragen', list_trigger: 'Auslöser',
     hist_high: 'HOCH', hist_mod: 'MITTEL', hist_liberator: 'FREISETZER',
-    pill_day: 'Tag {n}', detail_ferm_tag: 'FERMENTATION', app_tagline: 'Dein Darm in guten Händen',
+    pill_day: 'Tag {n}', detail_ferm_tag: 'FERMENTATION', app_tagline: 'Dein Darm in guten Händen', welcome_badge: 'Kostenlos starten', welcome_title: 'Finde deine Trigger-Lebensmittel.\nFühl dich wieder wie du.', welcome_sub: 'Der geführte Low-FODMAP-Plan bei Reizdarm, mit Flora an deiner Seite.', welcome_feat1: 'Ein Plan Schritt für Schritt, Woche für Woche', welcome_feat2: 'Finde heraus, welche Lebensmittel dir schaden', welcome_feat3: 'Flora wächst mit deinen Fortschritten', welcome_create: 'Kostenloses Konto erstellen', welcome_login: 'Ich habe schon ein Konto', welcome_skip: 'Ohne Konto fortfahren',
     form_seedling: 'Keimling', form_sprout: 'Spross', form_growing: 'Wachsend',
     form_blooming: 'Blühend', form_thriving: 'Aufblühend',
 
@@ -1053,6 +1061,10 @@ const STRINGS = {
     account: 'Cuenta', account_sub: 'Inicia sesión para respaldar y sincronizar tu progreso entre dispositivos.',
     account_signed_in: 'Sesión iniciada', account_manage: 'Gestionar cuenta',
     sign_in: 'Iniciar sesión', sign_up: 'Crear cuenta', sign_out: 'Cerrar sesión',
+    account_delete: 'Eliminar cuenta', account_delete_title: '¿Eliminar tu cuenta?',
+    account_delete_body: 'Se eliminará para siempre tu cuenta y todo lo guardado en ella (comidas, síntomas, tu plan y los resultados de la reintroducción), y también los datos de este teléfono. No se puede deshacer.',
+    account_delete_confirm: 'Sí, eliminar todo', account_deleted: 'Tu cuenta y tus datos se han eliminado.',
+    account_delete_failed: 'No se pudo eliminar la cuenta. Revisa tu conexión e inténtalo de nuevo.',
     auth_title_login: 'Bienvenido de nuevo', auth_title_signup: 'Crea tu cuenta', auth_title_reset: 'Restablecer contraseña',
     auth_sub_login: 'Inicia sesión para sincronizar tu progreso entre dispositivos.',
     auth_sub_signup: 'Tus datos son tuyos: una cuenta los respalda y los mantiene sincronizados.',
@@ -1061,7 +1073,7 @@ const STRINGS = {
     auth_password: 'Contraseña', auth_password_ph: 'Al menos 6 caracteres',
     auth_forgot: '¿Olvidaste tu contraseña?',
     auth_to_signup: '¿Nuevo aquí? Crea una cuenta', auth_to_login: '¿Ya tienes cuenta? Inicia sesión',
-    auth_send_reset: 'Enviar enlace', auth_back_to_login: 'Volver a iniciar sesión',
+    auth_send_reset: 'Enviar enlace', auth_back_to_login: 'Volver a iniciar sesión', auth_confirmed_continue: 'Ya lo confirmé, continuar',
     auth_err_empty: 'Introduce tu correo y contraseña.',
     auth_err_email: 'Introduce una dirección de correo válida.',
     auth_err_password_short: 'La contraseña debe tener al menos 6 caracteres.',
@@ -1073,7 +1085,7 @@ const STRINGS = {
     auth_err_mismatch: 'Las contraseñas no coinciden.',
     auth_confirm_password: 'Confirmar contraseña', auth_confirm_password_ph: 'Vuelve a escribir tu contraseña',
     auth_show_password: 'Mostrar contraseña', auth_hide_password: 'Ocultar contraseña',
-    auth_sent_title: 'Revisa tu correo', auth_sent_body: 'Enviamos un enlace de confirmación a {email}. Ábrelo para activar tu cuenta y luego inicia sesión.',
+    auth_sent_title: 'Revisa tu correo', auth_sent_body: 'Enviamos un enlace de confirmación a {email}. Ábrelo para activar tu cuenta y luego vuelve aquí.',
     auth_reset_sent_body: 'Si {email} tiene una cuenta, el enlace para restablecer la contraseña ya va en camino. Ábrelo para elegir una nueva contraseña.',
     account_nudge_title: 'Guarda tu progreso', account_nudge_sub: 'Crea una cuenta gratis para respaldar tu diario y tu colonia.', account_nudge_cta: 'Crear cuenta gratis', account_nudge_row_sub: 'Respalda tu diario y colonia',
     levelup_save_cta: 'Guarda tu colonia: crea una cuenta gratis',
@@ -1478,7 +1490,7 @@ const STRINGS = {
     risk_low: 'Bajo', risk_moderate: 'Moderado', risk_high: 'Alto',
     list_fermented: 'FERMENTADO', list_tolerated: 'tolerado', list_trigger: 'desencadenante',
     hist_high: 'ALTO', hist_mod: 'MOD', hist_liberator: 'LIBERADOR',
-    pill_day: 'Día {n}', detail_ferm_tag: 'FERMENTACIÓN', app_tagline: 'Tu intestino, en buenas manos',
+    pill_day: 'Día {n}', detail_ferm_tag: 'FERMENTACIÓN', app_tagline: 'Tu intestino, en buenas manos', welcome_badge: 'Empieza gratis', welcome_title: 'Descubre qué alimentos te sientan mal.\nVuelve a sentirte tú.', welcome_sub: 'El plan bajo en FODMAP guiado para el SII, con Flora a tu lado.', welcome_feat1: 'Un plan paso a paso, semana a semana', welcome_feat2: 'Descubre exactamente qué alimentos te afectan', welcome_feat3: 'Flora crece con tu progreso', welcome_create: 'Crear cuenta gratis', welcome_login: 'Ya tengo una cuenta', welcome_skip: 'Continuar sin cuenta',
     form_seedling: 'Semilla', form_sprout: 'Brote', form_growing: 'Creciendo',
     form_blooming: 'Floreciendo', form_thriving: 'Próspera',
 
@@ -1525,6 +1537,10 @@ const STRINGS = {
     account: 'Compte', account_sub: 'Connecte-toi pour sauvegarder et synchroniser ton parcours sur tous tes appareils.',
     account_signed_in: 'Connecté', account_manage: 'Gérer le compte',
     sign_in: 'Se connecter', sign_up: 'Créer un compte', sign_out: 'Se déconnecter',
+    account_delete: 'Supprimer le compte', account_delete_title: 'Supprimer ton compte ?',
+    account_delete_body: 'Ton compte et tout ce qui y est sauvegardé (repas, symptômes, ton plan et tes résultats de réintroduction) seront supprimés définitivement, ainsi que les données de ce téléphone. C\'est irréversible.',
+    account_delete_confirm: 'Oui, tout supprimer', account_deleted: 'Ton compte et tes données ont été supprimés.',
+    account_delete_failed: 'Impossible de supprimer le compte. Vérifie ta connexion et réessaie.',
     auth_title_login: 'Bon retour', auth_title_signup: 'Crée ton compte', auth_title_reset: 'Réinitialiser le mot de passe',
     auth_sub_login: 'Connecte-toi pour synchroniser ton parcours sur tous tes appareils.',
     auth_sub_signup: 'Tes données restent les tiennes — un compte les sauvegarde et les synchronise.',
@@ -1533,7 +1549,7 @@ const STRINGS = {
     auth_password: 'Mot de passe', auth_password_ph: 'Au moins 6 caractères',
     auth_forgot: 'Mot de passe oublié ?',
     auth_to_signup: 'Nouveau ici ? Crée un compte', auth_to_login: 'Déjà un compte ? Connecte-toi',
-    auth_send_reset: 'Envoyer le lien', auth_back_to_login: 'Retour à la connexion',
+    auth_send_reset: 'Envoyer le lien', auth_back_to_login: 'Retour à la connexion', auth_confirmed_continue: "J'ai confirmé, continuer",
     auth_err_empty: 'Saisis ton e-mail et ton mot de passe.',
     auth_err_email: 'Saisis une adresse e-mail valide.',
     auth_err_password_short: 'Le mot de passe doit comporter au moins 6 caractères.',
@@ -1545,7 +1561,7 @@ const STRINGS = {
     auth_err_mismatch: 'Les mots de passe ne correspondent pas.',
     auth_confirm_password: 'Confirmer le mot de passe', auth_confirm_password_ph: 'Ressaisis ton mot de passe',
     auth_show_password: 'Afficher le mot de passe', auth_hide_password: 'Masquer le mot de passe',
-    auth_sent_title: 'Vérifie tes e-mails', auth_sent_body: 'Nous avons envoyé un lien de confirmation à {email}. Ouvre-le pour activer ton compte, puis connecte-toi.',
+    auth_sent_title: 'Vérifie tes e-mails', auth_sent_body: 'Nous avons envoyé un lien de confirmation à {email}. Ouvre-le pour activer ton compte, puis reviens ici.',
     auth_reset_sent_body: 'Si {email} a un compte, un lien de réinitialisation est en route. Ouvre-le pour choisir un nouveau mot de passe.',
     account_nudge_title: 'Sauvegarde ta progression', account_nudge_sub: 'Crée un compte gratuit pour sauvegarder ton journal et ta colonie.', account_nudge_cta: 'Créer un compte gratuit', account_nudge_row_sub: 'Sauvegarde journal & colonie',
     levelup_save_cta: 'Sauvegarde ta colonie — crée un compte gratuit',
@@ -1950,7 +1966,7 @@ const STRINGS = {
     risk_low: 'Faible', risk_moderate: 'Modéré', risk_high: 'Élevé',
     list_fermented: 'FERMENTÉ', list_tolerated: 'toléré', list_trigger: 'déclencheur',
     hist_high: 'ÉLEVÉ', hist_mod: 'MODÉRÉ', hist_liberator: 'LIBÉRATEUR',
-    pill_day: 'Jour {n}', detail_ferm_tag: 'FERMENTATION', app_tagline: 'Ton intestin entre de bonnes mains',
+    pill_day: 'Jour {n}', detail_ferm_tag: 'FERMENTATION', app_tagline: 'Ton intestin entre de bonnes mains', welcome_badge: 'Gratuit pour commencer', welcome_title: 'Trouve les aliments qui te dérangent.\nRedeviens toi-même.', welcome_sub: 'Le programme pauvre en FODMAP guidé pour le SII, avec Flora à tes côtés.', welcome_feat1: 'Un programme pas à pas, semaine après semaine', welcome_feat2: 'Découvre exactement quels aliments te gênent', welcome_feat3: 'Flora grandit avec tes progrès', welcome_create: 'Créer un compte gratuit', welcome_login: "J'ai déjà un compte", welcome_skip: 'Continuer sans compte',
     form_seedling: 'Graine', form_sprout: 'Pousse', form_growing: 'En croissance',
     form_blooming: 'En fleur', form_thriving: 'Épanouie',
 
@@ -1997,6 +2013,10 @@ const STRINGS = {
     account: 'Account', account_sub: 'Accedi per salvare e sincronizzare il tuo percorso su tutti i dispositivi.',
     account_signed_in: 'Accesso eseguito', account_manage: 'Gestisci account',
     sign_in: 'Accedi', sign_up: 'Crea account', sign_out: 'Esci',
+    account_delete: 'Elimina account', account_delete_title: 'Eliminare il tuo account?',
+    account_delete_body: 'Il tuo account e tutto ciò che contiene (pasti, sintomi, il tuo piano e i risultati della reintroduzione) verranno eliminati per sempre, insieme ai dati su questo telefono. Non si può annullare.',
+    account_delete_confirm: 'Sì, elimina tutto', account_deleted: 'Il tuo account e i tuoi dati sono stati eliminati.',
+    account_delete_failed: "Impossibile eliminare l'account. Controlla la connessione e riprova.",
     auth_title_login: 'Bentornato', auth_title_signup: 'Crea il tuo account', auth_title_reset: 'Reimposta password',
     auth_sub_login: 'Accedi per sincronizzare il tuo percorso su tutti i dispositivi.',
     auth_sub_signup: 'I tuoi dati restano tuoi — un account li salva e li mantiene sincronizzati.',
@@ -2005,7 +2025,7 @@ const STRINGS = {
     auth_password: 'Password', auth_password_ph: 'Almeno 6 caratteri',
     auth_forgot: 'Password dimenticata?',
     auth_to_signup: 'Nuovo qui? Crea un account', auth_to_login: 'Hai già un account? Accedi',
-    auth_send_reset: 'Invia link', auth_back_to_login: 'Torna all\'accesso',
+    auth_send_reset: 'Invia link', auth_back_to_login: 'Torna all\'accesso', auth_confirmed_continue: 'Ho confermato, continua',
     auth_err_empty: 'Inserisci email e password.',
     auth_err_email: 'Inserisci un indirizzo email valido.',
     auth_err_password_short: 'La password deve avere almeno 6 caratteri.',
@@ -2017,7 +2037,7 @@ const STRINGS = {
     auth_err_mismatch: 'Le password non coincidono.',
     auth_confirm_password: 'Conferma password', auth_confirm_password_ph: 'Reinserisci la password',
     auth_show_password: 'Mostra password', auth_hide_password: 'Nascondi password',
-    auth_sent_title: 'Controlla la tua email', auth_sent_body: 'Abbiamo inviato un link di conferma a {email}. Aprilo per attivare il tuo account, poi accedi.',
+    auth_sent_title: 'Controlla la tua email', auth_sent_body: 'Abbiamo inviato un link di conferma a {email}. Aprilo per attivare il tuo account, poi torna qui.',
     auth_reset_sent_body: 'Se {email} ha un account, il link per reimpostare la password è in arrivo. Aprilo per scegliere una nuova password.',
     account_nudge_title: 'Salva i tuoi progressi', account_nudge_sub: 'Crea un account gratuito per salvare il tuo diario e la tua colonia.', account_nudge_cta: 'Crea account gratuito', account_nudge_row_sub: 'Salva diario e colonia',
     levelup_save_cta: 'Salva la tua colonia — crea un account gratuito',
@@ -2422,7 +2442,7 @@ const STRINGS = {
     risk_low: 'Basso', risk_moderate: 'Moderato', risk_high: 'Alto',
     list_fermented: 'FERMENTATO', list_tolerated: 'tollerato', list_trigger: 'scatenante',
     hist_high: 'ALTO', hist_mod: 'MOD', hist_liberator: 'LIBERATORE',
-    pill_day: 'Giorno {n}', detail_ferm_tag: 'FERMENTAZIONE', app_tagline: 'Il tuo intestino, in buone mani',
+    pill_day: 'Giorno {n}', detail_ferm_tag: 'FERMENTAZIONE', app_tagline: 'Il tuo intestino, in buone mani', welcome_badge: 'Inizia gratis', welcome_title: 'Scopri i cibi che ti fanno male.\nTorna a sentirti te.', welcome_sub: 'Il piano low-FODMAP guidato per il colon irritabile, con Flora al tuo fianco.', welcome_feat1: 'Un piano passo dopo passo, settimana per settimana', welcome_feat2: 'Scopri esattamente quali cibi ti disturbano', welcome_feat3: 'Flora cresce insieme ai tuoi progressi', welcome_create: 'Crea un account gratuito', welcome_login: 'Ho già un account', welcome_skip: 'Continua senza account',
     form_seedling: 'Seme', form_sprout: 'Germoglio', form_growing: 'In crescita',
     form_blooming: 'In fioritura', form_thriving: 'Prospera',
 
@@ -3953,7 +3973,7 @@ const FORMS = {
   grown:    { rBody: 50, body: '#6fa86f', inner: '#bfe0bf', cilia: 18, leaves: 0, glow: false, sparkle: false, specks: 3 },
   thriving: { rBody: 50, body: '#5fa85f', inner: '#b8e0b8', cilia: 18, leaves: 3, glow: true,  sparkle: true,  specks: 4 },
 };
-function Flora({ size = 140, mood = 'good', form = 'grown', blink = false }) {
+function Flora({ size = 140, mood = 'good', form = 'grown', blink = false, look = null }) {
   const m = mood === 'happy' ? 'good' : mood === 'queasy' ? 'bad' : mood;
   const bad = m === 'bad';
   const soso = m === 'soso';
@@ -3964,6 +3984,7 @@ function Flora({ size = 140, mood = 'good', form = 'grown', blink = false }) {
   const k = f.rBody / 50; // speck scale
   const ciliaPaths = f.cilia > 0 ? ciliaFringe(f.rBody, f.cilia) : [];
   const mouth = bad ? 'M66 89 Q75 81 84 89' : soso ? 'M66 86 L84 86' : 'M66 84 Q75 93 84 84';
+  const lx = look ? look.x : 0, ly = look ? look.y : 0; // gaze offset for the open eyes
 
   return (
     <Svg width={size} height={size} viewBox="0 0 150 150">
@@ -4008,10 +4029,10 @@ function Flora({ size = 140, mood = 'good', form = 'grown', blink = false }) {
         </>
       ) : (
         <>
-          <Circle cx="63" cy="72" r="6.5" fill={THEME.ink} />
-          <Circle cx="87" cy="72" r="6.5" fill={THEME.ink} />
-          <Circle cx="65" cy="69.5" r="2.2" fill="#fff" />
-          <Circle cx="89" cy="69.5" r="2.2" fill="#fff" />
+          <Circle cx={63 + lx} cy={72 + ly} r="6.5" fill={THEME.ink} />
+          <Circle cx={87 + lx} cy={72 + ly} r="6.5" fill={THEME.ink} />
+          <Circle cx={65 + lx} cy={69.5 + ly} r="2.2" fill="#fff" />
+          <Circle cx={89 + lx} cy={69.5 + ly} r="2.2" fill="#fff" />
         </>
       )}
       {/* cheeks */}
@@ -4071,6 +4092,36 @@ function BlinkingFlora(props) {
   );
 }
 
+// Flora that stays perfectly still: only her eyes move. She blinks and glances
+// around now and then, like she's taking in the screen.
+const GLANCES = [{ x: 0, y: 0 }, { x: -3, y: 0 }, { x: 3, y: -1 }, { x: 0, y: 2 }, { x: 2.5, y: 1.5 }, { x: -2.5, y: -1 }];
+function LookingFlora(props) {
+  const [blink, setBlink] = useState(false);
+  const [look, setLook] = useState(GLANCES[0]);
+  useEffect(() => {
+    if (_reduceMotion) return;
+    let blinkTimer, openTimer, lookTimer;
+    const scheduleBlink = () => {
+      blinkTimer = setTimeout(() => {
+        setBlink(true);
+        openTimer = setTimeout(() => { setBlink(false); scheduleBlink(); }, 140);
+      }, 2400 + Math.random() * 2600);
+    };
+    // Alternate between a glance away and looking back at the user.
+    let away = false;
+    const scheduleLook = () => {
+      lookTimer = setTimeout(() => {
+        away = !away;
+        setLook(away ? GLANCES[1 + Math.floor(Math.random() * (GLANCES.length - 1))] : GLANCES[0]);
+        scheduleLook();
+      }, away ? 900 + Math.random() * 700 : 1600 + Math.random() * 1800);
+    };
+    scheduleBlink(); scheduleLook();
+    return () => { clearTimeout(blinkTimer); clearTimeout(openTimer); clearTimeout(lookTimer); };
+  }, []);
+  return <Flora {...props} blink={blink} look={look} />;
+}
+
 // Branded launch animation: Flora springs in and breathes while a ring of
 // little probiotic dots orbits her (an on-brand spinner), and the wordmark
 // fades up. Shown while the app hydrates.
@@ -4117,6 +4168,99 @@ function SplashScreen({ t }) {
         <Text style={{ fontSize: 13, color: THEME.textMuted, marginTop: 4 }}>{t('app_tagline')}</Text>
       </Animated.View>
     </SafeAreaViewSC>
+    </SafeAreaProvider>
+  );
+}
+
+// First screen for anyone not signed in: sign in, create an account, or skip
+// straight into onboarding. Flora sits still (only her eyes move) while dots orbit
+// her and colour bubbles drift in a soft gradient; the copy and buttons stagger in underneath.
+function WelcomeScreen({ onCreate, onLogin, onSkip, t }) {
+  const enter = useRef(new Animated.Value(_reduceMotion ? 1 : 0)).current;
+  const drift = useRef(new Animated.Value(0)).current;
+  const orbit = useRef(new Animated.Value(0)).current;
+  const rows = useRef([0, 1, 2, 3].map(() => new Animated.Value(_reduceMotion ? 1 : 0))).current;
+  useEffect(() => {
+    NativeSplash.hideAsync().catch(() => {});
+    if (_reduceMotion) return;
+    Animated.spring(enter, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true }).start();
+    Animated.stagger(120, rows.map(v => Animated.timing(v, { toValue: 1, duration: 420, delay: 250, easing: Easing.out(Easing.cubic), useNativeDriver: true }))).start();
+    const d = Animated.loop(Animated.timing(drift, { toValue: 1, duration: 9000, easing: Easing.linear, useNativeDriver: true }));
+    const o = Animated.loop(Animated.timing(orbit, { toValue: 1, duration: 14000, easing: Easing.linear, useNativeDriver: true }));
+    d.start(); o.start();
+    return () => { d.stop(); o.stop(); };
+  }, []);
+  const rotate = orbit.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const slide = (v) => ({ opacity: v, transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }] });
+  // Background bubbles: horizontal position (share of width), top, size, colour.
+  const winW = Dimensions.get('window').width;
+  const bubbles = [
+    { x: 0.06, y: 70, d: 46, c: '#f6c96b' }, { x: 0.78, y: 40, d: 30, c: '#ef9fbf' }, { x: 0.84, y: 210, d: 54, c: '#8fcf8f' },
+    { x: 0.10, y: 260, d: 24, c: '#86bde8' }, { x: 0.60, y: 120, d: 16, c: '#f6c96b' }, { x: 0.30, y: 20, d: 18, c: '#8fcf8f' },
+  ];
+  const dots = ['#5fb06a', '#f0bd4f', '#ec84ac', '#5fa8e0', '#5fb06a', '#f0bd4f'];
+  const R = 104, C = 110;
+  const feats = [
+    { icon: '🗓️', bg: '#dcefd6', text: t('welcome_feat1') },
+    { icon: '🔎', bg: '#fbeed3', text: t('welcome_feat2') },
+    { icon: '🌱', bg: '#fbe0ea', text: t('welcome_feat3') },
+  ];
+  return (
+    <SafeAreaProvider>
+    <LinearGradient colors={['#d9efd0', '#f4f7f2', '#fdeedd']} locations={[0, 0.55, 1]} style={{ flex: 1 }}>
+      <StatusBar barStyle="dark-content" backgroundColor="#d9efd0" />
+      <SafeAreaViewSC style={{ flex: 1 }} edges={['top', 'bottom', 'left', 'right']}>
+        {bubbles.map((bb, i) => {
+          const y = drift.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, i % 2 ? 14 : -14, 0] });
+          return <Animated.View key={i} pointerEvents="none" style={{ position: 'absolute', left: winW * bb.x, top: bb.y, width: bb.d, height: bb.d, borderRadius: bb.d / 2, backgroundColor: bb.c, opacity: 0.35, transform: [{ translateY: y }] }} />;
+        })}
+        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingBottom: 12 }} showsVerticalScrollIndicator={false} bounces={false}>
+          <View style={{ alignItems: 'center', marginTop: 20 }}>
+            <View style={{ width: 220, height: 220, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ position: 'absolute', width: 170, height: 170, borderRadius: 85, backgroundColor: '#ffffff', opacity: 0.6 }} />
+              <Animated.View pointerEvents="none" style={{ position: 'absolute', width: 220, height: 220, transform: [{ rotate }] }}>
+                {dots.map((c, i) => {
+                  const a = (i / dots.length) * 2 * Math.PI;
+                  const sz = i % 2 ? 9 : 13;
+                  return <View key={i} style={{ position: 'absolute', left: C + Math.cos(a) * R - sz / 2, top: C + Math.sin(a) * R - sz / 2, width: sz, height: sz, borderRadius: sz / 2, backgroundColor: c }} />;
+                })}
+              </Animated.View>
+              <View style={{ zIndex: 1 }}><LookingFlora size={140} mood="good" form="thriving" /></View>
+            </View>
+            <Animated.View style={[{ alignItems: 'center' }, slide(enter)]}>
+              <View style={{ backgroundColor: THEME.amberBg, borderRadius: 999, paddingVertical: 5, paddingHorizontal: 12, marginTop: 4 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.amberText }}>✨ {t('welcome_badge')}</Text>
+              </View>
+              <Text style={{ fontSize: 34, fontWeight: '800', color: THEME.ink, letterSpacing: -0.8, marginTop: 10 }}>GutBloom</Text>
+              <Text style={{ fontSize: 21, fontWeight: '700', color: THEME.primaryDark, textAlign: 'center', marginTop: 8, lineHeight: 28 }}>{t('welcome_title')}</Text>
+              <Text style={{ fontSize: 15, color: THEME.textSoft, textAlign: 'center', marginTop: 8, lineHeight: 21 }}>{t('welcome_sub')}</Text>
+            </Animated.View>
+          </View>
+          <View style={{ marginTop: 20, gap: 10 }}>
+            {feats.map((f, i) => (
+              <Animated.View key={i} style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 16, padding: 12 }, slide(rows[i])]}>
+                <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: f.bg, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 18 }}>{f.icon}</Text></View>
+                <Text style={{ flex: 1, fontSize: 15, fontWeight: '600', color: THEME.ink }}>{f.text}</Text>
+              </Animated.View>
+            ))}
+          </View>
+          <View style={{ flex: 1, minHeight: 20 }} />
+          <Animated.View style={slide(rows[3])}>
+            <TouchableOpacity onPress={onCreate} activeOpacity={0.85} accessibilityRole="button" style={{ borderRadius: 18, overflow: 'hidden' }}>
+              <LinearGradient colors={['#5fa865', '#3f7f47']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingVertical: 17, alignItems: 'center' }}>
+                <Text style={{ fontSize: 17, fontWeight: '700', color: '#ffffff' }}>{t('welcome_create')}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onLogin} activeOpacity={0.8} accessibilityRole="button" style={{ marginTop: 12, backgroundColor: '#ffffff', borderWidth: 2, borderColor: THEME.primary, borderRadius: 18, paddingVertical: 15, alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: THEME.primaryDark }}>{t('welcome_login')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onSkip} accessibilityRole="button" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ marginTop: 16, alignItems: 'center' }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: THEME.textMuted }}>{t('welcome_skip')}</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </ScrollView>
+      </SafeAreaViewSC>
+    </LinearGradient>
     </SafeAreaProvider>
   );
 }
@@ -5918,7 +6062,17 @@ const STORAGE_KEYS = {
   barcodeIntroSeen: '@gutly:barcodeIntroSeen',
   customFoods:     '@gutly:customFoods',
   accountBannerDismissed: '@gutly:accountBannerDismissed',
+  syncStateTimes:  '@gutly:syncStateTimes',   // { field: iso } when each synced app-state field last changed here
+  syncTombstones:  '@gutly:syncTombstones',   // { recordId: { kind, at } } records deleted here, so the deletion syncs
+  syncedOwner:     '@gutly:syncedOwner',      // user id this phone last synced with
 };
+
+// App state (not individual records) that follows the account to a new phone.
+// Each field is one `records` row with kind 'state' and id 'state:<field>'.
+// Premium and the scan allowance stay local until real purchases (RevenueCat) exist.
+const SYNCED_STATE_FIELDS = ['profile', 'reintroProgress', 'testHistory', 'activeTest', 'currentPhase', 'phaseStartDate', 'periodActive', 'langPref', 'celebratedLevel', 'onboardingDone'];
+// Values a fresh install starts with, as JSON — used to tell real data from defaults.
+const SYNCED_STATE_DEFAULTS = { profile: '{}', reintroProgress: '{}', testHistory: '[]', activeTest: 'null', currentPhase: '"not_started"', phaseStartDate: 'null', periodActive: 'false', langPref: '"auto"', celebratedLevel: 'null', onboardingDone: 'false' };
 
 async function storageGet(key) {
   try {
@@ -5941,6 +6095,7 @@ async function storageSet(key, value) {
 
 export default function App() {
   const [screen, setScreen] = useState('onboarding');
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false); // "continue without an account" on the welcome screen
   // Language: 'auto' follows the phone; otherwise an explicit override from Settings.
   const [langPref, setLangPref] = useState('auto');
   // Regular users always follow the phone's language. The manual override is a
@@ -5956,6 +6111,10 @@ export default function App() {
   const openRecipes = (from) => { setRecipesReturn(from); setTab('recipes'); };
   const [log, setLog] = useState([]);
   const [customFoods, setCustomFoods] = useState([]);
+  // Sync bookkeeping (see SYNCED_STATE_FIELDS and STORAGE_KEYS.sync*).
+  const [stateTimes, setStateTimes] = useState({});
+  const [tombstones, setTombstones] = useState({});
+  const [syncedOwner, setSyncedOwner] = useState(null);
   const [reintroProgress, setReintroProgress] = useState({});
   // Kept-alive Foods screen, memoized so it doesn't re-render on unrelated App renders (e.g.
   // tapping another tab). Same element reference → React skips the subtree. Rebuilds only when
@@ -6014,6 +6173,7 @@ export default function App() {
         const [
           sProfile, sLang, sLog, sReintro, sHistory, sActive,
           sPhase, sPhaseDate, sPremium, sScan, sPeriod, sOnbDone, sCelebrated, sCustomFoods, sBannerDismissed,
+          sStateTimes, sTombstones, sSyncedOwner,
         ] = await Promise.all([
           storageGet(STORAGE_KEYS.profile),
           storageGet(STORAGE_KEYS.langPref),
@@ -6030,10 +6190,16 @@ export default function App() {
           storageGet(STORAGE_KEYS.celebratedLevel),
           storageGet(STORAGE_KEYS.customFoods),
           storageGet(STORAGE_KEYS.accountBannerDismissed),
+          storageGet(STORAGE_KEYS.syncStateTimes),
+          storageGet(STORAGE_KEYS.syncTombstones),
+          storageGet(STORAGE_KEYS.syncedOwner),
         ]);
         if (cancelled) return;
         if (typeof sCelebrated === 'number') setCelebratedLevel(sCelebrated);
         if (sBannerDismissed === true) setAccountBannerDismissed(true);
+        if (sStateTimes && typeof sStateTimes === 'object') setStateTimes(sStateTimes);
+        if (sTombstones && typeof sTombstones === 'object') setTombstones(sTombstones);
+        if (typeof sSyncedOwner === 'string') setSyncedOwner(sSyncedOwner);
         // Register saved custom foods into FOODS so meals referencing them resolve everywhere.
         if (Array.isArray(sCustomFoods)) { sCustomFoods.forEach(registerCustomFood); setCustomFoods(sCustomFoods); }
 
@@ -6068,6 +6234,9 @@ export default function App() {
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.log, log); }, [log, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.customFoods, customFoods); }, [customFoods, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.accountBannerDismissed, accountBannerDismissed); }, [accountBannerDismissed, hydrated]);
+  useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.syncStateTimes, stateTimes); }, [stateTimes, hydrated]);
+  useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.syncTombstones, tombstones); }, [tombstones, hydrated]);
+  useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.syncedOwner, syncedOwner); }, [syncedOwner, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.reintroProgress, reintroProgress); }, [reintroProgress, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.testHistory, testHistory); }, [testHistory, hydrated]);
   useEffect(() => { if (hydrated) storageSet(STORAGE_KEYS.activeTest, activeTest); }, [activeTest, hydrated]);
@@ -6114,6 +6283,44 @@ export default function App() {
   const logRef = useRef(log); logRef.current = log;
   const customFoodsRef = useRef(customFoods); customFoodsRef.current = customFoods;
   const userRef = useRef(user); userRef.current = user;
+  const hydratedRef = useRef(hydrated); hydratedRef.current = hydrated;
+  const stateTimesRef = useRef(stateTimes); stateTimesRef.current = stateTimes;
+  const tombstonesRef = useRef(tombstones); tombstonesRef.current = tombstones;
+  const syncedOwnerRef = useRef(syncedOwner); syncedOwnerRef.current = syncedOwner;
+  const syncedState = { profile, reintroProgress, testHistory, activeTest, currentPhase, phaseStartDate, periodActive, langPref, celebratedLevel, onboardingDone: screen === 'main' };
+  const syncedStateRef = useRef(syncedState); syncedStateRef.current = syncedState;
+  const stateJson = (v) => JSON.stringify(v === undefined ? null : v);
+  // Applies a synced field that came from the cloud, with the same checks as loading from storage.
+  const STATE_SETTERS = {
+    profile: v => { if (v && typeof v === 'object') setProfile(v); },
+    reintroProgress: v => { if (v && typeof v === 'object') setReintroProgress(v); },
+    testHistory: v => { if (Array.isArray(v)) setTestHistory(v); },
+    activeTest: v => { if (v === null || (v && typeof v === 'object')) setActiveTest(v); },
+    currentPhase: v => { if (typeof v === 'string') setCurrentPhase(v); },
+    phaseStartDate: v => { if (v === null || typeof v === 'string') setPhaseStartDate(v); },
+    periodActive: v => { if (typeof v === 'boolean') setPeriodActive(v); },
+    langPref: v => { if (typeof v === 'string') setLangPref(v); },
+    celebratedLevel: v => { if (v === null || typeof v === 'number') setCelebratedLevel(v); },
+    onboardingDone: v => { if (v === true) setScreen('main'); },
+  };
+
+  // Stamp the time whenever a synced field changes on this phone, so sync can
+  // tell which side is newer. The first look after loading is not a change, and
+  // values applied from the cloud pre-set the snapshot so they aren't re-stamped.
+  const stateSnapRef = useRef({});
+  useEffect(() => {
+    if (!hydrated) return;
+    const snap = stateSnapRef.current;
+    const now = new Date().toISOString();
+    const stamped = {};
+    SYNCED_STATE_FIELDS.forEach(f => {
+      const json = stateJson(syncedState[f]);
+      if (!(f in snap)) { snap[f] = json; return; }
+      if (snap[f] === json) return;
+      snap[f] = json; stamped[f] = now;
+    });
+    if (Object.keys(stamped).length) setStateTimes(prev => Object.assign({}, prev, stamped));
+  }, [hydrated, profile, reintroProgress, testHistory, activeTest, currentPhase, phaseStartDate, periodActive, langPref, celebratedLevel, screen]);
 
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState(null); // ms timestamp of last successful sync
@@ -6136,19 +6343,49 @@ export default function App() {
   // Every syncable local record → a row for the `records` table. Log entries take
   // their updated_at from the entry timestamp (they don't store one locally yet);
   // custom foods already carry updatedAt. The full record is stored as `data` jsonb.
-  const collectLocalRows = (ownerId) => {
+  // Synced app-state fields are included once they've changed on this phone
+  // (skipState leaves them out, for a new phone's first sync where the cloud wins).
+  // Deletions go up as tombstones (deleted: true) so other phones drop them too.
+  const collectLocalRows = (ownerId, opts) => {
     const nowIso = new Date().toISOString();
     const rows = [];
     logRef.current.forEach(e => rows.push({ owner_id: ownerId, id: e.id, kind: 'log', data: e, updated_at: e.updatedAt || e.timestamp || nowIso, deleted: false }));
     customFoodsRef.current.forEach(f => rows.push({ owner_id: ownerId, id: f.id, kind: 'customFood', data: f, updated_at: f.updatedAt || f.createdAt || nowIso, deleted: false }));
+    if (!(opts && opts.skipState)) rows.push.apply(rows, collectStateRows(ownerId, SYNCED_STATE_FIELDS));
+    const tb = tombstonesRef.current;
+    Object.keys(tb).forEach(id => rows.push({ owner_id: ownerId, id, kind: tb[id].kind, data: {}, updated_at: tb[id].at, deleted: true }));
+    return rows;
+  };
+  const collectStateRows = (ownerId, fields) => {
+    const rows = [];
+    fields.forEach(f => {
+      const at = stateTimesRef.current[f];
+      if (at) rows.push({ owner_id: ownerId, id: 'state:' + f, kind: 'state', data: { v: syncedStateRef.current[f] === undefined ? null : syncedStateRef.current[f] }, updated_at: at, deleted: false });
+    });
     return rows;
   };
 
   // Merge remote rows into local state, last-write-wins by updated_at, honoring
   // tombstones. Additive: nothing local is dropped unless the server says deleted.
-  const mergeRemote = (remoteRows) => {
-    const logRows = remoteRows.filter(r => r.kind === 'log');
-    const foodRows = remoteRows.filter(r => r.kind === 'customFood');
+  // With preferRemote (a new phone's first sync), the cloud's app state wins.
+  const mergeRemote = (remoteRows, preferRemote) => {
+    // A record deleted here stays deleted, unless it was changed elsewhere after the deletion.
+    const tb = tombstonesRef.current;
+    const notDeletedHere = (r) => !tb[r.id] || tsMs(r.updated_at) > tsMs(tb[r.id].at);
+    const logRows = remoteRows.filter(r => r.kind === 'log' && notDeletedHere(r));
+    const foodRows = remoteRows.filter(r => r.kind === 'customFood' && notDeletedHere(r));
+    const stateRows = remoteRows.filter(r => r.kind === 'state' && !r.deleted);
+    const applied = {};
+    stateRows.forEach(r => {
+      const f = r.id.slice('state:'.length);
+      if (SYNCED_STATE_FIELDS.indexOf(f) < 0) return;
+      if (!preferRemote && tsMs(r.updated_at) <= tsMs(stateTimesRef.current[f])) return;
+      const v = r.data ? r.data.v : null;
+      stateSnapRef.current[f] = stateJson(v);
+      applied[f] = r.updated_at;
+      STATE_SETTERS[f](v);
+    });
+    if (Object.keys(applied).length) setStateTimes(prev => Object.assign({}, prev, applied));
     if (logRows.length) {
       setLog(prev => {
         const map = new Map(prev.map(e => [e.id, e]));
@@ -6178,18 +6415,45 @@ export default function App() {
   // Full two-way sync: push all local rows, then pull the user's rows and merge.
   // Failures are non-fatal — the app stays usable offline and the next trigger retries.
   const syncingRef = useRef(false);
+  const pendingSyncRef = useRef(null);
   const syncNow = async (ownerId) => {
     if (!ownerId || syncingRef.current) return;
+    // Wait until this phone's saved data has loaded, or we'd sync an empty app.
+    if (!hydratedRef.current) { pendingSyncRef.current = ownerId; return; }
     syncingRef.current = true; setSyncing(true);
     try {
-      const rows = collectLocalRows(ownerId);
+      // First sync of this account on this phone (e.g. a new phone): the cloud's
+      // plan, profile and results win over whatever this phone has, so don't push them first.
+      const preferRemote = syncedOwnerRef.current !== ownerId;
+      const rows = collectLocalRows(ownerId, { skipState: preferRemote });
       if (rows.length) {
         const { error: upErr } = await supabase.from('records').upsert(rows, { onConflict: 'owner_id,id' });
         if (upErr) throw upErr;
       }
       const { data, error: selErr } = await supabase.from('records').select('id,kind,data,updated_at,deleted').eq('owner_id', ownerId);
       if (selErr) throw selErr;
-      if (Array.isArray(data)) mergeRemote(data);
+      if (Array.isArray(data)) {
+        mergeRemote(data, preferRemote);
+        // Fields the cloud doesn't have yet: upload this phone's copy. Real data from
+        // before this field was synced has no change time yet, so stamp it now.
+        const inCloud = {};
+        data.forEach(r => { if (r.kind === 'state') inCloud[r.id.slice('state:'.length)] = true; });
+        const missing = SYNCED_STATE_FIELDS.filter(f => !inCloud[f]);
+        const stamp = {};
+        missing.forEach(f => {
+          if (!stateTimesRef.current[f] && stateJson(syncedStateRef.current[f]) !== SYNCED_STATE_DEFAULTS[f]) stamp[f] = new Date().toISOString();
+        });
+        if (Object.keys(stamp).length) {
+          stateTimesRef.current = Object.assign({}, stateTimesRef.current, stamp);
+          setStateTimes(prev => Object.assign({}, prev, stamp));
+        }
+        const missingRows = collectStateRows(ownerId, missing);
+        if (missingRows.length) {
+          const { error: upErr2 } = await supabase.from('records').upsert(missingRows, { onConflict: 'owner_id,id' });
+          if (upErr2) throw upErr2;
+        }
+      }
+      setSyncedOwner(ownerId);
       setLastSync(Date.now());
     } catch (e) {
       console.warn('[gutly] sync failed:', e && e.message);
@@ -6223,15 +6487,19 @@ export default function App() {
     return () => { mounted = false; authSub.subscription.unsubscribe(); };
   }, []);
 
+  useEffect(() => {
+    if (hydrated && pendingSyncRef.current) { const id = pendingSyncRef.current; pendingSyncRef.current = null; syncNow(id); }
+  }, [hydrated]);
+
   // Push local changes up shortly after they happen (debounced), while signed in.
   useEffect(() => {
     if (!hydrated || !user) return;
     const id = setTimeout(() => {
-      const rows = collectLocalRows(user.id);
+      const rows = collectLocalRows(user.id, { skipState: syncedOwnerRef.current !== user.id });
       if (rows.length) supabase.from('records').upsert(rows, { onConflict: 'owner_id,id' }).then(({ error }) => { if (error) console.warn('[gutly] push failed:', error.message); });
     }, 1500);
     return () => clearTimeout(id);
-  }, [log, customFoods, user, hydrated]);
+  }, [log, customFoods, stateTimes, tombstones, user, hydrated]);
 
   // Pull fresh data when the app returns to the foreground (catches edits from another device).
   useEffect(() => {
@@ -6240,6 +6508,15 @@ export default function App() {
   }, []);
 
   const signOut = async () => { await supabase.auth.signOut(); showToast(t('auth_signed_out')); };
+
+  // GDPR right to erasure: deletes the account on the server (its records go with it,
+  // see delete_my_account in supabase_schema.sql), then wipes this phone.
+  const deleteAccount = async () => {
+    const { error } = await supabase.rpc('delete_my_account');
+    if (error) { console.warn('[gutly] delete account failed:', error.message); showToast(t('account_delete_failed')); return; }
+    await resetApp();
+    showToast(t('account_deleted'));
+  };
 
   // Wipe all persisted data and return to onboarding — a fresh start.
   const resetApp = async () => {
@@ -6259,6 +6536,10 @@ export default function App() {
     setTab('home');
     setCelebratedLevel(null);
     setLevelUp(null);
+    setStateTimes({});
+    setTombstones({});
+    setSyncedOwner(null);
+    stateSnapRef.current = {};
     setScreen('onboarding');
   };
 
@@ -6323,11 +6604,13 @@ export default function App() {
   };
 
   const updateLogEntry = (id, updates) => {
-    setLog(log.map(e => e.id === id ? Object.assign({}, e, updates) : e));
+    setLog(log.map(e => e.id === id ? Object.assign({}, e, updates, { updatedAt: new Date().toISOString() }) : e));
     showToast(t('toast_updated'));
   };
+  const addTombstone = (id, kind) => setTombstones(prev => Object.assign({}, prev, { [id]: { kind, at: new Date().toISOString() } }));
   const deleteLogEntry = (id) => {
     setLog(log.filter(e => e.id !== id));
+    addTombstone(id, 'log');
     showToast(t('toast_deleted'));
   };
 
@@ -6391,6 +6674,7 @@ export default function App() {
   const deleteCustomFood = (id) => {
     const i = FOODS.findIndex(f => f.id === id); if (i >= 0) FOODS.splice(i, 1);
     setCustomFoods(prev => prev.filter(f => f.id !== id));
+    addTombstone(id, 'customFood');
   };
 
   const onMealSave = (items, when, mealType, dishes) => {
@@ -6437,8 +6721,21 @@ export default function App() {
     return <SplashScreen t={t} />;
   }
 
+  if (screen === 'onboarding' && !user && !welcomeDismissed) {
+    // After sign-in the welcome screen gives way: an existing account's cloud
+    // state skips onboarding, and a new one continues into it.
+    return <SafeAreaProvider style={{ flex: 1 }}>
+    <AuthModal visible={modal?.type === 'account'} initialMode={modal && modal.mode} onClose={() => setModal(null)} user={user} onSignOut={signOut} t={t} />
+    <WelcomeScreen t={t} onCreate={() => setModal({ type: 'account', mode: 'signup' })} onLogin={() => setModal({ type: 'account', mode: 'login' })} onSkip={() => setWelcomeDismissed(true)} />
+    </SafeAreaProvider>;
+  }
+
   if (screen === 'onboarding') {
-    return <OnboardingScreen step={onbStep} setStep={setOnbStep} profile={profile} setProfile={setProfile} t={t} onComplete={() => {
+    // On a new phone, signing in here restores the account's plan and data
+    // (the first sync takes the cloud's state, which skips the rest of onboarding).
+    return <SafeAreaProvider style={{ flex: 1 }}>
+    <AuthModal visible={modal?.type === 'account'} initialMode={modal && modal.mode} onClose={() => setModal(null)} user={user} onSignOut={signOut} t={t} />
+    <OnboardingScreen step={onbStep} setStep={setOnbStep} profile={profile} setProfile={setProfile} t={t} onBack={user ? null : () => setWelcomeDismissed(false)} onComplete={() => {
       if (profile.phase === 'elimination' && currentPhase === 'not_started') {
         setCurrentPhase('elimination');
         setPhaseStartDate(new Date().toISOString());
@@ -6448,7 +6745,8 @@ export default function App() {
       }
       setScreen('main');
       showToast(`Welcome, ${profile.name || 'friend'} 🌱`);
-    }} />;
+    }} />
+    </SafeAreaProvider>;
   }
 
   // Latch each heavy tab as "mounted" on first visit, then keep it alive (just hidden) so
@@ -6488,7 +6786,7 @@ export default function App() {
       <AIScanModal visible={modal === 'aiscan'} onClose={() => setModal(null)} scansRemaining={scansRemaining} onComplete={() => { recordScanUsed(); setModal(null); showToast(t('toast_ai_logged')); }} />
       <ScanLimitModal visible={modal === 'scanLimit'} onClose={() => setModal(null)} allowance={PREMIUM_SCANS_PER_MONTH} t={t} />
       <PaywallModal visible={modal === 'paywall' || modal?.type === 'paywall'} reason={modal?.reason} onClose={() => setModal(null)} t={t} onUpgrade={() => { setIsPremium(true); setModal(null); showToast(t('toast_welcome_premium')); if (!user) setTimeout(() => setModal({ type: 'account', mode: 'signup' }), 500); }} />
-      <SettingsModal visible={modal === 'settings'} onClose={() => setModal(null)} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onOverride={overridePhaseWeek} profile={profile} setProfile={setProfile} isPremium={isPremium} onUpgrade={() => setModal({ type: 'paywall', reason: null })} onExport={() => { if (isPremium) setModal('export'); else setModal({ type: 'paywall', reason: 'export' }); }} langPref={langPref} setLangPref={setLangPref} onResetApp={() => { setModal(null); resetApp(); }} onSeedDemo={seedDemo} onTogglePremium={() => setIsPremium(p => !p)} onPreviewLevelUp={(opts) => { setModal(null); setTimeout(() => setLevelUp(opts), 350); }} customFoods={customFoods} onUpdateCustomFood={updateCustomFood} onDeleteCustomFood={deleteCustomFood} user={user} onOpenAccount={(mode) => { setModal(null); setTimeout(() => setModal({ type: 'account', mode }), 250); }} onSignOut={signOut} syncing={syncing} lastSync={lastSync} onSync={() => user && syncNow(user.id)} t={t} />
+      <SettingsModal visible={modal === 'settings'} onClose={() => setModal(null)} currentPhase={currentPhase} phaseStartDate={phaseStartDate} onOverride={overridePhaseWeek} profile={profile} setProfile={setProfile} isPremium={isPremium} onUpgrade={() => setModal({ type: 'paywall', reason: null })} onExport={() => { if (isPremium) setModal('export'); else setModal({ type: 'paywall', reason: 'export' }); }} langPref={langPref} setLangPref={setLangPref} onResetApp={() => { setModal(null); resetApp(); }} onSeedDemo={seedDemo} onTogglePremium={() => setIsPremium(p => !p)} onPreviewLevelUp={(opts) => { setModal(null); setTimeout(() => setLevelUp(opts), 350); }} customFoods={customFoods} onUpdateCustomFood={updateCustomFood} onDeleteCustomFood={deleteCustomFood} user={user} onOpenAccount={(mode) => { setModal(null); setTimeout(() => setModal({ type: 'account', mode }), 250); }} onSignOut={signOut} onDeleteAccount={() => { setModal(null); deleteAccount(); }} syncing={syncing} lastSync={lastSync} onSync={() => user && syncNow(user.id)} t={t} />
       <AuthModal visible={modal === 'account' || modal?.type === 'account'} initialMode={modal && modal.mode} onClose={() => setModal(null)} user={user} onSignOut={signOut} t={t} />
       <EditEntryModal visible={modal?.type === 'edit'} entry={modal?.entry} onClose={() => setModal(null)} onUpdate={updateLogEntry} onDelete={deleteLogEntry} onLogAgain={(e) => onMealSave(e.items, new Date(), e.mealType, e.mealDishes)} lang={lang} t={t} />
       <HistoryModal visible={modal === 'history'} onClose={() => setModal(null)} log={log} reintroProgress={reintroProgress} onEditEntry={(entry) => setModal({ type: 'edit', entry })} lang={lang} t={t} />
@@ -6584,7 +6882,7 @@ function SafetyStep({ profile, setProfile, t }) {
   );
 }
 
-function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, t }) {
+function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, onBack, t }) {
   const steps = [
     { type: 'text', q: "What's your name?", sub: 'Just your first name is fine.', key: 'name', placeholder: 'Your name' },
     { type: 'info', key: '_ibs_info', q: t('onb_ibs_q'), floraMood: 'soso',
@@ -6667,8 +6965,8 @@ function OnboardingScreen({ step, setStep, profile, setProfile, onComplete, t })
       <KeyboardAvoidingView style={{ flex: 1, padding: 20 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 6 }}>
         <View style={{ width: 32, height: 32, justifyContent: 'center', marginLeft: -4 }}>
-          {step > 0 && (
-            <TouchableOpacity onPress={() => setStep(step - 1)} accessibilityRole="button" accessibilityLabel={t('back')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          {(step > 0 || onBack) && (
+            <TouchableOpacity onPress={() => (step > 0 ? setStep(step - 1) : onBack())} accessibilityRole="button" accessibilityLabel={t('back')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <IconArrowLeft size={24} color={THEME.ink} />
             </TouchableOpacity>
           )}
@@ -9629,7 +9927,7 @@ function friendlyAuthError(err, t) {
 
 // Full-screen confirmation shown after a successful sign-up: Flora springs in
 // (on top of her own breathe/blink) and we tell the user to check their inbox.
-function AuthSentScreen({ email, variant = 'signup', onBackToLogin, onClose, t }) {
+function AuthSentScreen({ email, variant = 'signup', onBackToLogin, onContinue, continueBusy, continueError, onClose, t }) {
   const enter = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(enter, { toValue: 1, friction: 6, tension: 55, useNativeDriver: true }).start();
@@ -9652,9 +9950,21 @@ function AuthSentScreen({ email, variant = 'signup', onBackToLogin, onClose, t }
         </Animated.View>
       </View>
       <View style={{ padding: 20 }}>
-        <TouchableOpacity onPress={onBackToLogin} accessibilityRole="button" style={[s.btnPrimary, { alignSelf: 'stretch' }]}>
-          <Text style={s.btnPrimaryText}>{t('auth_back_to_login')}</Text>
-        </TouchableOpacity>
+        {onContinue ? (
+          <>
+            {continueError ? <Text style={{ fontSize: 13, color: '#a03030', textAlign: 'center', marginBottom: 10 }}>{continueError}</Text> : null}
+            <TouchableOpacity onPress={onContinue} disabled={continueBusy} accessibilityRole="button" style={[s.btnPrimary, { alignSelf: 'stretch', opacity: continueBusy ? 0.6 : 1 }]}>
+              {continueBusy ? <ActivityIndicator color="#ffffff" /> : <Text style={s.btnPrimaryText}>{t('auth_confirmed_continue')}</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onBackToLogin} accessibilityRole="button" style={{ marginTop: 14, alignItems: 'center' }}>
+              <Text style={{ fontSize: 14, color: '#4e7d4e', fontWeight: '600' }}>{t('auth_back_to_login')}</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity onPress={onBackToLogin} accessibilityRole="button" style={[s.btnPrimary, { alignSelf: 'stretch' }]}>
+            <Text style={s.btnPrimaryText}>{t('auth_back_to_login')}</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -9687,6 +9997,33 @@ function AuthModal({ visible, onClose, initialMode, user, onSignOut, t }) {
   // If the user signs in successfully, the App listener fires and we close.
   useEffect(() => { if (visible && user) onClose(); }, [user, visible]);
 
+  // After sign-up, the confirmation link opens in the browser, which can't sign
+  // the app in. So we keep the new password in memory (never stored) and sign in
+  // with it once the user is back: on a tap, or automatically when the app returns
+  // to the foreground.
+  const [continueBusy, setContinueBusy] = useState(false);
+  const [continueError, setContinueError] = useState('');
+  const pendingLoginRef = useRef(null);
+  useEffect(() => { if (!visible || !sentEmail) pendingLoginRef.current = null; }, [visible, sentEmail]);
+  const signInAfterConfirm = async (silent) => {
+    const creds = pendingLoginRef.current;
+    if (!creds) return;
+    if (!silent) { setContinueBusy(true); setContinueError(''); }
+    try {
+      const { error: err } = await supabase.auth.signInWithPassword(creds);
+      if (err && !silent) setContinueError(friendlyAuthError(err, t));
+    } catch (e) {
+      if (!silent) setContinueError(friendlyAuthError(e, t));
+    } finally {
+      if (!silent) setContinueBusy(false);
+    }
+  };
+  useEffect(() => {
+    if (!visible || !sentEmail || sentVariant !== 'signup') return;
+    const sub = AppState.addEventListener('change', (st) => { if (st === 'active') signInAfterConfirm(true); });
+    return () => sub.remove();
+  }, [visible, sentEmail, sentVariant]);
+
   const emailOk = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
 
   const submit = async () => {
@@ -9707,6 +10044,8 @@ function AuthModal({ visible, onClose, initialMode, user, onSignOut, t }) {
       } else if (mode === 'signup') {
         const { error: err } = await supabase.auth.signUp({ email: em, password });
         if (err) { setError(friendlyAuthError(err, t)); return; }
+        pendingLoginRef.current = { email: em, password };
+        setContinueError('');
         setSentVariant('signup'); setSentEmail(em); // show the full-screen confirmation with Flora
       } else {
         // reset: always succeed-looking so we don't reveal which emails exist
@@ -9754,7 +10093,7 @@ function AuthModal({ visible, onClose, initialMode, user, onSignOut, t }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaViewSC style={{ flex: 1, backgroundColor: '#fafbfa' }}>
         {sentEmail ? (
-          <AuthSentScreen email={sentEmail} variant={sentVariant} onClose={onClose} onBackToLogin={() => { setSentEmail(''); setMode('login'); }} t={t} />
+          <AuthSentScreen email={sentEmail} variant={sentVariant} onClose={onClose} onBackToLogin={() => { setSentEmail(''); setMode('login'); }} onContinue={sentVariant === 'signup' ? () => signInAfterConfirm(false) : null} continueBusy={continueBusy} continueError={continueError} t={t} />
         ) : (
         <>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f4f0' }}>
@@ -9887,9 +10226,10 @@ function SettingSelect({ label, sub, options, selectedIds, onToggle, multi = fal
   );
 }
 
-function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverride, profile, setProfile, isPremium, onUpgrade, onExport, langPref, setLangPref, onResetApp, onSeedDemo, onTogglePremium, onPreviewLevelUp, customFoods, onUpdateCustomFood, onDeleteCustomFood, user, onOpenAccount, onSignOut, syncing, lastSync, onSync, t }) {
+function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverride, profile, setProfile, isPremium, onUpgrade, onExport, langPref, setLangPref, onResetApp, onSeedDemo, onTogglePremium, onPreviewLevelUp, customFoods, onUpdateCustomFood, onDeleteCustomFood, user, onOpenAccount, onSignOut, onDeleteAccount, syncing, lastSync, onSync, t }) {
   const [confirmReset, setConfirmReset] = useState(false);
-  useEffect(() => { if (!visible) setConfirmReset(false); }, [visible]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  useEffect(() => { if (!visible) { setConfirmReset(false); setConfirmDelete(false); } }, [visible]);
   const [editPhase, setEditPhase] = useState(currentPhase);
   const [weekInput, setWeekInput] = useState('1');
   useEffect(() => { setEditPhase(currentPhase); }, [currentPhase, visible]);
@@ -9933,6 +10273,20 @@ function SettingsModal({ visible, onClose, currentPhase, phaseStartDate, onOverr
                 <TouchableOpacity onPress={onSignOut} accessibilityRole="button" style={[s.btnSecondary, { marginTop: 12 }]}>
                   <Text style={{ fontSize: 14, fontWeight: '600', color: '#4e7d4e' }}>{t('sign_out')}</Text>
                 </TouchableOpacity>
+                {confirmDelete ? (
+                  <View style={{ marginTop: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#a03030' }}>{t('account_delete_title')}</Text>
+                    <Text style={{ fontSize: 12, color: '#6b7a6b', marginTop: 4, marginBottom: 12, lineHeight: 18 }}>{t('account_delete_body')}</Text>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TouchableOpacity onPress={() => setConfirmDelete(false)} accessibilityRole="button" style={[s.btnSecondary, { flex: 1 }]}><Text style={s.btnSecondaryText}>{t('cancel')}</Text></TouchableOpacity>
+                      <TouchableOpacity onPress={onDeleteAccount} accessibilityRole="button" style={{ flex: 1, backgroundColor: '#c85050', borderRadius: 16, padding: 16, alignItems: 'center' }}><Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>{t('account_delete_confirm')}</Text></TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity onPress={() => setConfirmDelete(true)} accessibilityRole="button" style={{ marginTop: 14, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#a03030' }}>{t('account_delete')}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
               <View style={[s.cardFilled, { backgroundColor: '#f5faf5', marginHorizontal: 0 }]}>

@@ -1,5 +1,5 @@
 -- Gutly sync schema
--- Run once: Supabase dashboard → SQL Editor → New query → paste all of this → Run.
+-- Safe to run again (e.g. after this file changes): Supabase dashboard → SQL Editor → New query → paste all of this → Run.
 --
 -- One table holds every synced record (log entries + custom foods). Each record
 -- is stored as `data` jsonb (the exact local shape) plus the columns sync needs:
@@ -29,3 +29,42 @@ create policy "records are private to owner"
 
 -- Speeds up the app's "fetch my rows" query.
 create index if not exists records_owner_idx on public.records (owner_id);
+
+-- Keep the newest version of each record. Phones push their whole copy on every
+-- sync, so without this an older phone could overwrite a newer edit (or bring a
+-- deleted entry back). A stale write is silently skipped.
+create or replace function public.records_keep_newest()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.updated_at < old.updated_at then
+    return null;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists records_keep_newest on public.records;
+create trigger records_keep_newest
+  before update on public.records
+  for each row execute function public.records_keep_newest();
+
+-- "Delete account" in Settings (GDPR right to erasure): a signed-in user deletes
+-- their own account. The `on delete cascade` above removes all their records too.
+create or replace function public.delete_my_account()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'not signed in';
+  end if;
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;
