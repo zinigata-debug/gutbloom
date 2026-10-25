@@ -551,7 +551,7 @@ const STRINGS = {
     barcode_intro_cta: 'Scan now',
     barcode_intro_later: 'Maybe later',
     meal_modal_your_meal: 'Your meal',
-    meal_edit_portion_of: 'Edit portion: {food}', meal_remove_item: 'Remove from meal', meal_dish_remove_hint: 'Tap an ingredient to leave it out', meal_dish_add_hint: 'Had it with extras (a sauce, dip or side)? Add them from the search on the meal screen.', meal_ingredient_removed: 'removed',
+    meal_edit_portion_of: 'Edit portion: {food}', meal_remove_item: 'Remove from meal', meal_add_item: 'Add to the meal', meal_dish_remove_hint: 'Tap an ingredient to leave it out', meal_dish_add_hint: 'Had it with extras (a sauce, dip or side)? Add them from the search on the meal screen.', meal_ingredient_removed: 'removed',
     meal_base_hint: 'This is a base — add the other ingredients you used (cheese, veg, toppings…) so the score matches your plate.',
     meal_modal_hist_alert: 'Histamine alert',
     meal_modal_high_hist: 'High histamine: {foods}.',
@@ -1023,7 +1023,7 @@ const STRINGS = {
     barcode_intro_cta: 'Jetzt scannen',
     barcode_intro_later: 'Vielleicht später',
     meal_modal_your_meal: 'Deine Mahlzeit',
-    meal_edit_portion_of: 'Portion bearbeiten: {food}', meal_remove_item: 'Aus Mahlzeit entfernen', meal_dish_remove_hint: 'Tippe eine Zutat an, um sie wegzulassen', meal_dish_add_hint: 'Mit Extras gegessen (Soße, Dip oder Beilage)? Füge sie über die Suche im Mahlzeit-Screen hinzu.', meal_ingredient_removed: 'entfernt',
+    meal_edit_portion_of: 'Portion bearbeiten: {food}', meal_remove_item: 'Aus Mahlzeit entfernen', meal_add_item: 'Zur Mahlzeit hinzufügen', meal_dish_remove_hint: 'Tippe eine Zutat an, um sie wegzulassen', meal_dish_add_hint: 'Mit Extras gegessen (Soße, Dip oder Beilage)? Füge sie über die Suche im Mahlzeit-Screen hinzu.', meal_ingredient_removed: 'entfernt',
     meal_base_hint: 'Das ist eine Basis — füge die weiteren Zutaten hinzu, die du verwendet hast (Käse, Gemüse, Belag…), damit die Bewertung zu deinem Teller passt.',
     meal_modal_hist_alert: 'Histamin-Alarm',
     meal_modal_high_hist: 'Hohes Histamin: {foods}.',
@@ -1495,7 +1495,7 @@ const STRINGS = {
     barcode_intro_cta: 'Escanear ahora',
     barcode_intro_later: 'Quizá más tarde',
     meal_modal_your_meal: 'Tu comida',
-    meal_edit_portion_of: 'Editar porción: {food}', meal_remove_item: 'Quitar de la comida', meal_dish_remove_hint: 'Toca un ingrediente para quitarlo', meal_dish_add_hint: '¿Lo comiste con extras (salsa, dip o guarnición)? Añádelos desde la búsqueda en la pantalla de comida.', meal_ingredient_removed: 'quitado',
+    meal_edit_portion_of: 'Editar porción: {food}', meal_remove_item: 'Quitar de la comida', meal_add_item: 'Añadir a la comida', meal_dish_remove_hint: 'Toca un ingrediente para quitarlo', meal_dish_add_hint: '¿Lo comiste con extras (salsa, dip o guarnición)? Añádelos desde la búsqueda en la pantalla de comida.', meal_ingredient_removed: 'quitado',
     meal_base_hint: 'Esto es una base — añade los demás ingredientes que usaste (queso, verduras, coberturas…) para que la puntuación coincida con tu plato.',
     meal_modal_hist_alert: 'Alerta de histamina',
     meal_modal_high_hist: 'Alta histamina: {foods}.',
@@ -1967,7 +1967,7 @@ const STRINGS = {
     barcode_intro_cta: 'Scanner maintenant',
     barcode_intro_later: 'Plus tard',
     meal_modal_your_meal: 'Votre repas',
-    meal_edit_portion_of: 'Modifier la portion : {food}', meal_remove_item: 'Retirer du repas', meal_dish_remove_hint: 'Touche un ingrédient pour le retirer', meal_dish_add_hint: 'Mangé avec des extras (sauce, dip ou accompagnement) ? Ajoute-les via la recherche sur l’écran du repas.', meal_ingredient_removed: 'retiré',
+    meal_edit_portion_of: 'Modifier la portion : {food}', meal_remove_item: 'Retirer du repas', meal_add_item: 'Ajouter au repas', meal_dish_remove_hint: 'Touche un ingrédient pour le retirer', meal_dish_add_hint: 'Mangé avec des extras (sauce, dip ou accompagnement) ? Ajoute-les via la recherche sur l’écran du repas.', meal_ingredient_removed: 'retiré',
     meal_base_hint: "C'est une base — ajoute les autres ingrédients que tu as utilisés (fromage, légumes, garnitures…) pour que le score corresponde à ton assiette.",
     meal_modal_hist_alert: 'Alerte histamine',
     meal_modal_high_hist: 'Histamine élevée : {foods}.',
@@ -2439,7 +2439,7 @@ const STRINGS = {
     barcode_intro_cta: 'Scansiona ora',
     barcode_intro_later: 'Forse più tardi',
     meal_modal_your_meal: 'Il tuo pasto',
-    meal_edit_portion_of: 'Modifica porzione: {food}', meal_remove_item: 'Rimuovi dal pasto', meal_dish_remove_hint: 'Tocca un ingrediente per toglierlo', meal_dish_add_hint: 'Mangiato con extra (salsa, dip o contorno)? Aggiungili dalla ricerca nella schermata del pasto.', meal_ingredient_removed: 'tolto',
+    meal_edit_portion_of: 'Modifica porzione: {food}', meal_remove_item: 'Rimuovi dal pasto', meal_add_item: 'Aggiungi al pasto', meal_dish_remove_hint: 'Tocca un ingrediente per toglierlo', meal_dish_add_hint: 'Mangiato con extra (salsa, dip o contorno)? Aggiungili dalla ricerca nella schermata del pasto.', meal_ingredient_removed: 'tolto',
     meal_base_hint: 'Questa è una base — aggiungi gli altri ingredienti che hai usato (formaggio, verdure, condimenti…) così il punteggio corrisponde al tuo piatto.',
     meal_modal_hist_alert: 'Avviso istamina',
     meal_modal_high_hist: 'Alta istamina: {foods}.',
@@ -9055,6 +9055,9 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
   // The food currently being portioned in the bottom-sheet overlay, or null when it's
   // closed. Kept separate from `selected` so the "Il tuo pasto" strip stays put while editing.
   const [editingId, setEditingId] = useState(null);
+  // True when the portion sheet was opened by adding a NEW food (vs. re-editing one
+  // already in the meal) — drives the primary button label ("Add to the meal" vs "Done").
+  const [portionSheetIsAdd, setPortionSheetIsAdd] = useState(false);
   const [introSheet, setIntroSheet] = useState(false);
   const [discardConfirm, setDiscardConfirm] = useState(false);
   const [introSeen, setIntroSeen] = useState(true);
@@ -9226,7 +9229,7 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
               // not its raw category — a moderate food can be low in a small portion.
               const rowCat = isSel ? (meal?.items.find(v => v.id === f.id)?.verdictCat || f.cat) : f.cat;
               return (
-                <TouchableOpacity key={f.id} onPress={() => { if (!isSel) setSelected(selected.concat([makeMealItem(f.id)])); setEditingId(f.id); setSearch(''); }} accessibilityRole="button" accessibilityState={{ checked: isSel }} accessibilityLabel={foodName(f, lang)} accessibilityHint={t('meal_edit_portion_of', { food: foodName(f, lang) })} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f1f4f1' }}>
+                <TouchableOpacity key={f.id} onPress={() => { if (!isSel) setSelected(selected.concat([makeMealItem(f.id)])); setPortionSheetIsAdd(!isSel); setEditingId(f.id); setSearch(''); }} accessibilityRole="button" accessibilityState={{ checked: isSel }} accessibilityLabel={foodName(f, lang)} accessibilityHint={t('meal_edit_portion_of', { food: foodName(f, lang) })} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f1f4f1' }}>
                   <Text importantForAccessibility="no" style={{ fontSize: 22 }}>{f.emoji}</Text>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ fontSize: 14, fontWeight: '500', color: THEME.ink }}>{foodName(f, lang)}</Text>
@@ -9292,7 +9295,7 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
                   const sizeLabel = t('edit_portion_' + (it.size || 'M').toLowerCase());
                   return (
                     <View key={it.foodId} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#e8f0e8', borderRadius: 14, paddingLeft: 10, paddingRight: 5, paddingVertical: 6 }}>
-                      <TouchableOpacity onPress={() => setEditingId(it.foodId)} accessibilityRole="button" accessibilityLabel={`${foodName(f, lang)}, ${sizeLabel}`} accessibilityHint={t('meal_edit_portion_of', { food: foodName(f, lang) })} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <TouchableOpacity onPress={() => { setPortionSheetIsAdd(false); setEditingId(it.foodId); }} accessibilityRole="button" accessibilityLabel={`${foodName(f, lang)}, ${sizeLabel}`} accessibilityHint={t('meal_edit_portion_of', { food: foodName(f, lang) })} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Text importantForAccessibility="no" style={{ fontSize: 14 }}>{f.emoji}</Text>
                         <Text importantForAccessibility="no" style={{ fontSize: 13, color: '#2d6a2d', fontWeight: '500' }}>{foodName(f, lang)}</Text>
                       </TouchableOpacity>
@@ -9326,7 +9329,7 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
               )}
             </View>
             <TouchableOpacity onPress={() => { onSave(resolved.items, when, effMealType, resolved.dishes); reset(); }} disabled={selected.length === 0} style={{ backgroundColor: selected.length ? '#4e7d4e' : '#c0d0c0', borderRadius: 14, paddingHorizontal: 26, paddingVertical: 13 }}>
-              <Text style={{ color: 'white', fontSize: 15, fontWeight: '700' }}>{t('save')}</Text>
+              <Text style={{ color: 'white', fontSize: 15, fontWeight: '700' }}>{selected.length ? t('done') : t('save')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -9397,7 +9400,7 @@ function MealModal({ visible, onClose, onSave, onBarcode, onAIScan, onAddCustomF
                     })}
                   </View>
                   <TouchableOpacity onPress={() => setEditingId(null)} style={[s.btnPrimary, { marginTop: 0 }]}>
-                    <Text style={s.btnPrimaryText}>{t('done')}</Text>
+                    <Text style={s.btnPrimaryText}>{portionSheetIsAdd ? t('meal_add_item') : t('save')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => { toggle(f.id); setEditingId(null); }} accessibilityRole="button" style={{ paddingVertical: 14, alignItems: 'center', marginTop: 4 }}>
                     <Text style={{ fontSize: 14, fontWeight: '600', color: '#a03030' }}>{t('meal_remove_item')}</Text>
