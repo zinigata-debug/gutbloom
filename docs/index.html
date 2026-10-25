@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>GutBloom</title>
+<!--
+  Landing page for GutBloom account emails (Supabase "Site URL").
+  - Confirm signup link  → shows "Email confirmed, go back to the app".
+  - Reset password link  → lets the user choose a new password.
+  Served by GitHub Pages from /docs on main. The anon key is public by design
+  (same one as supabaseClient.ts); Row-Level Security protects the data.
+-->
+<style>
+  :root { --bg: #fafbfa; --card: #ffffff; --line: #eef2ee; --ink: #26302a; --soft: #5b6a5b; --muted: #8a988a; --primary: #4e7d4e; --dark: #2d6a2d; --tint: #f5faf5; --err: #a03030; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px 16px; }
+  .card { width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .hero { background: var(--tint); padding: 28px 32px 20px; text-align: center; }
+  .hero img { width: 120px; height: 120px; display: block; margin: 0 auto; }
+  .brand { font-size: 22px; font-weight: 700; color: var(--dark); margin-top: 8px; }
+  .body { padding: 28px 32px 32px; }
+  h1 { margin: 0 0 12px; font-size: 20px; }
+  p { margin: 0 0 16px; font-size: 15px; line-height: 22px; color: var(--soft); }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+  input { width: 100%; padding: 14px; font-size: 16px; border: 1.5px solid #dfe7df; border-radius: 12px; margin-bottom: 14px; }
+  button { width: 100%; padding: 14px; font-size: 15px; font-weight: 700; color: #fff; background: var(--primary); border: 0; border-radius: 12px; cursor: pointer; }
+  button:disabled { opacity: .6; }
+  .err { color: var(--err); font-size: 14px; margin-top: 4px; min-height: 20px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card">
+  <div class="hero">
+    <img src="https://fgpwifrdyhdigrqagnks.supabase.co/storage/v1/object/public/assets/flora.png" alt="Flora">
+    <div class="brand">GutBloom</div>
+  </div>
+  <div class="body">
+    <div id="v-loading"><p data-t="loading"></p></div>
+    <div id="v-confirmed" hidden><h1 data-t="confirmed_title"></h1><p data-t="confirmed_body"></p></div>
+    <div id="v-reset" hidden>
+      <h1 data-t="reset_title"></h1>
+      <p data-t="reset_body"></p>
+      <form id="reset-form">
+        <label for="pw1" data-t="pw_new"></label>
+        <input id="pw1" type="password" autocomplete="new-password" minlength="6" required>
+        <label for="pw2" data-t="pw_confirm"></label>
+        <input id="pw2" type="password" autocomplete="new-password" minlength="6" required>
+        <button id="pw-btn" type="submit" data-t="pw_save"></button>
+        <div class="err" id="pw-err" role="alert"></div>
+      </form>
+    </div>
+    <div id="v-reset-done" hidden><h1 data-t="reset_done_title"></h1><p data-t="reset_done_body"></p></div>
+    <div id="v-error" hidden><h1 data-t="error_title"></h1><p data-t="error_body"></p></div>
+  </div>
+</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+  var T = {
+    en: { loading: 'One moment…', confirmed_title: 'Email confirmed ✅', confirmed_body: 'Your GutBloom account is ready. Go back to the app and sign in.',
+      reset_title: 'Choose a new password', reset_body: 'Enter a new password for your GutBloom account.', pw_new: 'New password', pw_confirm: 'Repeat password', pw_save: 'Save password',
+      pw_short: 'The password must be at least 6 characters.', pw_mismatch: 'The passwords do not match.', pw_fail: 'Could not save the password. Please request a new reset link from the app.',
+      reset_done_title: 'Password changed ✅', reset_done_body: 'Go back to the GutBloom app and sign in with your new password.',
+      error_title: 'This link has expired', error_body: 'Links work only once and for a limited time. Go back to the GutBloom app and request a new one.' },
+    de: { loading: 'Einen Moment…', confirmed_title: 'E-Mail bestätigt ✅', confirmed_body: 'Dein GutBloom-Konto ist bereit. Geh zurück in die App und melde dich an.',
+      reset_title: 'Neues Passwort wählen', reset_body: 'Gib ein neues Passwort für dein GutBloom-Konto ein.', pw_new: 'Neues Passwort', pw_confirm: 'Passwort wiederholen', pw_save: 'Passwort speichern',
+      pw_short: 'Das Passwort muss mindestens 6 Zeichen haben.', pw_mismatch: 'Die Passwörter stimmen nicht überein.', pw_fail: 'Das Passwort konnte nicht gespeichert werden. Fordere in der App einen neuen Link an.',
+      reset_done_title: 'Passwort geändert ✅', reset_done_body: 'Geh zurück in die GutBloom-App und melde dich mit deinem neuen Passwort an.',
+      error_title: 'Dieser Link ist abgelaufen', error_body: 'Links funktionieren nur einmal und für begrenzte Zeit. Fordere in der GutBloom-App einen neuen an.' },
+    es: { loading: 'Un momento…', confirmed_title: 'Email confirmado ✅', confirmed_body: 'Tu cuenta de GutBloom está lista. Vuelve a la app e inicia sesión.',
+      reset_title: 'Elige una nueva contraseña', reset_body: 'Introduce una nueva contraseña para tu cuenta de GutBloom.', pw_new: 'Nueva contraseña', pw_confirm: 'Repite la contraseña', pw_save: 'Guardar contraseña',
+      pw_short: 'La contraseña debe tener al menos 6 caracteres.', pw_mismatch: 'Las contraseñas no coinciden.', pw_fail: 'No se pudo guardar la contraseña. Pide un nuevo enlace desde la app.',
+      reset_done_title: 'Contraseña cambiada ✅', reset_done_body: 'Vuelve a la app GutBloom e inicia sesión con tu nueva contraseña.',
+      error_title: 'Este enlace ha caducado', error_body: 'Los enlaces funcionan una sola vez y por tiempo limitado. Vuelve a la app GutBloom y pide uno nuevo.' },
+    fr: { loading: 'Un instant…', confirmed_title: 'E-mail confirmé ✅', confirmed_body: 'Ton compte GutBloom est prêt. Retourne dans l’app et connecte-toi.',
+      reset_title: 'Choisis un nouveau mot de passe', reset_body: 'Saisis un nouveau mot de passe pour ton compte GutBloom.', pw_new: 'Nouveau mot de passe', pw_confirm: 'Répète le mot de passe', pw_save: 'Enregistrer',
+      pw_short: 'Le mot de passe doit contenir au moins 6 caractères.', pw_mismatch: 'Les mots de passe ne correspondent pas.', pw_fail: 'Impossible d’enregistrer le mot de passe. Demande un nouveau lien dans l’app.',
+      reset_done_title: 'Mot de passe modifié ✅', reset_done_body: 'Retourne dans l’app GutBloom et connecte-toi avec ton nouveau mot de passe.',
+      error_title: 'Ce lien a expiré', error_body: 'Les liens ne fonctionnent qu’une fois et pour une durée limitée. Demande-en un nouveau dans l’app GutBloom.' },
+    it: { loading: 'Un momento…', confirmed_title: 'Email confermata ✅', confirmed_body: 'Il tuo account GutBloom è pronto. Torna nell’app e accedi.',
+      reset_title: 'Scegli una nuova password', reset_body: 'Inserisci una nuova password per il tuo account GutBloom.', pw_new: 'Nuova password', pw_confirm: 'Ripeti la password', pw_save: 'Salva password',
+      pw_short: 'La password deve avere almeno 6 caratteri.', pw_mismatch: 'Le password non coincidono.', pw_fail: 'Impossibile salvare la password. Richiedi un nuovo link dall’app.',
+      reset_done_title: 'Password cambiata ✅', reset_done_body: 'Torna nell’app GutBloom e accedi con la nuova password.',
+      error_title: 'Questo link è scaduto', error_body: 'I link funzionano una sola volta e per un tempo limitato. Torna nell’app GutBloom e richiedine uno nuovo.' }
+  };
+  var lang = (navigator.language || 'en').slice(0, 2).toLowerCase();
+  var tr = T[lang] || T.en;
+  document.documentElement.lang = T[lang] ? lang : 'en';
+  document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = tr[el.getAttribute('data-t')]; });
+
+  function show(id) {
+    ['v-loading', 'v-confirmed', 'v-reset', 'v-reset-done', 'v-error'].forEach(function (v) { document.getElementById(v).hidden = v !== id; });
+  }
+
+  // Supabase puts the result in the URL: #access_token=…&type=signup|recovery, or #error=…
+  var params = new URLSearchParams((location.hash || '').replace(/^#/, '') + '&' + (location.search || '').replace(/^\?/, ''));
+  var type = params.get('type');
+  if (params.get('error') || params.get('error_code')) {
+    show('v-error');
+  } else if (type === 'recovery') {
+    var sb = supabase.createClient('https://fgpwifrdyhdigrqagnks.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZncHdpZnJkeWhkaWdycWFnbmtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0OTYwNDMsImV4cCI6MjA5OTA3MjA0M30.Fz8A0W2CqOFfqHcGAvMVTYwXZ8nwlpskzlgcHpqzGmQ', {
+      auth: { detectSessionInUrl: true, persistSession: false, flowType: 'implicit' }
+    });
+    var ready = false;
+    sb.auth.onAuthStateChange(function (event) {
+      if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') && !ready) { ready = true; show('v-reset'); }
+    });
+    setTimeout(function () { if (!ready) show('v-error'); }, 8000);
+    document.getElementById('reset-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var a = document.getElementById('pw1').value, b = document.getElementById('pw2').value;
+      var err = document.getElementById('pw-err'), btn = document.getElementById('pw-btn');
+      if (a.length < 6) { err.textContent = tr.pw_short; return; }
+      if (a !== b) { err.textContent = tr.pw_mismatch; return; }
+      err.textContent = ''; btn.disabled = true;
+      sb.auth.updateUser({ password: a }).then(function (res) {
+        btn.disabled = false;
+        if (res.error) { err.textContent = tr.pw_fail; return; }
+        sb.auth.signOut({ scope: 'local' });
+        show('v-reset-done');
+      });
+    });
+  } else {
+    // Signup confirmation (or someone opening the page directly).
+    show('v-confirmed');
+  }
+  // Don't leave tokens in the address bar or browser history (the recovery
+  // branch leaves the hash for supabase-js to read; it clears it itself).
+  if (type !== 'recovery' && location.hash) history.replaceState(null, '', location.pathname);
+</script>
+</body>
+</html>
